@@ -148,7 +148,7 @@ Implemented so far:
 
 Goal: expose a stable Python integration surface for callers that do not want to shell out to the CLI.
 
-Status: planned.
+Status: released as `v0.6.0-alpha.1`.
 
 Candidate work:
 
@@ -157,6 +157,14 @@ Candidate work:
 - deterministic dictionary result contract.
 - custom rule file support through the API.
 - API-focused tests and docs.
+
+Implemented so far:
+
+- `agent_circuit_breaker.api` public module.
+- package-level exports for `evaluate_action`, `validate_rule_file`, and `rule_schema_metadata`.
+- custom rule-file support through the public API.
+- fail-closed error result for invalid custom rule files.
+- API reference docs and API-focused tests.
 
 ## v0.7: Adversarial Test Alpha
 

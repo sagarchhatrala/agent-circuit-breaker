@@ -52,6 +52,18 @@ circuit-breaker check "deploy production" --rules docs/examples/rules/custom_dep
 # Verdict: BLOCK
 ```
 
+## Use The Python API
+
+```python
+from agent_circuit_breaker import evaluate_action, validate_rule_file
+
+result = evaluate_action("rm -rf /")
+assert result["verdict"] == "block"
+
+rule_result = validate_rule_file("docs/examples/rules/custom_deploy_guard.json")
+assert rule_result["is_valid"] is True
+```
+
 `-c/--command` remains available as a compatibility shortcut:
 
 ```bash
@@ -87,4 +99,4 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v0.5.0-alpha.1`: filesystem, command, SQL, and external JSON rule safety alpha with documented schema metadata and fixture-backed rule validation.
+The current target is `v0.6.0-alpha.1`: filesystem, command, SQL, external JSON rule safety, and a public Python API for direct integrations.

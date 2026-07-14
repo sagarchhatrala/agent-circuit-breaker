@@ -2,6 +2,8 @@
 
 The v0.6 milestone exposes a small Python API for callers that want deterministic safety checks without shelling out to the CLI.
 
+Status: implemented for `v0.6.0-alpha.1`.
+
 ## Goals
 
 - Provide package-level functions for action evaluation and rule file validation.
