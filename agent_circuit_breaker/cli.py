@@ -8,6 +8,7 @@ from typing import Dict, Any
 from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
+from agent_circuit_breaker.inspectors.command import CommandInspector
 
 
 class CircuitBreakerCLI:
@@ -31,6 +32,7 @@ class CircuitBreakerCLI:
         self.output_format = "json" if json_output else output_format
         self.engine = Engine()
         self.inspector = FilesystemInspector()
+        self.command_inspector = CommandInspector()
 
     def evaluate_command(self, command: str) -> Dict[str, Any]:
         """
@@ -49,6 +51,7 @@ class CircuitBreakerCLI:
             "matched_rule": None,
             "rule_details": None,
             "operation_analysis": None,
+            "command_analysis": None,
             "error": None,
         }
 
@@ -63,6 +66,18 @@ class CircuitBreakerCLI:
                     "is_dangerous": False,
                     "danger_reason": None,
                 }
+                result["command_analysis"] = {
+                    "tokens": [],
+                    "command": None,
+                    "args": [],
+                    "segments": [],
+                    "operators": [],
+                    "is_valid": False,
+                    "error": "Command must be a string",
+                    "risk_flags": [],
+                    "is_dangerous": False,
+                    "danger_reason": None,
+                }
                 result["error"] = "Command must be a string"
                 return result
 
@@ -74,6 +89,20 @@ class CircuitBreakerCLI:
                 "flags": list(operation_analysis["flags"]),
                 "is_dangerous": operation_analysis["is_dangerous"],
                 "danger_reason": operation_analysis["danger_reason"],
+            }
+
+            command_analysis = self.command_inspector.analyze_command(command)
+            result["command_analysis"] = {
+                "tokens": command_analysis["tokens"],
+                "command": command_analysis["command"],
+                "args": command_analysis["args"],
+                "segments": command_analysis["segments"],
+                "operators": command_analysis["operators"],
+                "is_valid": command_analysis["is_valid"],
+                "error": command_analysis["error"],
+                "risk_flags": command_analysis["risk_flags"],
+                "is_dangerous": command_analysis["is_dangerous"],
+                "danger_reason": command_analysis["danger_reason"],
             }
 
             # Evaluate against engine rules
@@ -163,6 +192,19 @@ class CircuitBreakerCLI:
                 lines.append(f"Targets: {', '.join(analysis['targets'])}")
             if analysis["flags"]:
                 lines.append(f"Flags: {', '.join(analysis['flags'])}")
+
+        if result["command_analysis"]:
+            analysis = result["command_analysis"]
+            if analysis["command"]:
+                lines.append(f"Command Analysis: {analysis['command']}")
+            if analysis["operators"]:
+                lines.append(f"Operators: {', '.join(analysis['operators'])}")
+            if analysis["risk_flags"]:
+                lines.append(f"Command Risk Flags: {', '.join(analysis['risk_flags'])}")
+            if analysis["danger_reason"]:
+                lines.append(f"Command Danger: {analysis['danger_reason']}")
+            if analysis["error"]:
+                lines.append(f"Command Analysis Error: {analysis['error']}")
 
         if result["error"]:
             lines.append(f"Error: {result['error']}")

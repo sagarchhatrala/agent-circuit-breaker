@@ -62,6 +62,23 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertIn("decision", result)
         self.assertIn("matched_rule", result)
         self.assertIn("operation_analysis", result)
+        self.assertIn("command_analysis", result)
+
+    def test_evaluate_includes_command_analysis(self):
+        """Evaluation includes command inspector analysis."""
+        result = self.cli.evaluate_command("git push --force origin main")
+
+        self.assertIn("command_analysis", result)
+        self.assertEqual(result["command_analysis"]["command"], "git")
+        self.assertIn("cmd_git_force_push", result["command_analysis"]["risk_flags"])
+        self.assertTrue(result["command_analysis"]["is_dangerous"])
+
+    def test_command_analysis_does_not_change_verdict_yet(self):
+        """Command inspector risk is analysis-only until rules are wired."""
+        result = self.cli.evaluate_command("git push --force origin main")
+
+        self.assertEqual(result["verdict"], "unknown")
+        self.assertIsNone(result["matched_rule"])
 
     def test_evaluate_preserves_command(self):
         """Preserved original command in result."""
@@ -105,6 +122,18 @@ class TestCLIOutput(unittest.TestCase):
         parsed = json.loads(output)
         self.assertIn("verdict", parsed)
         self.assertIn("command", parsed)
+        self.assertIn("command_analysis", parsed)
+
+    def test_format_json_includes_command_risk_flags(self):
+        """JSON output includes command inspector risk details."""
+        cli = CircuitBreakerCLI(verbose=False, json_output=True)
+        result = cli.evaluate_command("git push --force origin main")
+        output = cli.format_output(result)
+        parsed = json.loads(output)
+
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertIn("cmd_git_force_push", parsed["command_analysis"]["risk_flags"])
+        self.assertTrue(parsed["command_analysis"]["is_dangerous"])
 
     def test_format_includes_matched_rule(self):
         """Output includes matched rule information."""
@@ -113,6 +142,15 @@ class TestCLIOutput(unittest.TestCase):
         if result["matched_rule"]:
             self.assertIn("Matched Rule:", output)
             self.assertIn("Severity:", output)
+
+    def test_format_includes_command_analysis_risk(self):
+        """Human-readable output includes command risk details."""
+        result = self.cli.evaluate_command("git push --force origin main")
+        output = self.cli.format_output(result)
+
+        self.assertIn("Command Analysis: git", output)
+        self.assertIn("Command Risk Flags: cmd_git_force_push", output)
+        self.assertIn("Command Danger: Git force push detected", output)
 
     def test_format_includes_operation_analysis(self):
         """Output includes operation analysis."""
