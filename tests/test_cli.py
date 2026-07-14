@@ -159,9 +159,8 @@ class TestCLICommandMode(unittest.TestCase):
 
     def test_command_mode_unknown_returns_two(self):
         """Unknown verdict returns exit code 2."""
-        # Some commands may result in unknown verdict
         exit_code = self.cli.run_command_mode('ls -la')
-        self.assertIn(exit_code, [0, 1, 2])  # Can be any valid exit code
+        self.assertEqual(exit_code, 2)
 
     def test_command_mode_produces_output(self):
         """Command mode produces output."""
@@ -282,6 +281,82 @@ class TestCLIMain(unittest.TestCase):
         finally:
             sys.argv = old_argv
             sys.stdout = old_stdout
+
+    def test_main_check_command_allow(self):
+        """Main supports check subcommand for allowed actions."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            sys.argv = ["circuit-breaker", "check", 'mkdir "/tmp/test"']
+            sys.stdout = StringIO()
+            exit_code = main()
+            output = sys.stdout.getvalue()
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Verdict: ALLOW", output)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_check_command_block(self):
+        """Main supports check subcommand for blocked actions."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            sys.argv = ["circuit-breaker", "check", 'rm -rf "/"']
+            sys.stdout = StringIO()
+            exit_code = main()
+            output = sys.stdout.getvalue()
+            self.assertEqual(exit_code, 1)
+            self.assertIn("Verdict: BLOCK", output)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_check_command_unknown(self):
+        """Main returns unknown for unrecognized actions."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            sys.argv = ["circuit-breaker", "check", "ls -la"]
+            sys.stdout = StringIO()
+            exit_code = main()
+            output = sys.stdout.getvalue()
+            self.assertEqual(exit_code, 2)
+            self.assertIn("Verdict: UNKNOWN", output)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_check_command_json_format(self):
+        """Main supports --format json with check subcommand."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            sys.argv = ["circuit-breaker", "check", 'rm -rf "/"', "--format", "json"]
+            sys.stdout = StringIO()
+            exit_code = main()
+            output = sys.stdout.getvalue()
+            parsed = json.loads(output)
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(parsed["verdict"], "block")
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_invalid_subcommand(self):
+        """Main rejects unsupported positional commands."""
+        old_argv = sys.argv
+        old_stderr = sys.stderr
+        try:
+            sys.argv = ["circuit-breaker", "scan", 'rm -rf "/"']
+            sys.stderr = StringIO()
+            exit_code = main()
+            output = sys.stderr.getvalue()
+            self.assertEqual(exit_code, 1)
+            self.assertIn("expected", output)
+        finally:
+            sys.argv = old_argv
+            sys.stderr = old_stderr
 
     def test_main_command_mode_block(self):
         """Main with blocking command."""

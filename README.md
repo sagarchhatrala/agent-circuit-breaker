@@ -23,11 +23,17 @@ pip install agent-circuit-breaker
 ### Usage
 
 ```bash
-circuit-breaker check "rm -rf /home/user/*"
-# Output: BLOCK (matches: fs_recursive_delete)
+circuit-breaker check "rm -rf /etc"
+# Verdict: BLOCK
 
-circuit-breaker check "ls /home" --verbose
-# Output: ALLOW (no matching block rules)
+circuit-breaker check "mkdir /tmp/example"
+# Verdict: ALLOW
+
+circuit-breaker check "ls /home"
+# Verdict: UNKNOWN
+
+circuit-breaker check "rm -rf /" --format json
+# JSON result with verdict, decision, matched rule, and operation analysis
 ```
 
 ---
@@ -77,8 +83,8 @@ Action → Inspector(s) → Rules → Engine → Decision (allow/block/error/unk
 - ✅ Filesystem inspector (dangerous paths, recursive delete, bulk operations)
 - ✅ 5+ built-in safety rules
 - ✅ CLI interface
-- ✅ 60+ tests
-- ✅ Full documentation
+- 100+ tests
+- Documentation in progress
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
 
@@ -124,9 +130,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.1.0 (Alpha)
+**Current**: v0.1.0-alpha in progress
 
-**Next**: v0.2 (Command Inspector)
+**Next**: finish v0.1 documentation and CLI polish
 
 ---
 

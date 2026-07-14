@@ -1,4 +1,34 @@
-# Quick Start Checklist
+# Quick Start
+
+## Local Setup
+
+```bash
+pip install -e .
+```
+
+## Run The Test Suite
+
+```bash
+python -m unittest discover
+```
+
+## Run The CLI
+
+```bash
+circuit-breaker check "rm -rf /"
+# Verdict: BLOCK
+
+circuit-breaker check "mkdir /tmp/example"
+# Verdict: ALLOW
+
+circuit-breaker check "ls -la"
+# Verdict: UNKNOWN
+
+circuit-breaker check "rm -rf /etc" --format json
+# JSON output
+```
+
+## Historical Checklist
 
 ## Pre-Development Setup
 
@@ -65,30 +95,30 @@
 pip install -e .
 
 # Run tests
-python -m pytest tests/ -v
+python -m unittest discover
 
 # Run CLI
 circuit-breaker check "rm -rf /"
 ```
 
-## Next: Create GitHub Repository
+## Repository Status
 
-1. Create empty repo on GitHub: `sagarchhatrala/agent-circuit-breaker`
-2. Push local repo:
+The GitHub repository already exists at `sagarchhatrala/agent-circuit-breaker`.
+
+Historical setup commands:
+
    ```bash
    git remote add origin https://github.com/sagarchhatrala/agent-circuit-breaker.git
    git branch -M main
    git push -u origin main
    git push --tags
    ```
-3. Add topics: `security`, `ai-agents`, `safety`, `deterministic`
-4. Enable discussions for community feedback
 
 ## Success Indicators
 
-- ✅ All 60+ tests passing
+- ✅ All 100+ tests passing
 - ✅ No silent failures in engine
 - ✅ CLI responds deterministically
-- ✅ Documentation complete
+- Documentation in progress
 - ✅ Code is readable and maintainable
 - ✅ Ready for public GitHub release

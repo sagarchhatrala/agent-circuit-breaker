@@ -3,7 +3,7 @@
 import sys
 import json
 import argparse
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
@@ -13,16 +13,22 @@ from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 class CircuitBreakerCLI:
     """CLI interface for Agent Circuit Breaker safety evaluation."""
 
-    def __init__(self, verbose: bool = False, json_output: bool = False):
+    def __init__(
+        self,
+        verbose: bool = False,
+        output_format: str = "text",
+        json_output: bool = False,
+    ):
         """
         Initialize the CLI.
 
         Args:
             verbose: Enable verbose output
-            json_output: Enable JSON output format
+            output_format: Output format, either "text" or "json"
+            json_output: Compatibility shortcut for JSON output
         """
         self.verbose = verbose
-        self.json_output = json_output
+        self.output_format = "json" if json_output else output_format
         self.engine = Engine()
         self.inspector = FilesystemInspector()
 
@@ -131,7 +137,7 @@ class CircuitBreakerCLI:
         Returns:
             Formatted output string
         """
-        if self.json_output:
+        if self.output_format == "json":
             return json.dumps(result, indent=2)
 
         # Human-readable format
@@ -243,20 +249,24 @@ class CircuitBreakerCLI:
 Agent Circuit Breaker - Safety Evaluation Tool
 
 Usage:
-  circuit-breaker [OPTIONS] [COMMAND]
+  circuit-breaker check <ACTION> [OPTIONS]
+  circuit-breaker -c <ACTION> [OPTIONS]
+  circuit-breaker -i [OPTIONS]
 
 Options:
   -h, --help              Show this help message
   -i, --interactive       Enter interactive mode
-  -j, --json              Output results as JSON
+  --format text|json      Output format (default: text)
+  -j, --json              Shortcut for --format json
   -v, --verbose           Enable verbose output
   -c, --command CMD       Evaluate a single command
 
 Examples:
-  circuit-breaker -i                           # Interactive mode
-  circuit-breaker -c 'rm -rf /'                # Evaluate single command
-  circuit-breaker -c 'rm /tmp/file' --json    # JSON output
-  circuit-breaker -c 'mv /src /dst' -v        # Verbose output
+  circuit-breaker check 'rm -rf /'              # Evaluate an action
+  circuit-breaker check 'mkdir /tmp/example'    # Known safe filesystem action
+  circuit-breaker check 'ls -la'                # Unknown action
+  circuit-breaker check 'rm -rf /etc' --format json
+  circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
 Exit Codes:
   0 - Command allowed
@@ -282,32 +292,56 @@ def main() -> int:
     parser.add_argument("-h", "--help", action="store_true", help="Show help message")
     parser.add_argument("-i", "--interactive", action="store_true", help="Interactive mode")
     parser.add_argument(
-        "-j", "--json", action="store_true", dest="json_output", help="JSON output format"
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        dest="output_format",
+        help="Output format",
+    )
+    parser.add_argument(
+        "-j",
+        "--json",
+        action="store_true",
+        dest="json_output",
+        help="Shortcut for --format json",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_argument("-c", "--command", type=str, help="Command to evaluate")
+    parser.add_argument(
+        "command_parts",
+        nargs="*",
+        help="Use: check <action>",
+    )
 
     try:
         args = parser.parse_args()
+        output_format = "json" if args.json_output else args.output_format
 
         # Handle help
         if args.help:
-            cli = CircuitBreakerCLI(verbose=args.verbose, json_output=args.json_output)
+            cli = CircuitBreakerCLI(verbose=args.verbose, output_format=output_format)
             cli._print_help()
             return 0
 
         # Create CLI instance
-        cli = CircuitBreakerCLI(verbose=args.verbose, json_output=args.json_output)
+        cli = CircuitBreakerCLI(verbose=args.verbose, output_format=output_format)
 
         # Handle command mode
         if args.command:
             return cli.run_command_mode(args.command)
 
+        if args.command_parts:
+            if args.command_parts[0] != "check" or len(args.command_parts) < 2:
+                print("Error: expected 'circuit-breaker check <action>'", file=sys.stderr)
+                return 1
+
+            return cli.run_command_mode(" ".join(args.command_parts[1:]))
+
         # Handle interactive mode (default if no command)
-        if args.interactive or not args.command:
+        if args.interactive:
             return cli.run_interactive()
 
-        return 0
+        return cli.run_interactive()
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
