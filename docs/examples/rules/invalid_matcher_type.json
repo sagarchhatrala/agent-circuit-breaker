@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "custom_regex_rule",
+      "title": "Unsupported regex matcher",
+      "severity": "HIGH",
+      "response": "block",
+      "matcher": {
+        "type": "regex",
+        "value": "deploy.*production"
+      }
+    }
+  ]
+}

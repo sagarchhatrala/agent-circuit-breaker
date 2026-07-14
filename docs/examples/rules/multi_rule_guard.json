@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "custom_deploy_guard",
+      "title": "Block production deployment phrase",
+      "severity": "HIGH",
+      "response": "block",
+      "matcher": {
+        "type": "contains",
+        "value": "deploy production"
+      },
+      "metadata": {
+        "category": "custom"
+      }
+    },
+    {
+      "id": "custom_destroy_prefix",
+      "title": "Block terraform destroy prefix",
+      "severity": "CRITICAL",
+      "response": "block",
+      "matcher": {
+        "type": "prefix",
+        "value": "terraform destroy"
+      },
+      "metadata": {
+        "category": "infrastructure"
+      }
+    }
+  ]
+}

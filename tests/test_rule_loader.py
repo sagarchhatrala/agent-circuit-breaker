@@ -7,10 +7,16 @@ from pathlib import Path
 
 from agent_circuit_breaker.engine import Decision, Engine, Rule
 from agent_circuit_breaker.rules.loader import (
+    RULE_SCHEMA_VERSION,
     RuleDefinitionBuilder,
     RuleDefinitionValidator,
     RuleFileLoader,
+    RuleSchema,
 )
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+EXAMPLE_RULE_DIR = REPO_ROOT / "docs" / "examples" / "rules"
 
 
 def valid_definition():
@@ -183,6 +189,16 @@ class TestRuleDefinitionValidator(unittest.TestCase):
         self.assertEqual(result1, result2)
         self.assertEqual(result2, result3)
 
+    def test_schema_metadata_matches_validator_constants(self):
+        """Schema metadata should expose the validator contract deterministically."""
+        metadata = RuleSchema.metadata()
+
+        self.assertEqual(metadata["version"], RULE_SCHEMA_VERSION)
+        self.assertEqual(metadata["matcher_types"], ["contains", "equals", "prefix"])
+        self.assertEqual(metadata["response_values"], ["allow", "block"])
+        self.assertEqual(metadata["severity_values"], ["CRITICAL", "HIGH", "LOW", "MEDIUM"])
+        self.assertEqual(metadata["required_rule_fields"], ["id", "matcher", "response", "severity", "title"])
+
 
 class TestRuleFileLoader(unittest.TestCase):
     """Test external rule definition file loading."""
@@ -275,6 +291,37 @@ class TestRuleFileLoader(unittest.TestCase):
 
         self.assertEqual(result1, result2)
         self.assertEqual(result2, result3)
+
+
+class TestRuleSchemaFixtures(unittest.TestCase):
+    """Test documented rule schema fixture files."""
+
+    def test_valid_fixture_files_pass_validation(self):
+        """Valid documented fixtures should pass loader validation."""
+        for fixture_name in ("custom_deploy_guard.json", "multi_rule_guard.json"):
+            with self.subTest(fixture_name=fixture_name):
+                result = RuleFileLoader.load(str(EXAMPLE_RULE_DIR / fixture_name))
+
+                self.assertTrue(result["is_valid"])
+                self.assertEqual(result["errors"], [])
+                self.assertIsNotNone(result["definition"])
+
+    def test_invalid_fixture_files_fail_validation(self):
+        """Invalid documented fixtures should fail loader validation."""
+        cases = {
+            "invalid_duplicate_ids.json": "rules[1].id duplicates rule id: duplicate_rule",
+            "invalid_matcher_type.json": "rules[0].matcher.type must be one of contains, equals, prefix",
+            "invalid_metadata.json": "rules[0].metadata must be an object",
+            "invalid_missing_rules.json": "Missing required top-level field: rules",
+        }
+
+        for fixture_name, expected_error in cases.items():
+            with self.subTest(fixture_name=fixture_name):
+                result = RuleFileLoader.load(str(EXAMPLE_RULE_DIR / fixture_name))
+
+                self.assertFalse(result["is_valid"])
+                self.assertIn(expected_error, result["errors"])
+                self.assertIsNone(result["definition"])
 
 
 class TestRuleDefinitionBuilder(unittest.TestCase):

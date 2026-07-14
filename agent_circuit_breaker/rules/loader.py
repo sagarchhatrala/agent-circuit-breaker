@@ -7,6 +7,8 @@ from typing import Any, Callable, Dict, List, Set
 
 from agent_circuit_breaker.engine import Rule
 
+RULE_SCHEMA_VERSION = 1
+
 
 class RuleDefinitionValidator:
     """Validates parsed external rule definitions without executing them."""
@@ -52,8 +54,8 @@ class RuleDefinitionValidator:
             if field not in cls.ALLOWED_TOP_LEVEL_FIELDS:
                 errors.append(f"Unknown top-level field: {field}")
 
-        if "version" in definition and definition["version"] != 1:
-            errors.append("version must be 1")
+        if "version" in definition and definition["version"] != RULE_SCHEMA_VERSION:
+            errors.append(f"version must be {RULE_SCHEMA_VERSION}")
 
         if "rules" not in definition:
             errors.append("Missing required top-level field: rules")
@@ -270,3 +272,21 @@ class RuleDefinitionBuilder:
             return lambda action, value=matcher_value: isinstance(action, str) and action.startswith(value)
 
         raise ValueError(f"Unsupported matcher type: {matcher_type}")
+
+
+class RuleSchema:
+    """Data-only description of the supported external rule schema."""
+
+    @staticmethod
+    def metadata() -> Dict[str, Any]:
+        """Return deterministic schema metadata for docs and integrations."""
+        return {
+            "version": RULE_SCHEMA_VERSION,
+            "top_level_fields": sorted(RuleDefinitionValidator.ALLOWED_TOP_LEVEL_FIELDS),
+            "required_rule_fields": sorted(RuleDefinitionValidator.REQUIRED_RULE_FIELDS),
+            "optional_rule_fields": sorted(RuleDefinitionValidator.OPTIONAL_RULE_FIELDS),
+            "severity_values": sorted(RuleDefinitionValidator.ALLOWED_SEVERITIES),
+            "response_values": sorted(RuleDefinitionValidator.ALLOWED_RESPONSES),
+            "matcher_types": sorted(RuleDefinitionValidator.ALLOWED_MATCHER_TYPES),
+            "required_matcher_fields": sorted(RuleDefinitionValidator.REQUIRED_MATCHER_FIELDS),
+        }

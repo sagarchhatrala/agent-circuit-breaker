@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "custom_bad_metadata",
+      "title": "Invalid metadata",
+      "severity": "LOW",
+      "response": "block",
+      "matcher": {
+        "type": "equals",
+        "value": "noop"
+      },
+      "metadata": "custom"
+    }
+  ]
+}

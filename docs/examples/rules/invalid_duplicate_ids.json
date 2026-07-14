@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "duplicate_rule",
+      "title": "First duplicate rule",
+      "severity": "HIGH",
+      "response": "block",
+      "matcher": {
+        "type": "contains",
+        "value": "first"
+      }
+    },
+    {
+      "id": "duplicate_rule",
+      "title": "Second duplicate rule",
+      "severity": "HIGH",
+      "response": "block",
+      "matcher": {
+        "type": "contains",
+        "value": "second"
+      }
+    }
+  ]
+}
