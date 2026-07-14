@@ -203,6 +203,10 @@ python -m unittest discover
 
 The project uses the Python standard library test runner.
 
+## Release Notes
+
+- [v0.3.0-alpha.1](releases/v0.3.0-alpha.1.md)
+
 ## Known Limits
 
 - Shell parsing is heuristic, not a complete shell grammar.
