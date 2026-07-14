@@ -2,6 +2,8 @@
 
 The v1.0 milestone marks the first stable release of Agent Circuit Breaker.
 
+Status: implemented for `v1.0.0`.
+
 ## Goals
 
 - Stabilize the public Python API, CLI, decision contract, and rule schema version 1.

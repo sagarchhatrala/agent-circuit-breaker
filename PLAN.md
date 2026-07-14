@@ -1,8 +1,8 @@
-# Agent Circuit Breaker v0.9 Release Candidate Plan
+# Agent Circuit Breaker v1.0 Stable Plan
 
 Project goal: build a deterministic safety layer between AI coding agents and the operating system.
 
-The current release target is `v0.9.0-rc.1`. This release candidate freezes the intended v1.0 surface and adds compatibility and release-process documentation.
+The current release target is `v1.0.0`. This stable release finalizes the public API, CLI, decision contract, and external rule schema version 1.
 
 ## Current Status
 
@@ -26,6 +26,7 @@ Completed:
 - Integration guide
 - Compatibility policy
 - Release checklist
+- Production-readiness documentation
 - Dedicated external rule schema documentation
 - Valid and invalid rule fixture coverage
 - CLI command: `circuit-breaker check <action>`
@@ -36,7 +37,7 @@ Completed:
 - GitHub `main` push workflow
 - GitHub prerelease workflow
 
-Remaining before tagging `v0.9.0-rc.1`:
+Remaining before tagging `v1.0.0`:
 
 - Release-readiness cleanup
 - Editable install verification
@@ -45,7 +46,7 @@ Remaining before tagging `v0.9.0-rc.1`:
 - Git tag and push
 - GitHub prerelease
 
-## v0.9 Release Candidate Scope
+## v1.0 Stable Scope
 
 In scope:
 
@@ -75,6 +76,7 @@ In scope:
 - CLI and Python integration guidance
 - Public API, CLI, decision, and rule schema compatibility policy
 - Repeatable release checklist
+- Production-readiness release plan
 - Fixture-backed valid and invalid schema examples
 - Safe rule construction for contains, equals, and prefix matchers
 - CLI validation through `validate-rules <path>`
@@ -117,17 +119,19 @@ Out of scope:
 - integration docs require callers to stop on `BLOCK` and `ERROR`
 - compatibility docs define stable public API and CLI contracts
 - release checklist includes tests, smokes, tag push, and GitHub Release steps
+- package metadata uses production/stable status
 - `circuit-breaker check "mkdir /tmp/example"` returns `ALLOW`
 - `circuit-breaker check "ls -la"` returns `UNKNOWN`
 - Documentation describes only currently supported behavior
 - `main` is pushed to GitHub
-- `v0.9.0-rc.1` tag is pushed to GitHub
-- GitHub prerelease is published
+- `v1.0.0` tag is pushed to GitHub
+- GitHub stable release is published
 
 ## Next Milestones
 
-After `v0.9.0-rc.1`, continue with:
+After `v1.0.0`, continue with:
 
-- v1.0: stable API, release process, and production-readiness review
+- compatible patch releases for bug fixes
+- compatible minor releases for additive safety coverage
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for details.

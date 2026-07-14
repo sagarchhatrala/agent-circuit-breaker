@@ -231,6 +231,8 @@ Implemented so far:
 
 Goal: make the project reliable enough for real agent integration.
 
+Status: released as `v1.0.0`.
+
 Candidate requirements:
 
 - stable public API
@@ -241,6 +243,17 @@ Candidate requirements:
 - release checklist
 - complete documentation
 - broader adversarial test suite
+
+Implemented so far:
+
+- stable public Python API.
+- stable CLI commands and exit codes.
+- stable decision contract.
+- external JSON rule schema version 1.
+- compatibility policy.
+- release checklist.
+- security model, threat model, and integration guide.
+- adversarial and documentation regression tests.
 
 ## Companion Products
 

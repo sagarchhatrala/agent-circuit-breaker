@@ -98,7 +98,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.9 Release Candidate Scope
+## v1.0 Stable Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
@@ -115,6 +115,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Newline-separated command chain inspection
 - Security model, threat model, and integration guide
 - Compatibility policy and release checklist
+- Production-readiness documentation
 - Optional custom rule enforcement through `--rules`
 - CLI interface
 - 304 tests
@@ -136,6 +137,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - CLI and Python integration guidance
 - **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)** - API, CLI, decision, and rule schema compatibility
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
+- **[docs/V1_0_PRODUCTION_READINESS.md](docs/V1_0_PRODUCTION_READINESS.md)** - stable release readiness
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
 - **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale
 - **[docs/ROADMAP.md](docs/ROADMAP.md)** - future milestones
@@ -171,9 +173,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.9.0-rc.1
+**Current**: v1.0.0
 
-**Next**: stable v1.0 release
+**Next**: compatible patch and minor releases
 
 ---
 
@@ -183,4 +185,4 @@ Sagar Chhatrala - [GitHub](https://github.com/sagarchhatrala)
 
 ---
 
-**This is an experimental project focused on deterministic safety for AI agents.**
+**This is a stable deterministic safety gate for AI agent integrations.**

@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.9 release candidate scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
+The current v1.0 stable scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -66,6 +66,7 @@ Release readiness references:
 
 - [COMPATIBILITY.md](COMPATIBILITY.md)
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- [V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)
 
 Append validated custom rules to a check:
 
@@ -263,6 +264,8 @@ The v0.8 security documentation milestone adds explicit security model, threat m
 
 The v0.9 release candidate milestone adds compatibility policy and release checklist documentation for v1.0 readiness.
 
+The v1.0 stable milestone marks the public API, CLI, decision contract, and rule schema version 1 as stable.
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests
@@ -282,6 +285,7 @@ The project uses the Python standard library test runner.
 - [v0.7.0-alpha.1](releases/v0.7.0-alpha.1.md)
 - [v0.8.0-alpha.1](releases/v0.8.0-alpha.1.md)
 - [v0.9.0-rc.1](releases/v0.9.0-rc.1.md)
+- [v1.0.0](releases/v1.0.0.md)
 
 ## Known Limits
 

@@ -1,6 +1,6 @@
 """Agent Circuit Breaker - Deterministic safety layer for AI agents."""
 
-__version__ = "0.9.0rc1"
+__version__ = "1.0.0"
 __author__ = "Sagar Chhatrala"
 
 from .engine import Engine, Decision, Rule
