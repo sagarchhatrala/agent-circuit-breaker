@@ -2,6 +2,8 @@
 
 The v0.8 milestone documents how Agent Circuit Breaker should and should not be trusted by real integrations.
 
+Status: implemented for `v0.8.0-alpha.1`.
+
 ## Goals
 
 - Document the security model and trust boundaries.

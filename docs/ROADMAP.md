@@ -190,7 +190,7 @@ Implemented so far:
 
 Goal: document the security model, threat assumptions, and integration boundaries.
 
-Status: planned.
+Status: released as `v0.8.0-alpha.1`.
 
 Candidate work:
 
@@ -199,6 +199,13 @@ Candidate work:
 - integration guide.
 - explicit non-goals and trust boundaries.
 - documentation link checks.
+
+Implemented so far:
+
+- security model reference.
+- threat model reference.
+- CLI and Python integration guide.
+- documentation regression tests for security links and key trust-boundary statements.
 
 ## v0.9: Release Candidate
 

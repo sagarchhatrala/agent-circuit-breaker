@@ -98,7 +98,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.7 Alpha Scope
+## v0.8 Alpha Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
@@ -113,9 +113,10 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Adversarial regression tests for malformed and hostile inputs
 - Fail-closed handling for malformed command and SQL parsing
 - Newline-separated command chain inspection
+- Security model, threat model, and integration guide
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 295 tests
+- 300 tests
 - Documentation for current alpha behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -129,6 +130,9 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/README.md](docs/README.md)** - usage guide
 - **[docs/API.md](docs/API.md)** - public Python API
 - **[docs/RULE_SCHEMA.md](docs/RULE_SCHEMA.md)** - external JSON rule schema
+- **[docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md)** - security model and trust boundaries
+- **[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)** - threat model and residual risk
+- **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - CLI and Python integration guidance
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
 - **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale
 - **[docs/ROADMAP.md](docs/ROADMAP.md)** - future milestones
@@ -164,9 +168,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.7.0-alpha.1
+**Current**: v0.8.0-alpha.1
 
-**Next**: security documentation alpha toward v1.0
+**Next**: release candidate toward v1.0
 
 ---
 
