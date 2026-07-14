@@ -2,6 +2,8 @@
 
 The v0.9 milestone freezes the intended v1.0 surface and performs release-readiness cleanup.
 
+Status: implemented for `v0.9.0-rc.1`.
+
 ## Goals
 
 - Document the compatibility policy for the public API, CLI, rule schema, and decisions.

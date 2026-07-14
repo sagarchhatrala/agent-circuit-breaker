@@ -1,8 +1,8 @@
-# Agent Circuit Breaker v0.8 Alpha Plan
+# Agent Circuit Breaker v0.9 Release Candidate Plan
 
 Project goal: build a deterministic safety layer between AI coding agents and the operating system.
 
-The current release target is `v0.8.0-alpha.1`. This alpha adds security model, threat model, and integration documentation on top of the v0.7 adversarial testing foundation.
+The current release target is `v0.9.0-rc.1`. This release candidate freezes the intended v1.0 surface and adds compatibility and release-process documentation.
 
 ## Current Status
 
@@ -24,6 +24,8 @@ Completed:
 - Security model documentation
 - Threat model documentation
 - Integration guide
+- Compatibility policy
+- Release checklist
 - Dedicated external rule schema documentation
 - Valid and invalid rule fixture coverage
 - CLI command: `circuit-breaker check <action>`
@@ -34,7 +36,7 @@ Completed:
 - GitHub `main` push workflow
 - GitHub prerelease workflow
 
-Remaining before tagging `v0.8.0-alpha.1`:
+Remaining before tagging `v0.9.0-rc.1`:
 
 - Release-readiness cleanup
 - Editable install verification
@@ -43,7 +45,7 @@ Remaining before tagging `v0.8.0-alpha.1`:
 - Git tag and push
 - GitHub prerelease
 
-## v0.8 Alpha Scope
+## v0.9 Release Candidate Scope
 
 In scope:
 
@@ -71,6 +73,8 @@ In scope:
 - Security model and trust boundary documentation
 - Threat model and residual risk documentation
 - CLI and Python integration guidance
+- Public API, CLI, decision, and rule schema compatibility policy
+- Repeatable release checklist
 - Fixture-backed valid and invalid schema examples
 - Safe rule construction for contains, equals, and prefix matchers
 - CLI validation through `validate-rules <path>`
@@ -111,18 +115,19 @@ Out of scope:
 - newline-separated command chains are inspected
 - security docs state the project is not a sandbox
 - integration docs require callers to stop on `BLOCK` and `ERROR`
+- compatibility docs define stable public API and CLI contracts
+- release checklist includes tests, smokes, tag push, and GitHub Release steps
 - `circuit-breaker check "mkdir /tmp/example"` returns `ALLOW`
 - `circuit-breaker check "ls -la"` returns `UNKNOWN`
 - Documentation describes only currently supported behavior
 - `main` is pushed to GitHub
-- `v0.8.0-alpha.1` tag is pushed to GitHub
+- `v0.9.0-rc.1` tag is pushed to GitHub
 - GitHub prerelease is published
 
 ## Next Milestones
 
-After `v0.8.0-alpha.1`, continue with:
+After `v0.9.0-rc.1`, continue with:
 
-- v0.9: release candidate
 - v1.0: stable API, release process, and production-readiness review
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for details.

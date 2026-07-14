@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.8 alpha scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, and security documentation: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
+The current v0.9 release candidate scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -281,6 +281,7 @@ The project uses the Python standard library test runner.
 - [v0.6.0-alpha.1](releases/v0.6.0-alpha.1.md)
 - [v0.7.0-alpha.1](releases/v0.7.0-alpha.1.md)
 - [v0.8.0-alpha.1](releases/v0.8.0-alpha.1.md)
+- [v0.9.0-rc.1](releases/v0.9.0-rc.1.md)
 
 ## Known Limits
 

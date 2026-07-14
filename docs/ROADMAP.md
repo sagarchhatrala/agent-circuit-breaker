@@ -211,7 +211,7 @@ Implemented so far:
 
 Goal: freeze the v1.0 surface and complete release readiness checks.
 
-Status: planned.
+Status: released as `v0.9.0-rc.1`.
 
 Candidate work:
 
@@ -220,6 +220,12 @@ Candidate work:
 - final README and quickstart pass.
 - public API contract review.
 - full regression and smoke verification.
+
+Implemented so far:
+
+- compatibility policy covering public API, CLI, decision contract, and rule schema.
+- repeatable release checklist.
+- documentation regression tests for release-readiness docs.
 
 ## v1.0: Production Readiness
 
