@@ -60,7 +60,7 @@ Design questions:
 
 Goal: detect destructive SQL statements before execution.
 
-Status: preparing `v0.3.0-alpha.1`.
+Status: released as `v0.3.0-alpha.1`.
 
 Detailed plan: [V0_3_SQL_INSPECTOR.md](V0_3_SQL_INSPECTOR.md)
 
@@ -90,6 +90,10 @@ Design questions:
 ## v0.4: Rule Loading And Validation
 
 Goal: support external rule files safely.
+
+Status: planned.
+
+Detailed plan: [V0_4_RULE_LOADING.md](V0_4_RULE_LOADING.md)
 
 Candidate work:
 
