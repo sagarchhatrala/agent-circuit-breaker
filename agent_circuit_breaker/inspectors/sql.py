@@ -13,8 +13,8 @@ class SQLInspector:
         """
         Analyze SQL text into a deterministic token structure.
 
-        This foundation step only tokenizes. Statement splitting and risk
-        detection are added in later v0.3 slices.
+        This foundation step tokenizes, splits statements, and marks a small
+        set of destructive SQL statement shapes for later rule evaluation.
         """
         result: Dict[str, Any] = {
             "raw": sql,
@@ -38,6 +38,7 @@ class SQLInspector:
         try:
             result["tokens"] = SQLInspector.tokenize(sql)
             result["statements"] = SQLInspector.split_statements(sql)
+            SQLInspector._apply_risk_analysis(result)
         except ValueError as exc:
             result["is_valid"] = False
             result["error"] = str(exc)
@@ -182,6 +183,64 @@ class SQLInspector:
             "is_dangerous": False,
             "danger_reason": None,
         }
+
+    @staticmethod
+    def _apply_risk_analysis(result: Dict[str, Any]) -> None:
+        """Apply statement risk detection and aggregate top-level flags."""
+        risk_flags: List[str] = []
+        danger_reasons: List[str] = []
+
+        for statement in result["statements"]:
+            SQLInspector._detect_statement_risks(statement)
+
+            for risk_flag in statement["risk_flags"]:
+                if risk_flag not in risk_flags:
+                    risk_flags.append(risk_flag)
+
+            danger_reason = statement["danger_reason"]
+            if danger_reason and danger_reason not in danger_reasons:
+                danger_reasons.append(danger_reason)
+
+        result["risk_flags"] = risk_flags
+        result["is_dangerous"] = bool(risk_flags)
+        result["danger_reason"] = "; ".join(danger_reasons) if danger_reasons else None
+
+    @staticmethod
+    def _detect_statement_risks(statement: Dict[str, Any]) -> None:
+        """Mark destructive SQL statement shapes using parsed tokens only."""
+        tokens_lower = [token.lower() for token in statement["tokens"]]
+        risks: List[tuple[str, str]] = []
+
+        if len(tokens_lower) >= 2 and tokens_lower[:2] == ["drop", "table"]:
+            risks.append(("sql_drop_table", "DROP TABLE detected"))
+
+        if len(tokens_lower) >= 2 and tokens_lower[:2] == ["drop", "database"]:
+            risks.append(("sql_drop_database", "DROP DATABASE detected"))
+
+        if tokens_lower and tokens_lower[0] == "truncate":
+            risks.append(("sql_truncate", "TRUNCATE detected"))
+
+        if (
+            len(tokens_lower) >= 3
+            and tokens_lower[:2] == ["delete", "from"]
+            and "where" not in tokens_lower
+        ):
+            risks.append(("sql_unqualified_delete", "Unqualified DELETE detected"))
+
+        if (
+            len(tokens_lower) >= 4
+            and tokens_lower[0] == "update"
+            and "set" in tokens_lower
+            and "where" not in tokens_lower
+        ):
+            risks.append(("sql_unqualified_update", "Unqualified UPDATE detected"))
+
+        if not risks:
+            return
+
+        statement["risk_flags"] = [risk_flag for risk_flag, _ in risks]
+        statement["is_dangerous"] = True
+        statement["danger_reason"] = "; ".join(reason for _, reason in risks)
 
     @staticmethod
     def _read_quoted(sql: str, start: int, quote: str) -> tuple[str, int]:

@@ -43,13 +43,14 @@ class TestSQLInspectorAnalysis(unittest.TestCase):
         self.assertEqual(result["statements"][0]["raw"], "SELECT * FROM users")
 
     def test_delete_statement(self):
-        """DELETE statement should tokenize without risk detection yet."""
+        """Unqualified DELETE statement should be marked dangerous."""
         result = SQLInspector.analyze_sql("DELETE FROM users")
 
         self.assertTrue(result["is_valid"])
         self.assertEqual(result["tokens"], ["DELETE", "FROM", "users"])
         self.assertEqual(result["statements"][0]["statement_type"], "delete")
-        self.assertFalse(result["is_dangerous"])
+        self.assertTrue(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], ["sql_unqualified_delete"])
 
     def test_update_statement_with_punctuation(self):
         """UPDATE statement should tokenize assignment punctuation."""
@@ -216,6 +217,129 @@ class TestSQLInspectorStatements(unittest.TestCase):
         self.assertFalse(result["is_valid"])
         self.assertEqual(result["statements"], [])
         self.assertEqual(result["error"], "Unclosed block comment")
+
+
+class TestSQLInspectorDestructiveStatements(unittest.TestCase):
+    """Test destructive SQL statement detection."""
+
+    def assertDangerousSql(self, sql, expected_flags, expected_reason):
+        """Assert a SQL string is marked dangerous with expected flags."""
+        result = SQLInspector.analyze_sql(sql)
+
+        self.assertTrue(result["is_valid"])
+        self.assertTrue(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], expected_flags)
+        self.assertEqual(result["danger_reason"], expected_reason)
+        self.assertTrue(result["statements"][0]["is_dangerous"])
+        self.assertEqual(result["statements"][0]["risk_flags"], expected_flags)
+
+    def test_drop_table_dangerous(self):
+        """DROP TABLE should be marked dangerous."""
+        self.assertDangerousSql(
+            "DROP TABLE users",
+            ["sql_drop_table"],
+            "DROP TABLE detected",
+        )
+
+    def test_drop_database_dangerous(self):
+        """DROP DATABASE should be marked dangerous."""
+        self.assertDangerousSql(
+            "DROP DATABASE prod",
+            ["sql_drop_database"],
+            "DROP DATABASE detected",
+        )
+
+    def test_truncate_dangerous(self):
+        """TRUNCATE should be marked dangerous."""
+        self.assertDangerousSql(
+            "TRUNCATE users",
+            ["sql_truncate"],
+            "TRUNCATE detected",
+        )
+
+    def test_truncate_table_dangerous(self):
+        """TRUNCATE TABLE should be marked dangerous."""
+        self.assertDangerousSql(
+            "TRUNCATE TABLE users",
+            ["sql_truncate"],
+            "TRUNCATE detected",
+        )
+
+    def test_unqualified_delete_dangerous(self):
+        """DELETE FROM without WHERE should be marked dangerous."""
+        self.assertDangerousSql(
+            "DELETE FROM users",
+            ["sql_unqualified_delete"],
+            "Unqualified DELETE detected",
+        )
+
+    def test_unqualified_update_dangerous(self):
+        """UPDATE without WHERE should be marked dangerous."""
+        self.assertDangerousSql(
+            "UPDATE users SET active = false",
+            ["sql_unqualified_update"],
+            "Unqualified UPDATE detected",
+        )
+
+    def test_quoted_drop_table_not_dangerous(self):
+        """Destructive text inside a quoted string should not be dangerous."""
+        result = SQLInspector.analyze_sql("SELECT 'DROP TABLE users'")
+
+        self.assertTrue(result["is_valid"])
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_quoted_line_comment_not_dangerous(self):
+        """Comment-like text inside a quoted string should not be dangerous."""
+        result = SQLInspector.analyze_sql("SELECT '-- DELETE FROM users'")
+
+        self.assertTrue(result["is_valid"])
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_qualified_delete_not_dangerous(self):
+        """DELETE FROM with WHERE should not be marked dangerous."""
+        result = SQLInspector.analyze_sql("DELETE FROM users WHERE id = 1")
+
+        self.assertTrue(result["is_valid"])
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_qualified_update_not_dangerous(self):
+        """UPDATE with WHERE should not be marked dangerous."""
+        result = SQLInspector.analyze_sql("UPDATE users SET active = false WHERE id = 1")
+
+        self.assertTrue(result["is_valid"])
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_identifier_containing_truncate_not_dangerous(self):
+        """A table name containing truncate should not be marked dangerous."""
+        result = SQLInspector.analyze_sql("SELECT * FROM truncate_log")
+
+        self.assertTrue(result["is_valid"])
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_multiple_statements_aggregate_risks(self):
+        """Multiple destructive statements should aggregate unique flags."""
+        result = SQLInspector.analyze_sql("DROP TABLE users; DELETE FROM audit_log")
+
+        self.assertTrue(result["is_valid"])
+        self.assertTrue(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], ["sql_drop_table", "sql_unqualified_delete"])
+        self.assertEqual(result["danger_reason"], "DROP TABLE detected; Unqualified DELETE detected")
+
+    def test_dangerous_analysis_deterministic(self):
+        """Repeated destructive SQL analysis should return the same structure."""
+        sql = "DROP DATABASE prod; UPDATE users SET active = false"
+
+        result1 = SQLInspector.analyze_sql(sql)
+        result2 = SQLInspector.analyze_sql(sql)
+        result3 = SQLInspector.analyze_sql(sql)
+
+        self.assertEqual(result1, result2)
+        self.assertEqual(result2, result3)
 
 
 class TestSQLInspectorDeterminism(unittest.TestCase):
