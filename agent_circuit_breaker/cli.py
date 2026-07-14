@@ -7,6 +7,7 @@ from typing import Dict, Any
 
 from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
+from agent_circuit_breaker.rules.loader import RuleFileLoader
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 from agent_circuit_breaker.inspectors.command import CommandInspector
 from agent_circuit_breaker.inspectors.sql import SQLInspector
@@ -320,6 +321,46 @@ class CircuitBreakerCLI:
         else:  # unknown
             return 2
 
+    def run_validate_rules_mode(self, path: str) -> int:
+        """
+        Run rule-file validation mode.
+
+        Args:
+            path: JSON rule file path to validate
+
+        Returns:
+            Exit code (0 for valid, 1 for invalid)
+        """
+        result = RuleFileLoader.load(path)
+        output = self.format_rule_validation_output(path, result)
+        print(output)
+
+        return 0 if result["is_valid"] else 1
+
+    def format_rule_validation_output(self, path: str, result: Dict[str, Any]) -> str:
+        """Format rule validation result for output."""
+        output = {
+            "path": path,
+            "is_valid": result["is_valid"],
+            "errors": result["errors"],
+            "definition": result["definition"],
+        }
+
+        if self.output_format == "json":
+            return json.dumps(output, indent=2)
+
+        lines = [
+            f"Rule File: {path}",
+            f"Valid: {str(result['is_valid']).upper()}",
+        ]
+
+        if result["errors"]:
+            lines.append("Errors:")
+            for error in result["errors"]:
+                lines.append(f"  - {error}")
+
+        return "\n".join(lines)
+
     def _print_help(self) -> None:
         """Print help information."""
         help_text = """
@@ -327,6 +368,7 @@ Agent Circuit Breaker - Safety Evaluation Tool
 
 Usage:
   circuit-breaker check <ACTION> [OPTIONS]
+  circuit-breaker validate-rules <PATH> [OPTIONS]
   circuit-breaker -c <ACTION> [OPTIONS]
   circuit-breaker -i [OPTIONS]
 
@@ -343,6 +385,7 @@ Examples:
   circuit-breaker check 'mkdir /tmp/example'    # Known safe filesystem action
   circuit-breaker check 'ls -la'                # Unknown action
   circuit-breaker check 'rm -rf /etc' --format json
+  circuit-breaker validate-rules ./rules.json
   circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
 Exit Codes:
@@ -408,11 +451,18 @@ def main() -> int:
             return cli.run_command_mode(args.command)
 
         if args.command_parts:
-            if args.command_parts[0] != "check" or len(args.command_parts) < 2:
-                print("Error: expected 'circuit-breaker check <action>'", file=sys.stderr)
-                return 1
+            if args.command_parts[0] == "check" and len(args.command_parts) >= 2:
+                return cli.run_command_mode(" ".join(args.command_parts[1:]))
 
-            return cli.run_command_mode(" ".join(args.command_parts[1:]))
+            if args.command_parts[0] == "validate-rules" and len(args.command_parts) == 2:
+                return cli.run_validate_rules_mode(args.command_parts[1])
+
+            print(
+                "Error: expected 'circuit-breaker check <action>' or "
+                "'circuit-breaker validate-rules <path>'",
+                file=sys.stderr,
+            )
+            return 1
 
         # Handle interactive mode (default if no command)
         if args.interactive:

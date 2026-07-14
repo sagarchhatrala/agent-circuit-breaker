@@ -3,8 +3,36 @@
 import unittest
 import json
 import sys
+import tempfile
 from io import StringIO
+from pathlib import Path
 from agent_circuit_breaker.cli import CircuitBreakerCLI, main
+
+
+def valid_rule_definition():
+    """Return a minimal valid external rule definition."""
+    return {
+        "version": 1,
+        "rules": [
+            {
+                "id": "custom_block_tmp_delete",
+                "title": "Block tmp deletion",
+                "severity": "HIGH",
+                "response": "block",
+                "matcher": {
+                    "type": "contains",
+                    "value": "rm -rf /tmp",
+                },
+            }
+        ],
+    }
+
+
+def write_rule_file(directory, name, definition):
+    """Write a JSON rule file and return its path."""
+    path = Path(directory) / name
+    path.write_text(json.dumps(definition), encoding="utf-8")
+    return str(path)
 
 
 class TestCLIEvaluation(unittest.TestCase):
@@ -323,6 +351,63 @@ class TestCLICommandMode(unittest.TestCase):
             sys.stdout = old_stdout
 
 
+class TestCLIRuleValidationMode(unittest.TestCase):
+    """Test CLI rule-file validation mode."""
+
+    def test_validate_rules_valid_file_returns_zero(self):
+        """Valid rule files return exit code 0."""
+        cli = CircuitBreakerCLI(verbose=False, json_output=False)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_rule_file(temp_dir, "rules.json", valid_rule_definition())
+            old_stdout = sys.stdout
+            try:
+                sys.stdout = StringIO()
+                exit_code = cli.run_validate_rules_mode(path)
+                output = sys.stdout.getvalue()
+            finally:
+                sys.stdout = old_stdout
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Rule File:", output)
+        self.assertIn("Valid: TRUE", output)
+
+    def test_validate_rules_invalid_file_returns_one(self):
+        """Invalid rule files return exit code 1 with errors."""
+        cli = CircuitBreakerCLI(verbose=False, json_output=False)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_rule_file(temp_dir, "rules.json", {"version": 1})
+            old_stdout = sys.stdout
+            try:
+                sys.stdout = StringIO()
+                exit_code = cli.run_validate_rules_mode(path)
+                output = sys.stdout.getvalue()
+            finally:
+                sys.stdout = old_stdout
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Valid: FALSE", output)
+        self.assertIn("Missing required top-level field: rules", output)
+
+    def test_format_rule_validation_json_output(self):
+        """Rule validation JSON output should be machine-readable."""
+        cli = CircuitBreakerCLI(verbose=False, json_output=True)
+        result = {
+            "is_valid": False,
+            "errors": ["Missing required top-level field: rules"],
+            "definition": None,
+        }
+
+        output = cli.format_rule_validation_output("rules.json", result)
+        parsed = json.loads(output)
+
+        self.assertEqual(parsed["path"], "rules.json")
+        self.assertFalse(parsed["is_valid"])
+        self.assertEqual(parsed["errors"], ["Missing required top-level field: rules"])
+        self.assertIsNone(parsed["definition"])
+
+
 class TestCLIInteractiveMode(unittest.TestCase):
     """Test CLI interactive mode functionality."""
 
@@ -555,6 +640,42 @@ class TestCLIMain(unittest.TestCase):
             self.assertEqual(parsed["verdict"], "block")
             self.assertEqual(parsed["matched_rule"], "sql_truncate")
             self.assertIn("sql_truncate", parsed["sql_analysis"]["risk_flags"])
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_validate_rules_valid_file(self):
+        """Main validates valid external rule files."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path = write_rule_file(temp_dir, "rules.json", valid_rule_definition())
+                sys.argv = ["circuit-breaker", "validate-rules", path]
+                sys.stdout = StringIO()
+                exit_code = main()
+                output = sys.stdout.getvalue()
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Valid: TRUE", output)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_validate_rules_invalid_json_output(self):
+        """Main supports JSON output for rule validation errors."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path = write_rule_file(temp_dir, "rules.json", {"version": 1})
+                sys.argv = ["circuit-breaker", "validate-rules", path, "--format", "json"]
+                sys.stdout = StringIO()
+                exit_code = main()
+                output = sys.stdout.getvalue()
+            parsed = json.loads(output)
+            self.assertEqual(exit_code, 1)
+            self.assertFalse(parsed["is_valid"])
+            self.assertEqual(parsed["errors"], ["Missing required top-level field: rules"])
         finally:
             sys.argv = old_argv
             sys.stdout = old_stdout
