@@ -28,6 +28,28 @@ def valid_rule_definition():
     }
 
 
+def custom_rule_definition(matcher_type="contains", matcher_value="deploy production", response="block"):
+    """Return a valid external rule definition with configurable matcher."""
+    return {
+        "version": 1,
+        "rules": [
+            {
+                "id": "custom_deploy_guard",
+                "title": "Custom deploy guard",
+                "severity": "HIGH",
+                "response": response,
+                "matcher": {
+                    "type": matcher_type,
+                    "value": matcher_value,
+                },
+                "metadata": {
+                    "category": "custom",
+                },
+            }
+        ],
+    }
+
+
 def write_rule_file(directory, name, definition):
     """Write a JSON rule file and return its path."""
     path = Path(directory) / name
@@ -349,6 +371,59 @@ class TestCLICommandMode(unittest.TestCase):
             self.assertTrue(len(output) > 0)
         finally:
             sys.stdout = old_stdout
+
+    def test_command_mode_custom_rules_block(self):
+        """Command mode enforces validated custom rules when provided."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_rule_file(temp_dir, "rules.json", custom_rule_definition())
+            old_stdout = sys.stdout
+            try:
+                sys.stdout = StringIO()
+                exit_code = self.cli.run_command_mode("please deploy production now", path)
+                output = sys.stdout.getvalue()
+            finally:
+                sys.stdout = old_stdout
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Verdict: BLOCK", output)
+        self.assertIn("Matched Rule: custom_deploy_guard", output)
+
+    def test_command_mode_invalid_custom_rules_fail_closed(self):
+        """Invalid custom rule files should stop command evaluation."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_rule_file(temp_dir, "rules.json", {"version": 1})
+            old_stdout = sys.stdout
+            try:
+                sys.stdout = StringIO()
+                exit_code = self.cli.run_command_mode("deploy production", path)
+                output = sys.stdout.getvalue()
+            finally:
+                sys.stdout = old_stdout
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Valid: FALSE", output)
+        self.assertIn("Missing required top-level field: rules", output)
+        self.assertNotIn("Verdict:", output)
+
+    def test_builtin_rules_take_precedence_over_custom_rules(self):
+        """Built-in rules should be evaluated before custom rules."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_rule_file(
+                temp_dir,
+                "rules.json",
+                custom_rule_definition(matcher_type="contains", matcher_value="rm -rf /", response="allow"),
+            )
+            old_stdout = sys.stdout
+            try:
+                sys.stdout = StringIO()
+                exit_code = self.cli.run_command_mode('rm -rf "/"', path)
+                output = sys.stdout.getvalue()
+            finally:
+                sys.stdout = old_stdout
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Verdict: BLOCK", output)
+        self.assertIn("Matched Rule: fs_recursive_delete", output)
 
 
 class TestCLIRuleValidationMode(unittest.TestCase):
@@ -676,6 +751,41 @@ class TestCLIMain(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             self.assertFalse(parsed["is_valid"])
             self.assertEqual(parsed["errors"], ["Missing required top-level field: rules"])
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_check_with_custom_rules_blocks(self):
+        """Main check supports custom rule files."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path = write_rule_file(temp_dir, "rules.json", custom_rule_definition())
+                sys.argv = ["circuit-breaker", "check", "please", "deploy", "production", "--rules", path]
+                sys.stdout = StringIO()
+                exit_code = main()
+                output = sys.stdout.getvalue()
+            self.assertEqual(exit_code, 1)
+            self.assertIn("Verdict: BLOCK", output)
+            self.assertIn("Matched Rule: custom_deploy_guard", output)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_command_shortcut_with_custom_rules_blocks(self):
+        """Command shortcut supports custom rule files."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path = write_rule_file(temp_dir, "rules.json", custom_rule_definition())
+                sys.argv = ["circuit-breaker", "-c", "deploy production", "--rules", path]
+                sys.stdout = StringIO()
+                exit_code = main()
+                output = sys.stdout.getvalue()
+            self.assertEqual(exit_code, 1)
+            self.assertIn("Matched Rule: custom_deploy_guard", output)
         finally:
             sys.argv = old_argv
             sys.stdout = old_stdout

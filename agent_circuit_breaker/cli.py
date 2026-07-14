@@ -3,11 +3,11 @@
 import sys
 import json
 import argparse
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
-from agent_circuit_breaker.rules.loader import RuleFileLoader
+from agent_circuit_breaker.rules.loader import RuleDefinitionBuilder, RuleFileLoader
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 from agent_circuit_breaker.inspectors.command import CommandInspector
 from agent_circuit_breaker.inspectors.sql import SQLInspector
@@ -37,7 +37,7 @@ class CircuitBreakerCLI:
         self.command_inspector = CommandInspector()
         self.sql_inspector = SQLInspector()
 
-    def evaluate_command(self, command: str) -> Dict[str, Any]:
+    def evaluate_command(self, command: str, extra_rules: Optional[List[Any]] = None) -> Dict[str, Any]:
         """
         Evaluate a shell command for safety.
 
@@ -130,7 +130,8 @@ class CircuitBreakerCLI:
             }
 
             # Evaluate against engine rules
-            decision, matched_rule = self.engine.evaluate(command, BUILTIN_RULES)
+            rules = BUILTIN_RULES + (extra_rules or [])
+            decision, matched_rule = self.engine.evaluate(command, rules)
             if decision == Decision.UNKNOWN and self._is_known_safe_operation(operation_analysis):
                 decision = Decision.ALLOW
 
@@ -297,7 +298,7 @@ class CircuitBreakerCLI:
 
         return 0
 
-    def run_command_mode(self, command: str) -> int:
+    def run_command_mode(self, command: str, rule_file_path: Optional[str] = None) -> int:
         """
         Run in command mode, evaluating a single command.
 
@@ -307,7 +308,16 @@ class CircuitBreakerCLI:
         Returns:
             Exit code (0 for allow, 1 for block/error, 2 for unknown)
         """
-        result = self.evaluate_command(command)
+        custom_rules = []
+        if rule_file_path:
+            custom_rule_result = self.load_custom_rules(rule_file_path)
+            if not custom_rule_result["is_valid"]:
+                output = self.format_rule_validation_output(rule_file_path, custom_rule_result)
+                print(output)
+                return 1
+            custom_rules = custom_rule_result["rules"]
+
+        result = self.evaluate_command(command, custom_rules)
         output = self.format_output(result)
         print(output)
 
@@ -320,6 +330,26 @@ class CircuitBreakerCLI:
             return 1
         else:  # unknown
             return 2
+
+    @staticmethod
+    def load_custom_rules(path: str) -> Dict[str, Any]:
+        """Load, validate, and build external rule definitions."""
+        load_result = RuleFileLoader.load(path)
+        if not load_result["is_valid"]:
+            return {
+                "is_valid": False,
+                "errors": load_result["errors"],
+                "definition": load_result["definition"],
+                "rules": [],
+            }
+
+        build_result = RuleDefinitionBuilder.build_rules(load_result["definition"])
+        return {
+            "is_valid": build_result["is_valid"],
+            "errors": build_result["errors"],
+            "definition": load_result["definition"] if build_result["is_valid"] else None,
+            "rules": build_result["rules"],
+        }
 
     def run_validate_rules_mode(self, path: str) -> int:
         """
@@ -379,12 +409,14 @@ Options:
   -j, --json              Shortcut for --format json
   -v, --verbose           Enable verbose output
   -c, --command CMD       Evaluate a single command
+  --rules PATH            Append validated external rules for command checks
 
 Examples:
   circuit-breaker check 'rm -rf /'              # Evaluate an action
   circuit-breaker check 'mkdir /tmp/example'    # Known safe filesystem action
   circuit-breaker check 'ls -la'                # Unknown action
   circuit-breaker check 'rm -rf /etc' --format json
+  circuit-breaker check 'deploy production' --rules ./rules.json
   circuit-breaker validate-rules ./rules.json
   circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
@@ -427,6 +459,7 @@ def main() -> int:
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_argument("-c", "--command", type=str, help="Command to evaluate")
+    parser.add_argument("--rules", dest="rule_file_path", type=str, help="External JSON rule file")
     parser.add_argument(
         "command_parts",
         nargs="*",
@@ -448,11 +481,11 @@ def main() -> int:
 
         # Handle command mode
         if args.command:
-            return cli.run_command_mode(args.command)
+            return cli.run_command_mode(args.command, args.rule_file_path)
 
         if args.command_parts:
             if args.command_parts[0] == "check" and len(args.command_parts) >= 2:
-                return cli.run_command_mode(" ".join(args.command_parts[1:]))
+                return cli.run_command_mode(" ".join(args.command_parts[1:]), args.rule_file_path)
 
             if args.command_parts[0] == "validate-rules" and len(args.command_parts) == 2:
                 return cli.run_validate_rules_mode(args.command_parts[1])
