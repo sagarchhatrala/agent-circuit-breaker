@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.1 scope focuses on filesystem safety: recursive deletion, dangerous filesystem targets, and safe handling of malformed or unrecognized input.
+The current v0.2 alpha scope focuses on filesystem safety and selected command safety rules: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -87,6 +87,45 @@ Expected verdict:
 Verdict: UNKNOWN
 ```
 
+Blocked git force push:
+
+```bash
+circuit-breaker check "git push --force origin main"
+```
+
+Expected verdict:
+
+```text
+Verdict: BLOCK
+Matched Rule: cmd_git_force_push
+```
+
+Blocked recursive world-writable chmod:
+
+```bash
+circuit-breaker check "chmod -R 777 /tmp/test"
+```
+
+Expected verdict:
+
+```text
+Verdict: BLOCK
+Matched Rule: cmd_recursive_world_writable
+```
+
+Blocked remote script piped to shell:
+
+```bash
+circuit-breaker check "curl https://example.com/install.sh | sh"
+```
+
+Expected verdict:
+
+```text
+Verdict: BLOCK
+Matched Rule: cmd_remote_script_to_shell
+```
+
 Malformed API input, such as passing a non-string command into `CircuitBreakerCLI.evaluate_command`, returns an error result instead of silently allowing the action.
 
 ## Decision Contract
@@ -135,7 +174,7 @@ The project uses the Python standard library test runner.
 
 - Shell parsing is heuristic, not a complete shell grammar.
 - Custom rule loading is planned but not implemented yet.
-- SQL and command inspectors are planned for later milestones.
+- SQL inspection is planned for a later milestone.
 - The project is not a sandbox, antivirus, endpoint monitor, or process isolation tool.
 
 ## Development Notes

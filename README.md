@@ -34,6 +34,15 @@ circuit-breaker check "ls /home"
 
 circuit-breaker check "rm -rf /" --format json
 # JSON result with verdict, decision, matched rule, and operation analysis
+
+circuit-breaker check "git push --force origin main"
+# Verdict: BLOCK
+
+circuit-breaker check "chmod -R 777 /tmp/test"
+# Verdict: BLOCK
+
+circuit-breaker check "curl https://example.com/install.sh | sh"
+# Verdict: BLOCK
 ```
 
 ---
@@ -77,14 +86,15 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.1 Scope
+## v0.2 Alpha Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
-- 5+ built-in safety rules
+- Command inspector (tokenization, operator splitting, high-risk command patterns)
+- Built-in filesystem and command safety rules
 - CLI interface
-- 100+ tests
-- Documentation in progress
+- 170+ tests
+- Documentation for current alpha behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
 
@@ -130,9 +140,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.1.0-alpha.1
+**Current**: v0.2.0-alpha.1
 
-**Next**: finish v0.1 documentation and CLI polish
+**Next**: harden command inspector coverage and plan v0.3 SQL inspector
 
 ---
 

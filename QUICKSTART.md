@@ -26,6 +26,15 @@ circuit-breaker check "ls -la"
 
 circuit-breaker check "rm -rf /etc" --format json
 # JSON output
+
+circuit-breaker check "git push --force origin main"
+# Verdict: BLOCK
+
+circuit-breaker check "chmod -R 777 /tmp/test"
+# Verdict: BLOCK
+
+circuit-breaker check "curl https://example.com/install.sh | sh"
+# Verdict: BLOCK
 ```
 
 `-c/--command` remains available as a compatibility shortcut:
@@ -49,6 +58,7 @@ Before tagging a release:
 pip install -e .
 python -m unittest discover
 circuit-breaker check "rm -rf /"
+circuit-breaker check "git push --force origin main"
 ```
 
 Expected result for the smoke test:
@@ -59,4 +69,4 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v0.1.0-alpha.1`: filesystem safety alpha with stable CLI behavior and complete project documentation for the implemented scope.
+The current target is `v0.2.0-alpha.1`: filesystem and command safety alpha with enforced command rules for high-risk command patterns.

@@ -1,10 +1,10 @@
 # Roadmap
 
-This roadmap tracks planned milestones without expanding the v0.1 scope beyond the current safety layer.
+This roadmap tracks planned milestones while keeping each release narrow and testable.
 
 ## v0.1: Filesystem Safety Alpha
 
-Status: in progress.
+Status: released as `v0.1.0-alpha.1`.
 
 Current completed work:
 
@@ -17,15 +17,7 @@ Current completed work:
 - test suite with 100+ tests
 - README and quickstart alignment
 
-Remaining v0.1 work:
-
-- finish documentation set
-- review public method docstrings and type hints
-- clarify package release readiness
-- update `PLAN.md` to reflect actual implementation status
-- tag and push `v0.1.0-alpha.1`
-
-Exit criteria:
+Exit criteria met:
 
 - all tests pass with `python -m unittest discover`
 - docs accurately describe current behavior
@@ -36,6 +28,8 @@ Exit criteria:
 ## v0.2: Command Inspector
 
 Goal: inspect command-level hazards beyond basic filesystem heuristics.
+
+Status: preparing `v0.2.0-alpha.1`.
 
 Detailed plan: [V0_2_COMMAND_INSPECTOR.md](V0_2_COMMAND_INSPECTOR.md)
 
