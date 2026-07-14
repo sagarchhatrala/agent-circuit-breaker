@@ -1,4 +1,4 @@
-"""Rules — Declarative safety policy definitions."""
+"""Rules - Declarative safety policy definitions."""
 
 from .builtin_rules import BUILTIN_RULES
 

@@ -57,18 +57,18 @@ Without a deterministic safety layer, an LLM hallucination or misalignment can c
 
 ## Design Philosophy
 
-1. **Deterministic over AI** — Explicit rules beat probabilistic reasoning
-2. **Fail secure** — When in doubt, block
-3. **Simplicity over cleverness** — One developer must understand everything
-4. **No silent failures** — Always explicit (allow/block/error/unknown)
-5. **Minimal dependencies** — Python stdlib only
+1. **Deterministic over AI** - Explicit rules beat probabilistic reasoning
+2. **Fail secure** - When in doubt, block
+3. **Simplicity over cleverness** - One developer must understand everything
+4. **No silent failures** - Always explicit (allow/block/error/unknown)
+5. **Minimal dependencies** - Python stdlib only
 
 ---
 
 ## Architecture
 
 ```
-Action → Inspector(s) → Rules → Engine → Decision (allow/block/error/unknown)
+Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown)
 ```
 
 - **Inspector**: Domain-specific analysis (filesystem, command, SQL)
@@ -79,10 +79,10 @@ Action → Inspector(s) → Rules → Engine → Decision (allow/block/error/unk
 
 ## v0.1 Scope
 
-- ✅ Core engine with deterministic decision logic
-- ✅ Filesystem inspector (dangerous paths, recursive delete, bulk operations)
-- ✅ 5+ built-in safety rules
-- ✅ CLI interface
+- Core engine with deterministic decision logic
+- Filesystem inspector (dangerous paths, recursive delete, bulk operations)
+- 5+ built-in safety rules
+- CLI interface
 - 100+ tests
 - Documentation in progress
 
@@ -92,12 +92,12 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 
 ## Documentation
 
-- **[PLAN.md](PLAN.md)** — 2-week milestone roadmap
-- **[ENGINEERING.md](ENGINEERING.md)** — Project constitution and principles
-- **[docs/README.md](docs/README.md)** — Usage guide
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System design
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — Rationale
-- **[docs/ROADMAP.md](docs/ROADMAP.md)** — Future milestones
+- **[PLAN.md](PLAN.md)** - alpha release plan
+- **[ENGINEERING.md](ENGINEERING.md)** - project constitution and principles
+- **[docs/README.md](docs/README.md)** - usage guide
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** - future milestones
 
 ---
 
@@ -115,7 +115,7 @@ Pull requests should:
 
 ## License
 
-MIT License — See [LICENSE](LICENSE)
+MIT License - See [LICENSE](LICENSE)
 
 ---
 
@@ -130,7 +130,7 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.1.0-alpha in progress
+**Current**: v0.1.0-alpha.1
 
 **Next**: finish v0.1 documentation and CLI polish
 
@@ -138,7 +138,7 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Author
 
-Sagar Chhatrala — [GitHub](https://github.com/sagarchhatrala)
+Sagar Chhatrala - [GitHub](https://github.com/sagarchhatrala)
 
 ---
 

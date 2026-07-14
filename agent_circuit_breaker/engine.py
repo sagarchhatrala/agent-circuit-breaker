@@ -1,5 +1,5 @@
 """
-Engine — Core decision logic for Agent Circuit Breaker.
+Engine - Core decision logic for Agent Circuit Breaker.
 
 The engine receives an action and a rule set, then returns a deterministic decision.
 """
@@ -94,7 +94,7 @@ class Engine:
             return Decision.ERROR, None
         
         if not rules:
-            # No rules provided — nothing to evaluate against
+            # No rules provided - nothing to evaluate against
             return Decision.UNKNOWN, None
         
         # Evaluate each rule in order
@@ -106,14 +106,14 @@ class Engine:
             try:
                 # Call the matcher function
                 if rule.matcher(action):
-                    # Rule matched — return the decision based on rule response
+                    # Rule matched - return the decision based on rule response
                     if rule.response == "block":
                         return Decision.BLOCK, rule
                     elif rule.response == "allow":
                         return Decision.ALLOW, rule
             
             except Exception as e:
-                # Matcher raised an exception — treat as error
+                # Matcher raised an exception - treat as error
                 # This prevents silent failures
                 return Decision.ERROR, None
         

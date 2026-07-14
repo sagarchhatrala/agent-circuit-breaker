@@ -23,7 +23,7 @@ Remaining v0.1 work:
 - review public method docstrings and type hints
 - clarify package release readiness
 - update `PLAN.md` to reflect actual implementation status
-- decide whether to tag `v0.1.0-alpha`
+- tag and push `v0.1.0-alpha.1`
 
 Exit criteria:
 

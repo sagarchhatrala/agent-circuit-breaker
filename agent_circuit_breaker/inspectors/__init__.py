@@ -1,4 +1,4 @@
-"""Inspectors — Domain-specific action analysis."""
+"""Inspectors - Domain-specific action analysis."""
 
 from .filesystem import FilesystemInspector
 

@@ -1,5 +1,5 @@
 """
-Built-in rules — Default filesystem safety policy.
+Built-in rules - Default filesystem safety policy.
 
 These rules describe dangerous filesystem operations that should be blocked.
 """
