@@ -119,6 +119,23 @@ Design questions:
 - How should callable logic be represented declaratively?
 - What rule features are intentionally unsupported?
 
+## v0.5: Rule Schema Hardening
+
+Goal: make the external rule format explicit, documented, and regression-tested.
+
+Status: planned.
+
+Detailed plan: [V0_5_RULE_SCHEMA.md](V0_5_RULE_SCHEMA.md)
+
+Candidate work:
+
+- formal rule schema documentation
+- schema constants exposed by the package
+- valid and invalid fixture files
+- tests that validate every documented fixture
+- clearer matcher semantics
+- stronger duplicate and unsupported-field examples
+
 ## v1.0: Production Readiness
 
 Goal: make the project reliable enough for real agent integration.
