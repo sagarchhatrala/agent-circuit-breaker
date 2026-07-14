@@ -6,6 +6,7 @@ These rules describe dangerous filesystem operations that should be blocked.
 
 from ..engine import Rule
 from ..inspectors.filesystem import FilesystemInspector
+from ..inspectors.command import CommandInspector
 
 
 def _is_recursive_delete(action: str) -> bool:
@@ -74,6 +75,30 @@ def _is_unqualified_glob_delete(action: str) -> bool:
     return False
 
 
+def _has_command_risk(action: str, risk_flag: str) -> bool:
+    """Return true when command analysis reports a specific risk flag."""
+    analysis = CommandInspector.analyze_command(action)
+    if not analysis["is_valid"]:
+        return False
+
+    return risk_flag in analysis["risk_flags"]
+
+
+def _is_git_force_push(action: str) -> bool:
+    """Detect git force push operations."""
+    return _has_command_risk(action, "cmd_git_force_push")
+
+
+def _is_recursive_world_writable(action: str) -> bool:
+    """Detect recursive chmod 777 operations."""
+    return _has_command_risk(action, "cmd_recursive_world_writable")
+
+
+def _is_remote_script_to_shell(action: str) -> bool:
+    """Detect remote script download piped directly to a shell."""
+    return _has_command_risk(action, "cmd_remote_script_to_shell")
+
+
 # Built-in filesystem safety rules
 BUILTIN_RULES = [
     Rule(
@@ -123,6 +148,42 @@ BUILTIN_RULES = [
         metadata={
             "description": "Blocks bulk recursive deletes using wildcards (rm -rf /*, etc.)",
             "category": "filesystem",
+        }
+    ),
+
+    Rule(
+        id="cmd_git_force_push",
+        title="Git force push detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_git_force_push,
+        metadata={
+            "description": "Blocks git push operations using --force, -f, or --force-with-lease",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_recursive_world_writable",
+        title="Recursive world-writable chmod detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_recursive_world_writable,
+        metadata={
+            "description": "Blocks recursive chmod 777 operations",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_remote_script_to_shell",
+        title="Remote script piped to shell detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_remote_script_to_shell,
+        metadata={
+            "description": "Blocks curl/wget output piped directly to sh or bash",
+            "category": "command",
         }
     ),
 ]

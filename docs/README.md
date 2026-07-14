@@ -115,6 +115,12 @@ The v0.1 built-in rule set focuses on filesystem deletion risks:
 - root and home-directory deletion patterns
 - unqualified recursive glob deletion patterns
 
+The command inspector also enforces a small v0.2 command safety set:
+
+- `git push --force`, `git push -f`, and `git push --force-with-lease`
+- recursive world-writable permissions such as `chmod -R 777 <target>`
+- remote script execution patterns such as `curl ... | sh` and `wget ... | bash`
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests

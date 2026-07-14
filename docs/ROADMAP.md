@@ -48,6 +48,14 @@ Candidate coverage:
 - script execution patterns
 - safer handling of quoted and escaped shell arguments
 
+Implemented so far:
+
+- tokenizer foundation
+- shell operator splitting for `&&`, `||`, `;`, and `|`
+- command risk detection for git force push, recursive chmod 777, and remote script piped to shell
+- CLI command analysis output
+- built-in command safety rules for the detected command risks
+
 Design questions:
 
 - How much shell parsing can be implemented safely without external dependencies?
