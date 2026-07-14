@@ -94,10 +94,10 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 
 - **[PLAN.md](PLAN.md)** — 2-week milestone roadmap
 - **[ENGINEERING.md](ENGINEERING.md)** — Project constitution and principles
-- **[docs/README.md](docs/README.md)** — Usage guide (in development)
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System design (in development)
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — Rationale (in development)
-- **[docs/ROADMAP.md](docs/ROADMAP.md)** — Future milestones (in development)
+- **[docs/README.md](docs/README.md)** — Usage guide
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System design
+- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** — Rationale
+- **[docs/ROADMAP.md](docs/ROADMAP.md)** — Future milestones
 
 ---
 
