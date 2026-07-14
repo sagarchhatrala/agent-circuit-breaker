@@ -37,6 +37,8 @@ Exit criteria:
 
 Goal: inspect command-level hazards beyond basic filesystem heuristics.
 
+Detailed plan: [V0_2_COMMAND_INSPECTOR.md](V0_2_COMMAND_INSPECTOR.md)
+
 Candidate coverage:
 
 - command tokenization
