@@ -83,13 +83,48 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertIn("sql_drop_table", result["sql_analysis"]["risk_flags"])
         self.assertTrue(result["sql_analysis"]["is_dangerous"])
 
-    def test_sql_analysis_does_not_enforce_yet(self):
-        """SQL analysis is exposed before SQL rules are enforced."""
+    def test_sql_drop_table_blocks(self):
+        """SQL DROP TABLE risk is enforced."""
         result = self.cli.evaluate_command("DROP TABLE users")
 
-        self.assertEqual(result["verdict"], "unknown")
-        self.assertIsNone(result["matched_rule"])
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "sql_drop_table")
         self.assertIn("sql_drop_table", result["sql_analysis"]["risk_flags"])
+
+    def test_sql_destructive_patterns_block(self):
+        """Scoped destructive SQL risk flags are enforced."""
+        cases = [
+            ("DROP DATABASE prod", "sql_drop_database"),
+            ("TRUNCATE TABLE users", "sql_truncate"),
+            ("DELETE FROM users", "sql_unqualified_delete"),
+            ("UPDATE users SET active = false", "sql_unqualified_update"),
+        ]
+
+        for sql, expected_rule in cases:
+            with self.subTest(sql=sql):
+                result = self.cli.evaluate_command(sql)
+
+                self.assertEqual(result["verdict"], "block")
+                self.assertEqual(result["matched_rule"], expected_rule)
+                self.assertIn(expected_rule, result["sql_analysis"]["risk_flags"])
+
+    def test_sql_false_positives_do_not_block(self):
+        """Quoted strings and qualified SQL should not trigger SQL rules."""
+        cases = [
+            "SELECT 'DROP TABLE users'",
+            "SELECT '-- DELETE FROM users'",
+            "DELETE FROM users WHERE id = 1",
+            "UPDATE users SET active = false WHERE id = 1",
+            "SELECT * FROM truncate_log",
+        ]
+
+        for sql in cases:
+            with self.subTest(sql=sql):
+                result = self.cli.evaluate_command(sql)
+
+                self.assertEqual(result["verdict"], "unknown")
+                self.assertIsNone(result["matched_rule"])
+                self.assertEqual(result["sql_analysis"]["risk_flags"], [])
 
     def test_git_force_push_blocks(self):
         """Command inspector git force push risk is enforced."""
@@ -197,7 +232,8 @@ class TestCLIOutput(unittest.TestCase):
         output = cli.format_output(result)
         parsed = json.loads(output)
 
-        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertEqual(parsed["verdict"], "block")
+        self.assertEqual(parsed["matched_rule"], "sql_unqualified_delete")
         self.assertIn("sql_unqualified_delete", parsed["sql_analysis"]["risk_flags"])
         self.assertTrue(parsed["sql_analysis"]["is_dangerous"])
 
@@ -506,7 +542,7 @@ class TestCLIMain(unittest.TestCase):
             sys.stdout = old_stdout
 
     def test_main_check_command_sql_json_analysis(self):
-        """Main JSON output includes SQL analysis before enforcement."""
+        """Main JSON output includes enforced SQL analysis."""
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
@@ -515,8 +551,9 @@ class TestCLIMain(unittest.TestCase):
             exit_code = main()
             output = sys.stdout.getvalue()
             parsed = json.loads(output)
-            self.assertEqual(exit_code, 2)
-            self.assertEqual(parsed["verdict"], "unknown")
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(parsed["verdict"], "block")
+            self.assertEqual(parsed["matched_rule"], "sql_truncate")
             self.assertIn("sql_truncate", parsed["sql_analysis"]["risk_flags"])
         finally:
             sys.argv = old_argv

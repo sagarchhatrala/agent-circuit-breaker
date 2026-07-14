@@ -7,6 +7,7 @@ These rules describe dangerous filesystem operations that should be blocked.
 from ..engine import Rule
 from ..inspectors.filesystem import FilesystemInspector
 from ..inspectors.command import CommandInspector
+from ..inspectors.sql import SQLInspector
 
 
 def _is_recursive_delete(action: str) -> bool:
@@ -84,6 +85,15 @@ def _has_command_risk(action: str, risk_flag: str) -> bool:
     return risk_flag in analysis["risk_flags"]
 
 
+def _has_sql_risk(action: str, risk_flag: str) -> bool:
+    """Return true when SQL analysis reports a specific risk flag."""
+    analysis = SQLInspector.analyze_sql(action)
+    if not analysis["is_valid"]:
+        return False
+
+    return risk_flag in analysis["risk_flags"]
+
+
 def _is_git_force_push(action: str) -> bool:
     """Detect git force push operations."""
     return _has_command_risk(action, "cmd_git_force_push")
@@ -97,6 +107,31 @@ def _is_recursive_world_writable(action: str) -> bool:
 def _is_remote_script_to_shell(action: str) -> bool:
     """Detect remote script download piped directly to a shell."""
     return _has_command_risk(action, "cmd_remote_script_to_shell")
+
+
+def _is_sql_drop_table(action: str) -> bool:
+    """Detect SQL DROP TABLE statements."""
+    return _has_sql_risk(action, "sql_drop_table")
+
+
+def _is_sql_drop_database(action: str) -> bool:
+    """Detect SQL DROP DATABASE statements."""
+    return _has_sql_risk(action, "sql_drop_database")
+
+
+def _is_sql_truncate(action: str) -> bool:
+    """Detect SQL TRUNCATE statements."""
+    return _has_sql_risk(action, "sql_truncate")
+
+
+def _is_sql_unqualified_delete(action: str) -> bool:
+    """Detect SQL DELETE statements without WHERE."""
+    return _has_sql_risk(action, "sql_unqualified_delete")
+
+
+def _is_sql_unqualified_update(action: str) -> bool:
+    """Detect SQL UPDATE statements without WHERE."""
+    return _has_sql_risk(action, "sql_unqualified_update")
 
 
 # Built-in filesystem safety rules
@@ -184,6 +219,66 @@ BUILTIN_RULES = [
         metadata={
             "description": "Blocks curl/wget output piped directly to sh or bash",
             "category": "command",
+        }
+    ),
+
+    Rule(
+        id="sql_drop_table",
+        title="SQL DROP TABLE detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_sql_drop_table,
+        metadata={
+            "description": "Blocks SQL DROP TABLE statements",
+            "category": "sql",
+        }
+    ),
+
+    Rule(
+        id="sql_drop_database",
+        title="SQL DROP DATABASE detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_sql_drop_database,
+        metadata={
+            "description": "Blocks SQL DROP DATABASE statements",
+            "category": "sql",
+        }
+    ),
+
+    Rule(
+        id="sql_truncate",
+        title="SQL TRUNCATE detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_sql_truncate,
+        metadata={
+            "description": "Blocks SQL TRUNCATE statements",
+            "category": "sql",
+        }
+    ),
+
+    Rule(
+        id="sql_unqualified_delete",
+        title="SQL DELETE without WHERE detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_sql_unqualified_delete,
+        metadata={
+            "description": "Blocks SQL DELETE statements that do not include a WHERE clause",
+            "category": "sql",
+        }
+    ),
+
+    Rule(
+        id="sql_unqualified_update",
+        title="SQL UPDATE without WHERE detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_sql_unqualified_update,
+        metadata={
+            "description": "Blocks SQL UPDATE statements that do not include a WHERE clause",
+            "category": "sql",
         }
     ),
 ]
