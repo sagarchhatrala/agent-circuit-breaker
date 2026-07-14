@@ -123,7 +123,7 @@ Design questions:
 
 Goal: make the external rule format explicit, documented, and regression-tested.
 
-Status: planned.
+Status: released as `v0.5.0-alpha.1`.
 
 Detailed plan: [V0_5_RULE_SCHEMA.md](V0_5_RULE_SCHEMA.md)
 
@@ -135,6 +135,70 @@ Candidate work:
 - tests that validate every documented fixture
 - clearer matcher semantics
 - stronger duplicate and unsupported-field examples
+
+Implemented so far:
+
+- dedicated rule schema reference.
+- schema version constant and deterministic metadata export.
+- valid single-rule and multi-rule fixtures.
+- invalid duplicate ID, matcher type, metadata, and missing-rules fixtures.
+- fixture validation tests.
+
+## v0.6: Public API Alpha
+
+Goal: expose a stable Python integration surface for callers that do not want to shell out to the CLI.
+
+Status: planned.
+
+Candidate work:
+
+- public package-level evaluation function.
+- public rule-file validation function.
+- deterministic dictionary result contract.
+- custom rule file support through the API.
+- API-focused tests and docs.
+
+## v0.7: Adversarial Test Alpha
+
+Goal: increase confidence with hostile, malformed, and edge-case inputs across inspectors and rule loading.
+
+Status: planned.
+
+Candidate work:
+
+- adversarial command parsing cases.
+- adversarial SQL parsing cases.
+- malformed and suspicious custom rule cases.
+- CLI determinism checks.
+- regression tests for fail-closed behavior.
+
+## v0.8: Security Documentation Alpha
+
+Goal: document the security model, threat assumptions, and integration boundaries.
+
+Status: planned.
+
+Candidate work:
+
+- security model reference.
+- threat model reference.
+- integration guide.
+- explicit non-goals and trust boundaries.
+- documentation link checks.
+
+## v0.9: Release Candidate
+
+Goal: freeze the v1.0 surface and complete release readiness checks.
+
+Status: planned.
+
+Candidate work:
+
+- compatibility policy.
+- release checklist.
+- final README and quickstart pass.
+- public API contract review.
+- full regression and smoke verification.
 
 ## v1.0: Production Readiness
 

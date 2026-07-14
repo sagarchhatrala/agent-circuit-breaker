@@ -45,6 +45,9 @@ circuit-breaker check "UPDATE users SET active = false WHERE id = 1"
 circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 # Valid: TRUE
 
+circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json
+# Valid: TRUE
+
 circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
 # Verdict: BLOCK
 ```
@@ -73,6 +76,7 @@ circuit-breaker check "rm -rf /"
 circuit-breaker check "git push --force origin main"
 circuit-breaker check "DROP TABLE users"
 circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json
 ```
 
 Expected result for the smoke test:
@@ -83,4 +87,4 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v0.4.0-alpha.1`: filesystem, command, SQL, and external JSON rule safety alpha with optional custom rule enforcement.
+The current target is `v0.5.0-alpha.1`: filesystem, command, SQL, and external JSON rule safety alpha with documented schema metadata and fixture-backed rule validation.

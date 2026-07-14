@@ -2,6 +2,8 @@
 
 The v0.5 milestone hardens the v0.4 external JSON rule format. The goal is to make the supported schema explicit, test fixture-backed, and stable enough to document as a pre-1.0 contract.
 
+Status: implemented for `v0.5.0-alpha.1`.
+
 ## Goals
 
 - Document the full rule schema in one dedicated reference.

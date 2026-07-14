@@ -1,8 +1,8 @@
-# Agent Circuit Breaker v0.4 Alpha Plan
+# Agent Circuit Breaker v0.5 Alpha Plan
 
 Project goal: build a deterministic safety layer between AI coding agents and the operating system.
 
-The current release target is `v0.4.0-alpha.1`. This alpha adds external JSON rule loading, validation, and optional custom rule enforcement on top of the v0.3 filesystem, command, and SQL safety foundation.
+The current release target is `v0.5.0-alpha.1`. This alpha hardens the external JSON rule schema on top of the v0.4 rule loading foundation.
 
 ## Current Status
 
@@ -16,6 +16,9 @@ Completed:
 - SQL inspector
 - Rule definition validator
 - Rule file loader
+- Rule schema metadata API
+- Dedicated external rule schema documentation
+- Valid and invalid rule fixture coverage
 - CLI command: `circuit-breaker check <action>`
 - CLI command: `circuit-breaker validate-rules <path>`
 - Text and JSON CLI output
@@ -24,7 +27,7 @@ Completed:
 - GitHub `main` push workflow
 - GitHub prerelease workflow
 
-Remaining before tagging `v0.4.0-alpha.1`:
+Remaining before tagging `v0.5.0-alpha.1`:
 
 - Release-readiness cleanup
 - Editable install verification
@@ -33,7 +36,7 @@ Remaining before tagging `v0.4.0-alpha.1`:
 - Git tag and push
 - GitHub prerelease
 
-## v0.4 Alpha Scope
+## v0.5 Alpha Scope
 
 In scope:
 
@@ -52,6 +55,9 @@ In scope:
 - TRUNCATE enforcement
 - Unqualified DELETE and UPDATE enforcement
 - External JSON rule file validation
+- External JSON rule schema reference
+- Deterministic schema metadata export
+- Fixture-backed valid and invalid schema examples
 - Safe rule construction for contains, equals, and prefix matchers
 - CLI validation through `validate-rules <path>`
 - Optional custom rule enforcement through `--rules <path>`
@@ -81,18 +87,23 @@ Out of scope:
 - `circuit-breaker check "TRUNCATE TABLE users"` returns `BLOCK`
 - `circuit-breaker check "DELETE FROM users WHERE id = 1"` returns `UNKNOWN`
 - `circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json` returns valid
+- `circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json` returns valid
 - `circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json` returns `BLOCK`
 - `circuit-breaker check "mkdir /tmp/example"` returns `ALLOW`
 - `circuit-breaker check "ls -la"` returns `UNKNOWN`
 - Documentation describes only currently supported behavior
 - `main` is pushed to GitHub
-- `v0.4.0-alpha.1` tag is pushed to GitHub
+- `v0.5.0-alpha.1` tag is pushed to GitHub
 - GitHub prerelease is published
 
 ## Next Milestones
 
-After `v0.4.0-alpha.1`, continue with:
+After `v0.5.0-alpha.1`, continue with:
 
+- v0.6: public API alpha
+- v0.7: adversarial test alpha
+- v0.8: security documentation alpha
+- v0.9: release candidate
 - v1.0: stable API, release process, and production-readiness review
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for details.

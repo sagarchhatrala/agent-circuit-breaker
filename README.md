@@ -98,7 +98,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.4 Alpha Scope
+## v0.5 Alpha Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
@@ -106,9 +106,12 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - SQL inspector (tokenization, statement splitting, destructive statement detection)
 - Built-in filesystem, command, and SQL safety rules
 - External JSON rule validation
+- Dedicated external rule schema reference
+- Schema metadata exported by the package
+- Valid and invalid rule schema fixtures
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 270+ tests
+- 274 tests
 - Documentation for current alpha behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -120,6 +123,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[PLAN.md](PLAN.md)** - alpha release plan
 - **[ENGINEERING.md](ENGINEERING.md)** - project constitution and principles
 - **[docs/README.md](docs/README.md)** - usage guide
+- **[docs/RULE_SCHEMA.md](docs/RULE_SCHEMA.md)** - external JSON rule schema
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
 - **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale
 - **[docs/ROADMAP.md](docs/ROADMAP.md)** - future milestones
@@ -155,9 +159,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.4.0-alpha.1
+**Current**: v0.5.0-alpha.1
 
-**Next**: production-readiness review toward v1.0
+**Next**: public API alpha toward v1.0
 
 ---
 

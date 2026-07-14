@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.4 alpha scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, and external JSON rule validation: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, and safe handling of malformed or unrecognized input.
+The current v0.5 alpha scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, and fixture-backed external JSON rule validation: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -51,6 +51,8 @@ Validate external JSON rules:
 ```bash
 circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 ```
+
+The supported external rule format is documented in [RULE_SCHEMA.md](RULE_SCHEMA.md).
 
 Append validated custom rules to a check:
 
@@ -238,6 +240,8 @@ The v0.4 rule loader supports external JSON rule files with deterministic matche
 
 Custom rules are validated before use. Invalid rule files fail closed and return an error-style exit code.
 
+The v0.5 schema hardening milestone adds a dedicated schema reference, exported schema metadata, and valid and invalid rule fixtures under `docs/examples/rules/`.
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests
@@ -252,6 +256,7 @@ The project uses the Python standard library test runner.
 
 - [v0.3.0-alpha.1](releases/v0.3.0-alpha.1.md)
 - [v0.4.0-alpha.1](releases/v0.4.0-alpha.1.md)
+- [v0.5.0-alpha.1](releases/v0.5.0-alpha.1.md)
 
 ## Known Limits
 
