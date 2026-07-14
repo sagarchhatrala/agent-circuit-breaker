@@ -60,6 +60,8 @@ Design questions:
 
 Goal: detect destructive SQL statements before execution.
 
+Detailed plan: [V0_3_SQL_INSPECTOR.md](V0_3_SQL_INSPECTOR.md)
+
 Candidate coverage:
 
 - `DROP TABLE`
