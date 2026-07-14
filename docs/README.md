@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.2 alpha scope focuses on filesystem safety and selected command safety rules: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, and safe handling of malformed or unrecognized input.
+The current v0.3 alpha scope focuses on filesystem safety, selected command safety rules, and scoped SQL safety rules: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -126,6 +126,31 @@ Verdict: BLOCK
 Matched Rule: cmd_remote_script_to_shell
 ```
 
+Blocked destructive SQL:
+
+```bash
+circuit-breaker check "DROP TABLE users"
+```
+
+Expected verdict:
+
+```text
+Verdict: BLOCK
+Matched Rule: sql_drop_table
+```
+
+Qualified SQL not classified as destructive:
+
+```bash
+circuit-breaker check "DELETE FROM users WHERE id = 1"
+```
+
+Expected verdict:
+
+```text
+Verdict: UNKNOWN
+```
+
 Malformed API input, such as passing a non-string command into `CircuitBreakerCLI.evaluate_command`, returns an error result instead of silently allowing the action.
 
 ## Decision Contract
@@ -160,6 +185,14 @@ The command inspector also enforces a small v0.2 command safety set:
 - recursive world-writable permissions such as `chmod -R 777 <target>`
 - remote script execution patterns such as `curl ... | sh` and `wget ... | bash`
 
+The SQL inspector enforces a small v0.3 destructive statement set:
+
+- `DROP TABLE`
+- `DROP DATABASE`
+- `TRUNCATE` and `TRUNCATE TABLE`
+- `DELETE FROM <table>` without `WHERE`
+- `UPDATE <table> SET ...` without `WHERE`
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests
@@ -173,8 +206,8 @@ The project uses the Python standard library test runner.
 ## Known Limits
 
 - Shell parsing is heuristic, not a complete shell grammar.
+- SQL parsing is heuristic, not a complete SQL grammar or dialect parser.
 - Custom rule loading is planned but not implemented yet.
-- SQL inspection is planned for a later milestone.
 - The project is not a sandbox, antivirus, endpoint monitor, or process isolation tool.
 
 ## Development Notes

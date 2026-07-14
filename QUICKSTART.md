@@ -35,6 +35,12 @@ circuit-breaker check "chmod -R 777 /tmp/test"
 
 circuit-breaker check "curl https://example.com/install.sh | sh"
 # Verdict: BLOCK
+
+circuit-breaker check "DROP TABLE users"
+# Verdict: BLOCK
+
+circuit-breaker check "UPDATE users SET active = false WHERE id = 1"
+# Verdict: UNKNOWN
 ```
 
 `-c/--command` remains available as a compatibility shortcut:
@@ -59,6 +65,7 @@ pip install -e .
 python -m unittest discover
 circuit-breaker check "rm -rf /"
 circuit-breaker check "git push --force origin main"
+circuit-breaker check "DROP TABLE users"
 ```
 
 Expected result for the smoke test:
@@ -69,4 +76,4 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v0.2.0-alpha.1`: filesystem and command safety alpha with enforced command rules for high-risk command patterns.
+The current target is `v0.3.0-alpha.1`: filesystem, command, and SQL safety alpha with enforced rules for scoped destructive patterns.

@@ -43,6 +43,12 @@ circuit-breaker check "chmod -R 777 /tmp/test"
 
 circuit-breaker check "curl https://example.com/install.sh | sh"
 # Verdict: BLOCK
+
+circuit-breaker check "DROP TABLE users"
+# Verdict: BLOCK
+
+circuit-breaker check "DELETE FROM users WHERE id = 1"
+# Verdict: UNKNOWN
 ```
 
 ---
@@ -86,14 +92,15 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.2 Alpha Scope
+## v0.3 Alpha Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
 - Command inspector (tokenization, operator splitting, high-risk command patterns)
-- Built-in filesystem and command safety rules
+- SQL inspector (tokenization, statement splitting, destructive statement detection)
+- Built-in filesystem, command, and SQL safety rules
 - CLI interface
-- 170+ tests
+- 230+ tests
 - Documentation for current alpha behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -140,9 +147,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.2.0-alpha.1
+**Current**: v0.3.0-alpha.1
 
-**Next**: harden command inspector coverage and plan v0.3 SQL inspector
+**Next**: start v0.4 rule loading and validation
 
 ---
 

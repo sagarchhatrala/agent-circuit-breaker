@@ -29,7 +29,7 @@ Exit criteria met:
 
 Goal: inspect command-level hazards beyond basic filesystem heuristics.
 
-Status: preparing `v0.2.0-alpha.1`.
+Status: released as `v0.2.0-alpha.1`.
 
 Detailed plan: [V0_2_COMMAND_INSPECTOR.md](V0_2_COMMAND_INSPECTOR.md)
 
@@ -60,6 +60,8 @@ Design questions:
 
 Goal: detect destructive SQL statements before execution.
 
+Status: preparing `v0.3.0-alpha.1`.
+
 Detailed plan: [V0_3_SQL_INSPECTOR.md](V0_3_SQL_INSPECTOR.md)
 
 Candidate coverage:
@@ -70,6 +72,14 @@ Candidate coverage:
 - unqualified `DELETE`
 - unqualified `UPDATE`
 - migration commands with destructive statements
+
+Implemented so far:
+
+- SQL tokenizer foundation
+- statement splitting on semicolons outside strings and comments
+- destructive statement detection
+- CLI SQL analysis output
+- built-in SQL safety rules for scoped destructive statements
 
 Design questions:
 

@@ -2,6 +2,8 @@
 
 The v0.3 milestone adds deterministic SQL statement inspection. The goal is to detect a small set of high-risk destructive SQL patterns before execution. The goal is not to build a full SQL parser or understand every dialect.
 
+Status: implemented for `v0.3.0-alpha.1`.
+
 ## Goals
 
 - Add `agent_circuit_breaker/inspectors/sql.py`.
@@ -146,7 +148,7 @@ Add SQL analysis as a separate field:
 }
 ```
 
-Implementation order:
+Implementation order completed:
 
 1. Expose SQL analysis in CLI output as analysis-only.
 2. Add tests for JSON and text output.
