@@ -47,6 +47,19 @@ class CircuitBreakerCLI:
         }
 
         try:
+            if not isinstance(command, str):
+                result["verdict"] = "error"
+                result["decision"] = Decision.ERROR.name
+                result["operation_analysis"] = {
+                    "operation": "unknown",
+                    "targets": [],
+                    "flags": [],
+                    "is_dangerous": False,
+                    "danger_reason": None,
+                }
+                result["error"] = "Command must be a string"
+                return result
+
             # Analyze the filesystem operation
             operation_analysis = self.inspector.analyze_operation(command)
             result["operation_analysis"] = {
@@ -59,6 +72,8 @@ class CircuitBreakerCLI:
 
             # Evaluate against engine rules
             decision, matched_rule = self.engine.evaluate(command, BUILTIN_RULES)
+            if decision == Decision.UNKNOWN and self._is_known_safe_operation(operation_analysis):
+                decision = Decision.ALLOW
 
             result["decision"] = decision.name
 
@@ -67,8 +82,8 @@ class CircuitBreakerCLI:
                 result["rule_details"] = {
                     "id": matched_rule.id,
                     "title": matched_rule.title,
-                    "severity": matched_rule.severity.name,
-                    "response": matched_rule.response.name,
+                    "severity": matched_rule.severity,
+                    "response": matched_rule.response,
                     "metadata": matched_rule.metadata or {},
                 }
 
@@ -91,6 +106,20 @@ class CircuitBreakerCLI:
                 result["traceback"] = traceback.format_exc()
 
         return result
+
+    @staticmethod
+    def _is_known_safe_operation(operation_analysis: Dict[str, Any]) -> bool:
+        """Return true for recognized operations with no detected danger."""
+        if operation_analysis["is_dangerous"]:
+            return False
+
+        return operation_analysis["operation"] in {
+            "move",
+            "copy",
+            "chmod",
+            "create_dir",
+            "create_file",
+        }
 
     def format_output(self, result: Dict[str, Any]) -> str:
         """

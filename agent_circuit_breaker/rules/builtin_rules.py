@@ -4,7 +4,8 @@ Built-in rules — Default filesystem safety policy.
 These rules describe dangerous filesystem operations that should be blocked.
 """
 
-from .engine import Rule
+from ..engine import Rule
+from ..inspectors.filesystem import FilesystemInspector
 
 
 def _is_recursive_delete(action: str) -> bool:
@@ -32,19 +33,15 @@ def _is_recursive_delete(action: str) -> bool:
 
 def _is_system_path(action: str) -> bool:
     """Detect attempts to delete system directories."""
-    action_lower = action.lower()
-    
-    dangerous_paths = [
-        "/", "/root", "/boot", "/etc", "/sys", "/bin", "/sbin", "/usr/bin",
-        "/c:\\", "c:\\windows", "c:\\system32", "c:\\program files",
-        "d:\\", "e:\\", "f:\\",
-        "/system", "/library", "/applications",
-    ]
-    
-    for path in dangerous_paths:
-        if path in action_lower:
+    analysis = FilesystemInspector.analyze_operation(action)
+    if analysis["operation"] != "delete":
+        return False
+
+    for target in analysis["targets"]:
+        is_dangerous, _ = FilesystemInspector.is_dangerous_target(target)
+        if is_dangerous:
             return True
-    
+
     return False
 
 

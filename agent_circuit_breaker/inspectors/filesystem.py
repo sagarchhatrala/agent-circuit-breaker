@@ -44,6 +44,16 @@ class FilesystemInspector:
         "E:\\",
     }
 
+    # Top-level container paths are dangerous as direct deletion targets, but
+    # deleting a user's own child path should be evaluated by operation context.
+    EXACT_ONLY_TARGETS = {
+        "/",
+        "/home",
+        "C:\\",
+        "D:\\",
+        "E:\\",
+    }
+
     def __init__(self):
         """Initialize the Filesystem Inspector."""
         self.current_os = platform.system()
@@ -149,13 +159,25 @@ class FilesystemInspector:
         except ValueError:
             return False, None
 
-        # Normalize path for comparison (case-insensitive on Windows)
-        check_path = normalized.lower() if platform.system() == "Windows" else normalized
+        # Use a uniform separator for cross-platform comparisons. Lowercasing
+        # keeps Windows path checks deterministic even on non-Windows hosts.
+        check_path = normalized.replace("\\", "/").lower()
 
         # Check against dangerous targets
         for dangerous in FilesystemInspector.DANGEROUS_TARGETS:
-            dangerous_check = dangerous.lower() if platform.system() == "Windows" else dangerous
-            if check_path == dangerous_check or check_path.startswith(dangerous_check + "/"):
+            dangerous_check = dangerous.replace("\\", "/").lower().rstrip("/")
+            if dangerous_check == "":
+                dangerous_check = "/"
+
+            is_exact_match = check_path.rstrip("/") == dangerous_check
+            is_child_match = check_path.startswith(dangerous_check + "/")
+
+            if dangerous in FilesystemInspector.EXACT_ONLY_TARGETS:
+                if is_exact_match:
+                    return True, f"Dangerous target: {dangerous}"
+                continue
+
+            if is_exact_match or is_child_match:
                 return True, f"Dangerous target: {dangerous}"
 
         # Check if path is root or root-like
@@ -241,6 +263,8 @@ class FilesystemInspector:
 
         # Extract flags
         flags_patterns = [
+            (r"(?<!\S)-[A-Za-z]*r[A-Za-z]*(?:\s|$)", "recursive"),
+            (r"(?<!\S)-[A-Za-z]*f[A-Za-z]*(?:\s|$)", "force"),
             (r"-r(?:\s|$|/|\\)", "recursive"),
             (r"-f(?:\s|$|/|\\)", "force"),
             (r"--recursive", "recursive"),
