@@ -1,8 +1,11 @@
 """Tests for external rule definition validation."""
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from agent_circuit_breaker.rules.loader import RuleDefinitionValidator
+from agent_circuit_breaker.rules.loader import RuleDefinitionValidator, RuleFileLoader
 
 
 def valid_definition():
@@ -171,6 +174,99 @@ class TestRuleDefinitionValidator(unittest.TestCase):
         result1 = RuleDefinitionValidator.validate(definition)
         result2 = RuleDefinitionValidator.validate(definition)
         result3 = RuleDefinitionValidator.validate(definition)
+
+        self.assertEqual(result1, result2)
+        self.assertEqual(result2, result3)
+
+
+class TestRuleFileLoader(unittest.TestCase):
+    """Test external rule definition file loading."""
+
+    def write_rule_file(self, directory, name, content):
+        """Write test rule file content and return its path."""
+        path = Path(directory) / name
+        path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def test_missing_file_returns_invalid(self):
+        """Missing rule files should fail explicitly."""
+        result = RuleFileLoader.load("missing-rules.json")
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], ["Rule file not found: missing-rules.json"])
+        self.assertIsNone(result["definition"])
+
+    def test_non_string_path_returns_invalid(self):
+        """Non-string file paths should fail explicitly."""
+        result = RuleFileLoader.load(None)
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], ["Rule file path must be a non-empty string"])
+        self.assertIsNone(result["definition"])
+
+    def test_directory_path_returns_invalid(self):
+        """Directory paths should fail explicitly."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = RuleFileLoader.load(temp_dir)
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], [f"Rule file path is not a file: {temp_dir}"])
+        self.assertIsNone(result["definition"])
+
+    def test_invalid_json_returns_invalid(self):
+        """Malformed JSON should fail with line and column details."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self.write_rule_file(temp_dir, "rules.json", '{"rules": [')
+
+            result = RuleFileLoader.load(path)
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], ["Invalid JSON: Expecting value at line 1, column 12"])
+        self.assertIsNone(result["definition"])
+
+    def test_top_level_array_returns_invalid(self):
+        """Top-level JSON arrays should fail validation."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self.write_rule_file(temp_dir, "rules.json", "[]")
+
+            result = RuleFileLoader.load(path)
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], ["Rule definition must be an object"])
+        self.assertIsNone(result["definition"])
+
+    def test_invalid_rule_file_returns_validation_errors(self):
+        """Invalid rule files should return validator errors."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self.write_rule_file(temp_dir, "rules.json", json.dumps({"version": 1}))
+
+            result = RuleFileLoader.load(path)
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], ["Missing required top-level field: rules"])
+        self.assertIsNone(result["definition"])
+
+    def test_valid_file_returns_parsed_definition(self):
+        """Valid rule files should return parsed definitions."""
+        definition = valid_definition()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self.write_rule_file(temp_dir, "rules.json", json.dumps(definition))
+
+            result = RuleFileLoader.load(path)
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["definition"], definition)
+
+    def test_file_loading_is_deterministic(self):
+        """Repeated file loading should return the same structure."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = self.write_rule_file(temp_dir, "rules.json", json.dumps(valid_definition()))
+
+            result1 = RuleFileLoader.load(path)
+            result2 = RuleFileLoader.load(path)
+            result3 = RuleFileLoader.load(path)
 
         self.assertEqual(result1, result2)
         self.assertEqual(result2, result3)

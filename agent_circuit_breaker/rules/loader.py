@@ -1,5 +1,8 @@
-"""External rule definition validation."""
+"""External rule definition loading and validation."""
 
+import json
+from json import JSONDecodeError
+from pathlib import Path
 from typing import Any, Dict, List, Set
 
 
@@ -163,3 +166,45 @@ class RuleDefinitionValidator:
         """Validate optional metadata field."""
         if "metadata" in rule and not isinstance(rule["metadata"], dict):
             errors.append(f"{path}.metadata must be an object")
+
+
+class RuleFileLoader:
+    """Loads and validates external rule definition files."""
+
+    @staticmethod
+    def load(path: str) -> Dict[str, Any]:
+        """Load and validate a JSON rule definition file."""
+        result: Dict[str, Any] = {
+            "is_valid": False,
+            "errors": [],
+            "definition": None,
+        }
+
+        if not isinstance(path, str) or not path.strip():
+            result["errors"] = ["Rule file path must be a non-empty string"]
+            return result
+
+        rule_path = Path(path)
+        if not rule_path.exists():
+            result["errors"] = [f"Rule file not found: {path}"]
+            return result
+
+        if not rule_path.is_file():
+            result["errors"] = [f"Rule file path is not a file: {path}"]
+            return result
+
+        try:
+            with rule_path.open("r", encoding="utf-8") as rule_file:
+                definition = json.load(rule_file)
+        except JSONDecodeError as exc:
+            result["errors"] = [f"Invalid JSON: {exc.msg} at line {exc.lineno}, column {exc.colno}"]
+            return result
+        except OSError as exc:
+            result["errors"] = [f"Could not read rule file: {exc}"]
+            return result
+
+        validation = RuleDefinitionValidator.validate(definition)
+        result["is_valid"] = validation["is_valid"]
+        result["errors"] = validation["errors"]
+        result["definition"] = definition if validation["is_valid"] else None
+        return result
