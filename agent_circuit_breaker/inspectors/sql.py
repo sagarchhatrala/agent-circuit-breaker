@@ -37,11 +37,61 @@ class SQLInspector:
 
         try:
             result["tokens"] = SQLInspector.tokenize(sql)
+            result["statements"] = SQLInspector.split_statements(sql)
         except ValueError as exc:
             result["is_valid"] = False
             result["error"] = str(exc)
 
         return result
+
+    @staticmethod
+    def split_statements(sql: str) -> List[Dict[str, Any]]:
+        """Split SQL text into statements on semicolons outside comments and quotes."""
+        if not isinstance(sql, str):
+            raise ValueError("SQL must be a string")
+
+        raw_statements: List[str] = []
+        current: List[str] = []
+        index = 0
+
+        while index < len(sql):
+            char = sql[index]
+            next_char = sql[index + 1] if index + 1 < len(sql) else ""
+
+            if char == "-" and next_char == "-":
+                index = SQLInspector._skip_line_comment(sql, index + 2)
+                continue
+
+            if char == "/" and next_char == "*":
+                index = SQLInspector._skip_block_comment(sql, index + 2)
+                continue
+
+            if char == "'":
+                token, index = SQLInspector._read_quoted(sql, index, "'")
+                current.append(f"'{token}'")
+                continue
+
+            if char == '"':
+                token, index = SQLInspector._read_quoted(sql, index, '"')
+                current.append(f'"{token}"')
+                continue
+
+            if char == ";":
+                SQLInspector._append_statement(raw_statements, current)
+                current = []
+                index += 1
+                continue
+
+            current.append(char)
+            index += 1
+
+        SQLInspector._append_statement(raw_statements, current)
+
+        return [
+            SQLInspector._build_statement(statement)
+            for statement in raw_statements
+            if statement.strip()
+        ]
 
     @staticmethod
     def tokenize(sql: str) -> List[str]:
@@ -112,6 +162,26 @@ class SQLInspector:
         """Append current token text when non-empty."""
         if current:
             tokens.append("".join(current))
+
+    @staticmethod
+    def _append_statement(raw_statements: List[str], current: List[str]) -> None:
+        """Append current statement text when non-empty."""
+        statement = "".join(current).strip()
+        if statement:
+            raw_statements.append(statement)
+
+    @staticmethod
+    def _build_statement(raw: str) -> Dict[str, Any]:
+        """Build deterministic statement analysis for one SQL statement."""
+        tokens = SQLInspector.tokenize(raw)
+        return {
+            "raw": raw,
+            "tokens": tokens,
+            "statement_type": tokens[0].lower() if tokens else None,
+            "risk_flags": [],
+            "is_dangerous": False,
+            "danger_reason": None,
+        }
 
     @staticmethod
     def _read_quoted(sql: str, start: int, quote: str) -> tuple[str, int]:

@@ -39,6 +39,8 @@ class TestSQLInspectorAnalysis(unittest.TestCase):
 
         self.assertTrue(result["is_valid"])
         self.assertEqual(result["tokens"], ["SELECT", "*", "FROM", "users"])
+        self.assertEqual(len(result["statements"]), 1)
+        self.assertEqual(result["statements"][0]["raw"], "SELECT * FROM users")
 
     def test_delete_statement(self):
         """DELETE statement should tokenize without risk detection yet."""
@@ -46,6 +48,7 @@ class TestSQLInspectorAnalysis(unittest.TestCase):
 
         self.assertTrue(result["is_valid"])
         self.assertEqual(result["tokens"], ["DELETE", "FROM", "users"])
+        self.assertEqual(result["statements"][0]["statement_type"], "delete")
         self.assertFalse(result["is_dangerous"])
 
     def test_update_statement_with_punctuation(self):
@@ -134,12 +137,104 @@ class TestSQLInspectorTokenize(unittest.TestCase):
             SQLInspector.tokenize(None)
 
 
+class TestSQLInspectorStatements(unittest.TestCase):
+    """Test SQL statement splitting."""
+
+    def test_two_select_statements(self):
+        """Semicolon should split two statements."""
+        result = SQLInspector.analyze_sql("SELECT 1; SELECT 2")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual([statement["raw"] for statement in result["statements"]], ["SELECT 1", "SELECT 2"])
+        self.assertEqual([statement["tokens"] for statement in result["statements"]], [["SELECT", "1"], ["SELECT", "2"]])
+
+    def test_delete_then_select(self):
+        """Multiple statement types should preserve order."""
+        result = SQLInspector.analyze_sql("DELETE FROM users; SELECT * FROM users")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(
+            [statement["statement_type"] for statement in result["statements"]],
+            ["delete", "select"],
+        )
+
+    def test_semicolon_inside_single_quote_not_split(self):
+        """Semicolons inside single-quoted strings should not split."""
+        result = SQLInspector.analyze_sql("SELECT ';'")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(len(result["statements"]), 1)
+        self.assertEqual(result["statements"][0]["tokens"], ["SELECT", ";"])
+
+    def test_semicolon_inside_double_quote_not_split(self):
+        """Semicolons inside double-quoted identifiers should not split."""
+        result = SQLInspector.analyze_sql('SELECT "a;b" FROM users')
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(len(result["statements"]), 1)
+        self.assertEqual(result["statements"][0]["tokens"], ["SELECT", "a;b", "FROM", "users"])
+
+    def test_line_comment_after_statement(self):
+        """Line comments should be ignored during statement splitting."""
+        result = SQLInspector.analyze_sql("SELECT 1; -- comment\nSELECT 2")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual([statement["raw"] for statement in result["statements"]], ["SELECT 1", "SELECT 2"])
+
+    def test_block_comment_semicolon_not_split(self):
+        """Semicolons inside block comments should not split."""
+        result = SQLInspector.analyze_sql("SELECT /* ; */ 1; SELECT 2")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual([statement["tokens"] for statement in result["statements"]], [["SELECT", "1"], ["SELECT", "2"]])
+
+    def test_trailing_semicolon_ignored(self):
+        """Trailing semicolon should not create an empty statement."""
+        result = SQLInspector.analyze_sql("SELECT 1;")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(len(result["statements"]), 1)
+
+    def test_split_statements_directly(self):
+        """Direct statement splitting should expose statement dictionaries."""
+        statements = SQLInspector.split_statements("SELECT 1; SELECT 2")
+
+        self.assertEqual([statement["tokens"] for statement in statements], [["SELECT", "1"], ["SELECT", "2"]])
+
+    def test_malformed_quote_invalid_for_statements(self):
+        """Malformed quote should keep analysis invalid."""
+        result = SQLInspector.analyze_sql("SELECT ';")
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["statements"], [])
+        self.assertIn("Unclosed", result["error"])
+
+    def test_malformed_block_comment_invalid_for_statements(self):
+        """Malformed block comment should keep analysis invalid."""
+        result = SQLInspector.analyze_sql("SELECT /* ;")
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["statements"], [])
+        self.assertEqual(result["error"], "Unclosed block comment")
+
+
 class TestSQLInspectorDeterminism(unittest.TestCase):
     """Test deterministic SQL analysis."""
 
     def test_same_sql_same_result(self):
         """Repeated analysis should return the same structure."""
         sql = "SELECT 'DROP TABLE users' FROM logs"
+
+        result1 = SQLInspector.analyze_sql(sql)
+        result2 = SQLInspector.analyze_sql(sql)
+        result3 = SQLInspector.analyze_sql(sql)
+
+        self.assertEqual(result1, result2)
+        self.assertEqual(result2, result3)
+
+    def test_same_sql_statements_same_result(self):
+        """Repeated statement splitting should return the same structure."""
+        sql = "SELECT ';'; SELECT /* ignored ; */ 2"
 
         result1 = SQLInspector.analyze_sql(sql)
         result2 = SQLInspector.analyze_sql(sql)
