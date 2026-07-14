@@ -62,6 +62,11 @@ Security and integration references:
 - [THREAT_MODEL.md](THREAT_MODEL.md)
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
 
+Release readiness references:
+
+- [COMPATIBILITY.md](COMPATIBILITY.md)
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+
 Append validated custom rules to a check:
 
 ```bash
@@ -255,6 +260,8 @@ The v0.6 public API milestone exposes package-level `evaluate_action`, `validate
 The v0.7 adversarial testing milestone adds malformed-input and hostile-input regression coverage, including fail-closed behavior for invalid parsing and newline-separated command chains.
 
 The v0.8 security documentation milestone adds explicit security model, threat model, and integration guidance for CLI and Python API callers.
+
+The v0.9 release candidate milestone adds compatibility policy and release checklist documentation for v1.0 readiness.
 
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 

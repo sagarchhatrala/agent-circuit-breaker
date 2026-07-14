@@ -48,5 +48,40 @@ class TestSecurityDocs(unittest.TestCase):
         self.assertIn("continue only on exit code `0`", integration_guide)
 
 
+class TestReleaseReadinessDocs(unittest.TestCase):
+    """Test release-readiness documentation exists and is linked."""
+
+    def test_release_readiness_docs_exist(self):
+        """The v0.9 release-readiness docs should exist."""
+        for file_name in ("COMPATIBILITY.md", "RELEASE_CHECKLIST.md"):
+            with self.subTest(file_name=file_name):
+                self.assertTrue((DOCS_DIR / file_name).is_file())
+
+    def test_docs_index_links_release_readiness_docs(self):
+        """The docs index should link release-readiness docs."""
+        docs_index = (DOCS_DIR / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("[COMPATIBILITY.md](COMPATIBILITY.md)", docs_index)
+        self.assertIn("[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)", docs_index)
+
+    def test_compatibility_policy_defines_stable_contracts(self):
+        """Compatibility docs should define stable API, CLI, and schema contracts."""
+        compatibility = (DOCS_DIR / "COMPATIBILITY.md").read_text(encoding="utf-8")
+
+        self.assertIn("`evaluate_action(action, rule_file_path=None)`", compatibility)
+        self.assertIn("The stable CLI commands are:", compatibility)
+        self.assertIn("The current external JSON rule schema version is `1`.", compatibility)
+        self.assertIn("Fail-closed behavior", compatibility)
+
+    def test_release_checklist_includes_required_gates(self):
+        """Release checklist should include tests, smokes, tags, and GitHub Release."""
+        checklist = (DOCS_DIR / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+
+        self.assertIn("python -m unittest discover", checklist)
+        self.assertIn("git diff --check", checklist)
+        self.assertIn("Push `main`.", checklist)
+        self.assertIn("Create the GitHub Release", checklist)
+
+
 if __name__ == "__main__":
     unittest.main()
