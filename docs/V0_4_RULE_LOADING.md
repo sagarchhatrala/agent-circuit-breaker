@@ -2,6 +2,8 @@
 
 The v0.4 milestone adds safe validation for external rule definitions. The goal is to let users describe rules in data files without allowing arbitrary code execution.
 
+Status: implemented for `v0.4.0-alpha.1`.
+
 ## Goals
 
 - Define a minimal JSON rule format.

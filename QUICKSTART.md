@@ -41,6 +41,12 @@ circuit-breaker check "DROP TABLE users"
 
 circuit-breaker check "UPDATE users SET active = false WHERE id = 1"
 # Verdict: UNKNOWN
+
+circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+# Valid: TRUE
+
+circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
+# Verdict: BLOCK
 ```
 
 `-c/--command` remains available as a compatibility shortcut:
@@ -66,6 +72,7 @@ python -m unittest discover
 circuit-breaker check "rm -rf /"
 circuit-breaker check "git push --force origin main"
 circuit-breaker check "DROP TABLE users"
+circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 ```
 
 Expected result for the smoke test:
@@ -76,4 +83,4 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v0.3.0-alpha.1`: filesystem, command, and SQL safety alpha with enforced rules for scoped destructive patterns.
+The current target is `v0.4.0-alpha.1`: filesystem, command, SQL, and external JSON rule safety alpha with optional custom rule enforcement.

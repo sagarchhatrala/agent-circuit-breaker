@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "custom_deploy_guard",
+      "title": "Block production deployment phrase",
+      "severity": "HIGH",
+      "response": "block",
+      "matcher": {
+        "type": "contains",
+        "value": "deploy production"
+      },
+      "metadata": {
+        "category": "custom"
+      }
+    }
+  ]
+}

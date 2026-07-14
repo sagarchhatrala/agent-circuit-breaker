@@ -91,7 +91,7 @@ Design questions:
 
 Goal: support external rule files safely.
 
-Status: planned.
+Status: released as `v0.4.0-alpha.1`.
 
 Detailed plan: [V0_4_RULE_LOADING.md](V0_4_RULE_LOADING.md)
 
@@ -102,6 +102,16 @@ Candidate work:
 - schema documentation
 - clear errors for malformed rules
 - fixture-based rule examples
+
+Implemented so far:
+
+- JSON rule format.
+- deterministic rule definition validator.
+- JSON rule file loading.
+- CLI validation through `validate-rules`.
+- safe rule construction for `contains`, `equals`, and `prefix`.
+- optional custom rule enforcement through `--rules`.
+- fixture-based JSON rule example.
 
 Design questions:
 

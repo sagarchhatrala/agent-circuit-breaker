@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.3 alpha scope focuses on filesystem safety, selected command safety rules, and scoped SQL safety rules: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, and safe handling of malformed or unrecognized input.
+The current v0.4 alpha scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, and external JSON rule validation: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -44,6 +44,18 @@ JSON output:
 
 ```bash
 circuit-breaker check "rm -rf /etc" --format json
+```
+
+Validate external JSON rules:
+
+```bash
+circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+```
+
+Append validated custom rules to a check:
+
+```bash
+circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
 ```
 
 The `--json` flag is supported as a shortcut for `--format json`.
@@ -151,6 +163,31 @@ Expected verdict:
 Verdict: UNKNOWN
 ```
 
+Valid custom rule file:
+
+```bash
+circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+```
+
+Expected verdict:
+
+```text
+Valid: TRUE
+```
+
+Blocked by a custom rule file:
+
+```bash
+circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
+```
+
+Expected verdict:
+
+```text
+Verdict: BLOCK
+Matched Rule: custom_deploy_guard
+```
+
 Malformed API input, such as passing a non-string command into `CircuitBreakerCLI.evaluate_command`, returns an error result instead of silently allowing the action.
 
 ## Decision Contract
@@ -193,6 +230,14 @@ The SQL inspector enforces a small v0.3 destructive statement set:
 - `DELETE FROM <table>` without `WHERE`
 - `UPDATE <table> SET ...` without `WHERE`
 
+The v0.4 rule loader supports external JSON rule files with deterministic matcher types:
+
+- `contains`
+- `equals`
+- `prefix`
+
+Custom rules are validated before use. Invalid rule files fail closed and return an error-style exit code.
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests
@@ -206,12 +251,14 @@ The project uses the Python standard library test runner.
 ## Release Notes
 
 - [v0.3.0-alpha.1](releases/v0.3.0-alpha.1.md)
+- [v0.4.0-alpha.1](releases/v0.4.0-alpha.1.md)
 
 ## Known Limits
 
 - Shell parsing is heuristic, not a complete shell grammar.
 - SQL parsing is heuristic, not a complete SQL grammar or dialect parser.
-- Custom rule loading is planned but not implemented yet.
+- External rule files support only JSON and a small deterministic matcher set.
+- External rule files cannot execute arbitrary code.
 - The project is not a sandbox, antivirus, endpoint monitor, or process isolation tool.
 
 ## Development Notes

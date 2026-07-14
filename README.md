@@ -49,6 +49,12 @@ circuit-breaker check "DROP TABLE users"
 
 circuit-breaker check "DELETE FROM users WHERE id = 1"
 # Verdict: UNKNOWN
+
+circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+# Valid: TRUE
+
+circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
+# Verdict: BLOCK
 ```
 
 ---
@@ -92,15 +98,17 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.3 Alpha Scope
+## v0.4 Alpha Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
 - Command inspector (tokenization, operator splitting, high-risk command patterns)
 - SQL inspector (tokenization, statement splitting, destructive statement detection)
 - Built-in filesystem, command, and SQL safety rules
+- External JSON rule validation
+- Optional custom rule enforcement through `--rules`
 - CLI interface
-- 230+ tests
+- 270+ tests
 - Documentation for current alpha behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -147,9 +155,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.3.0-alpha.1
+**Current**: v0.4.0-alpha.1
 
-**Next**: start v0.4 rule loading and validation
+**Next**: production-readiness review toward v1.0
 
 ---
 
