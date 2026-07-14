@@ -56,6 +56,12 @@ The supported external rule format is documented in [RULE_SCHEMA.md](RULE_SCHEMA
 
 Python integrations can use the public API documented in [API.md](API.md).
 
+Security and integration references:
+
+- [SECURITY_MODEL.md](SECURITY_MODEL.md)
+- [THREAT_MODEL.md](THREAT_MODEL.md)
+- [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+
 Append validated custom rules to a check:
 
 ```bash
@@ -247,6 +253,8 @@ The v0.5 schema hardening milestone adds a dedicated schema reference, exported 
 The v0.6 public API milestone exposes package-level `evaluate_action`, `validate_rule_file`, and `rule_schema_metadata` functions for callers that do not want to shell out to the CLI.
 
 The v0.7 adversarial testing milestone adds malformed-input and hostile-input regression coverage, including fail-closed behavior for invalid parsing and newline-separated command chains.
+
+The v0.8 security documentation milestone adds explicit security model, threat model, and integration guidance for CLI and Python API callers.
 
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
