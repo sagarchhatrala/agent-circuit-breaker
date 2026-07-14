@@ -19,6 +19,8 @@ class CommandInspector:
             "tokens": [],
             "command": None,
             "args": [],
+            "segments": [],
+            "operators": [],
             "is_valid": True,
             "error": None,
             "risk_flags": [],
@@ -35,18 +37,125 @@ class CommandInspector:
             return result
 
         try:
-            tokens = CommandInspector.tokenize(command)
+            split_result = CommandInspector.split_segments(command)
         except ValueError as exc:
             result["is_valid"] = False
             result["error"] = str(exc)
             return result
 
-        result["tokens"] = tokens
-        if tokens:
-            result["command"] = tokens[0]
-            result["args"] = tokens[1:]
+        result["segments"] = split_result["segments"]
+        result["operators"] = split_result["operators"]
+
+        if result["segments"]:
+            first_segment = result["segments"][0]
+            result["tokens"] = first_segment["tokens"]
+            result["command"] = first_segment["command"]
+            result["args"] = first_segment["args"]
 
         return result
+
+    @staticmethod
+    def split_segments(command: str) -> Dict[str, Any]:
+        """
+        Split command text on shell operators while respecting quotes.
+
+        Supported operators: &&, ||, ;, |
+        """
+        if not isinstance(command, str):
+            raise ValueError("Command must be a string")
+
+        raw_segments: List[str] = []
+        operators: List[str] = []
+        current: List[str] = []
+        quote: Optional[str] = None
+        escaped = False
+        index = 0
+
+        while index < len(command):
+            char = command[index]
+
+            if escaped:
+                current.append(char)
+                escaped = False
+                index += 1
+                continue
+
+            if char == "\\":
+                current.append(char)
+                escaped = True
+                index += 1
+                continue
+
+            if quote:
+                current.append(char)
+                if char == quote:
+                    quote = None
+                index += 1
+                continue
+
+            if char in ("'", '"'):
+                quote = char
+                current.append(char)
+                index += 1
+                continue
+
+            two_char = command[index : index + 2]
+            if two_char in ("&&", "||"):
+                CommandInspector._append_segment(raw_segments, current)
+                operators.append(two_char)
+                current = []
+                index += 2
+                continue
+
+            if char in (";", "|"):
+                CommandInspector._append_segment(raw_segments, current)
+                operators.append(char)
+                current = []
+                index += 1
+                continue
+
+            current.append(char)
+            index += 1
+
+        if escaped:
+            current.append("\\")
+
+        if quote:
+            raise ValueError(f"Unclosed {quote} quote")
+
+        CommandInspector._append_segment(raw_segments, current)
+
+        segments = [
+            CommandInspector._build_segment(segment)
+            for segment in raw_segments
+            if segment.strip()
+        ]
+
+        return {
+            "segments": segments,
+            "operators": operators,
+        }
+
+    @staticmethod
+    def _append_segment(raw_segments: List[str], current: List[str]) -> None:
+        """Append the current raw segment if it contains non-whitespace text."""
+        segment = "".join(current).strip()
+        if segment:
+            raw_segments.append(segment)
+
+    @staticmethod
+    def _build_segment(raw: str) -> Dict[str, Any]:
+        """Build deterministic segment analysis for one command segment."""
+        tokens = CommandInspector.tokenize(raw)
+        return {
+            "raw": raw,
+            "tokens": tokens,
+            "command": tokens[0] if tokens else None,
+            "args": tokens[1:] if len(tokens) > 1 else [],
+            "risk_flags": [],
+            "is_dangerous": False,
+            "danger_reason": None,
+        }
 
     @staticmethod
     def tokenize(command: str) -> List[str]:
