@@ -129,6 +129,12 @@ class CircuitBreakerCLI:
                 "danger_reason": sql_analysis["danger_reason"],
             }
 
+            if not command_analysis["is_valid"] or not sql_analysis["is_valid"]:
+                result["decision"] = Decision.ERROR.name
+                result["verdict"] = "error"
+                result["error"] = command_analysis["error"] or sql_analysis["error"]
+                return result
+
             # Evaluate against engine rules
             rules = BUILTIN_RULES + (extra_rules or [])
             decision, matched_rule = self.engine.evaluate(command, rules)

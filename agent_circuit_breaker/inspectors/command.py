@@ -60,7 +60,7 @@ class CommandInspector:
         """
         Split command text on shell operators while respecting quotes.
 
-        Supported operators: &&, ||, ;, |
+        Supported operators: &&, ||, ;, |, and newlines.
         """
         if not isinstance(command, str):
             raise ValueError("Command must be a string")
@@ -108,9 +108,9 @@ class CommandInspector:
                 index += 2
                 continue
 
-            if char in (";", "|"):
+            if char in (";", "|", "\n", "\r"):
                 CommandInspector._append_segment(raw_segments, current)
-                operators.append(char)
+                operators.append("newline" if char in ("\n", "\r") else char)
                 current = []
                 index += 1
                 continue
