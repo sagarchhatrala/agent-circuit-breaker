@@ -9,6 +9,7 @@ from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 from agent_circuit_breaker.inspectors.command import CommandInspector
+from agent_circuit_breaker.inspectors.sql import SQLInspector
 
 
 class CircuitBreakerCLI:
@@ -33,6 +34,7 @@ class CircuitBreakerCLI:
         self.engine = Engine()
         self.inspector = FilesystemInspector()
         self.command_inspector = CommandInspector()
+        self.sql_inspector = SQLInspector()
 
     def evaluate_command(self, command: str) -> Dict[str, Any]:
         """
@@ -52,6 +54,7 @@ class CircuitBreakerCLI:
             "rule_details": None,
             "operation_analysis": None,
             "command_analysis": None,
+            "sql_analysis": None,
             "error": None,
         }
 
@@ -74,6 +77,15 @@ class CircuitBreakerCLI:
                     "operators": [],
                     "is_valid": False,
                     "error": "Command must be a string",
+                    "risk_flags": [],
+                    "is_dangerous": False,
+                    "danger_reason": None,
+                }
+                result["sql_analysis"] = {
+                    "tokens": [],
+                    "statements": [],
+                    "is_valid": False,
+                    "error": "SQL must be a string",
                     "risk_flags": [],
                     "is_dangerous": False,
                     "danger_reason": None,
@@ -103,6 +115,17 @@ class CircuitBreakerCLI:
                 "risk_flags": command_analysis["risk_flags"],
                 "is_dangerous": command_analysis["is_dangerous"],
                 "danger_reason": command_analysis["danger_reason"],
+            }
+
+            sql_analysis = self.sql_inspector.analyze_sql(command)
+            result["sql_analysis"] = {
+                "tokens": sql_analysis["tokens"],
+                "statements": sql_analysis["statements"],
+                "is_valid": sql_analysis["is_valid"],
+                "error": sql_analysis["error"],
+                "risk_flags": sql_analysis["risk_flags"],
+                "is_dangerous": sql_analysis["is_dangerous"],
+                "danger_reason": sql_analysis["danger_reason"],
             }
 
             # Evaluate against engine rules
@@ -205,6 +228,18 @@ class CircuitBreakerCLI:
                 lines.append(f"Command Danger: {analysis['danger_reason']}")
             if analysis["error"]:
                 lines.append(f"Command Analysis Error: {analysis['error']}")
+
+        if result["sql_analysis"]:
+            analysis = result["sql_analysis"]
+            has_sql_details = analysis["risk_flags"] or analysis["danger_reason"] or analysis["error"]
+            if has_sql_details and analysis["statements"]:
+                lines.append(f"SQL Statements: {len(analysis['statements'])}")
+            if analysis["risk_flags"]:
+                lines.append(f"SQL Risk Flags: {', '.join(analysis['risk_flags'])}")
+            if analysis["danger_reason"]:
+                lines.append(f"SQL Danger: {analysis['danger_reason']}")
+            if analysis["error"]:
+                lines.append(f"SQL Analysis Error: {analysis['error']}")
 
         if result["error"]:
             lines.append(f"Error: {result['error']}")

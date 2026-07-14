@@ -63,6 +63,7 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertIn("matched_rule", result)
         self.assertIn("operation_analysis", result)
         self.assertIn("command_analysis", result)
+        self.assertIn("sql_analysis", result)
 
     def test_evaluate_includes_command_analysis(self):
         """Evaluation includes command inspector analysis."""
@@ -72,6 +73,23 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertEqual(result["command_analysis"]["command"], "git")
         self.assertIn("cmd_git_force_push", result["command_analysis"]["risk_flags"])
         self.assertTrue(result["command_analysis"]["is_dangerous"])
+
+    def test_evaluate_includes_sql_analysis(self):
+        """Evaluation includes SQL inspector analysis."""
+        result = self.cli.evaluate_command("DROP TABLE users")
+
+        self.assertIn("sql_analysis", result)
+        self.assertTrue(result["sql_analysis"]["is_valid"])
+        self.assertIn("sql_drop_table", result["sql_analysis"]["risk_flags"])
+        self.assertTrue(result["sql_analysis"]["is_dangerous"])
+
+    def test_sql_analysis_does_not_enforce_yet(self):
+        """SQL analysis is exposed before SQL rules are enforced."""
+        result = self.cli.evaluate_command("DROP TABLE users")
+
+        self.assertEqual(result["verdict"], "unknown")
+        self.assertIsNone(result["matched_rule"])
+        self.assertIn("sql_drop_table", result["sql_analysis"]["risk_flags"])
 
     def test_git_force_push_blocks(self):
         """Command inspector git force push risk is enforced."""
@@ -158,6 +176,7 @@ class TestCLIOutput(unittest.TestCase):
         self.assertIn("verdict", parsed)
         self.assertIn("command", parsed)
         self.assertIn("command_analysis", parsed)
+        self.assertIn("sql_analysis", parsed)
 
     def test_format_json_includes_command_risk_flags(self):
         """JSON output includes command inspector risk details."""
@@ -170,6 +189,17 @@ class TestCLIOutput(unittest.TestCase):
         self.assertEqual(parsed["matched_rule"], "cmd_git_force_push")
         self.assertIn("cmd_git_force_push", parsed["command_analysis"]["risk_flags"])
         self.assertTrue(parsed["command_analysis"]["is_dangerous"])
+
+    def test_format_json_includes_sql_analysis(self):
+        """JSON output includes SQL inspector risk details."""
+        cli = CircuitBreakerCLI(verbose=False, json_output=True)
+        result = cli.evaluate_command("DELETE FROM users")
+        output = cli.format_output(result)
+        parsed = json.loads(output)
+
+        self.assertEqual(parsed["verdict"], "unknown")
+        self.assertIn("sql_unqualified_delete", parsed["sql_analysis"]["risk_flags"])
+        self.assertTrue(parsed["sql_analysis"]["is_dangerous"])
 
     def test_format_includes_matched_rule(self):
         """Output includes matched rule information."""
@@ -187,6 +217,15 @@ class TestCLIOutput(unittest.TestCase):
         self.assertIn("Command Analysis: git", output)
         self.assertIn("Command Risk Flags: cmd_git_force_push", output)
         self.assertIn("Command Danger: Git force push detected", output)
+
+    def test_format_includes_sql_analysis_risk(self):
+        """Human-readable output includes SQL risk details."""
+        result = self.cli.evaluate_command("DROP DATABASE prod")
+        output = self.cli.format_output(result)
+
+        self.assertIn("SQL Statements: 1", output)
+        self.assertIn("SQL Risk Flags: sql_drop_database", output)
+        self.assertIn("SQL Danger: DROP DATABASE detected", output)
 
     def test_format_includes_operation_analysis(self):
         """Output includes operation analysis."""
@@ -461,6 +500,24 @@ class TestCLIMain(unittest.TestCase):
             parsed = json.loads(output)
             self.assertEqual(exit_code, 1)
             self.assertEqual(parsed["verdict"], "block")
+            self.assertIn("sql_analysis", parsed)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_check_command_sql_json_analysis(self):
+        """Main JSON output includes SQL analysis before enforcement."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            sys.argv = ["circuit-breaker", "check", "TRUNCATE", "TABLE", "users", "--format", "json"]
+            sys.stdout = StringIO()
+            exit_code = main()
+            output = sys.stdout.getvalue()
+            parsed = json.loads(output)
+            self.assertEqual(exit_code, 2)
+            self.assertEqual(parsed["verdict"], "unknown")
+            self.assertIn("sql_truncate", parsed["sql_analysis"]["risk_flags"])
         finally:
             sys.argv = old_argv
             sys.stdout = old_stdout
