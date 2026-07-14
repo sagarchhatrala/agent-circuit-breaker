@@ -3,7 +3,9 @@
 import json
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Callable, Dict, List, Set
+
+from agent_circuit_breaker.engine import Rule
 
 
 class RuleDefinitionValidator:
@@ -208,3 +210,63 @@ class RuleFileLoader:
         result["errors"] = validation["errors"]
         result["definition"] = definition if validation["is_valid"] else None
         return result
+
+
+class RuleDefinitionBuilder:
+    """Builds executable Rule objects from validated rule definitions."""
+
+    @classmethod
+    def build_rules(cls, definition: Any) -> Dict[str, Any]:
+        """Validate and build Rule objects from a parsed definition."""
+        validation = RuleDefinitionValidator.validate(definition)
+        if not validation["is_valid"]:
+            return {
+                "is_valid": False,
+                "errors": validation["errors"],
+                "rules": [],
+            }
+
+        rules: List[Rule] = []
+        errors: List[str] = []
+
+        for index, rule_definition in enumerate(definition["rules"]):
+            try:
+                rules.append(cls._build_rule(rule_definition))
+            except ValueError as exc:
+                errors.append(f"rules[{index}]: {exc}")
+
+        return {
+            "is_valid": not errors,
+            "errors": errors,
+            "rules": rules if not errors else [],
+        }
+
+    @classmethod
+    def _build_rule(cls, rule_definition: Dict[str, Any]) -> Rule:
+        """Build one Rule object from a validated rule definition."""
+        matcher = cls._build_matcher(rule_definition["matcher"])
+        return Rule(
+            id=rule_definition["id"],
+            title=rule_definition["title"],
+            severity=rule_definition["severity"],
+            response=rule_definition["response"],
+            matcher=matcher,
+            metadata=rule_definition.get("metadata") or {},
+        )
+
+    @staticmethod
+    def _build_matcher(matcher_definition: Dict[str, str]) -> Callable[[str], bool]:
+        """Build a deterministic matcher callable."""
+        matcher_type = matcher_definition["type"]
+        matcher_value = matcher_definition["value"]
+
+        if matcher_type == "contains":
+            return lambda action, value=matcher_value: isinstance(action, str) and value in action
+
+        if matcher_type == "equals":
+            return lambda action, value=matcher_value: isinstance(action, str) and action == value
+
+        if matcher_type == "prefix":
+            return lambda action, value=matcher_value: isinstance(action, str) and action.startswith(value)
+
+        raise ValueError(f"Unsupported matcher type: {matcher_type}")

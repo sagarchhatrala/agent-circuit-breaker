@@ -5,7 +5,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_circuit_breaker.rules.loader import RuleDefinitionValidator, RuleFileLoader
+from agent_circuit_breaker.engine import Decision, Engine, Rule
+from agent_circuit_breaker.rules.loader import (
+    RuleDefinitionBuilder,
+    RuleDefinitionValidator,
+    RuleFileLoader,
+)
 
 
 def valid_definition():
@@ -270,6 +275,97 @@ class TestRuleFileLoader(unittest.TestCase):
 
         self.assertEqual(result1, result2)
         self.assertEqual(result2, result3)
+
+
+class TestRuleDefinitionBuilder(unittest.TestCase):
+    """Test building Rule objects from external rule definitions."""
+
+    def test_build_valid_definition_returns_rules(self):
+        """Valid definitions should build Rule objects."""
+        result = RuleDefinitionBuilder.build_rules(valid_definition())
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(len(result["rules"]), 1)
+        self.assertIsInstance(result["rules"][0], Rule)
+        self.assertEqual(result["rules"][0].id, "custom_block_tmp_delete")
+        self.assertEqual(result["rules"][0].metadata, {"category": "custom"})
+
+    def test_build_invalid_definition_returns_errors(self):
+        """Invalid definitions should not build Rule objects."""
+        result = RuleDefinitionBuilder.build_rules({"version": 1})
+
+        self.assertFalse(result["is_valid"])
+        self.assertEqual(result["errors"], ["Missing required top-level field: rules"])
+        self.assertEqual(result["rules"], [])
+
+    def test_contains_matcher_rule_matches_substring(self):
+        """Contains matcher should match actions containing configured text."""
+        result = RuleDefinitionBuilder.build_rules(valid_definition())
+        rule = result["rules"][0]
+
+        self.assertTrue(rule.matcher("please rm -rf /tmp/cache"))
+        self.assertFalse(rule.matcher("rm -rf /var/cache"))
+
+    def test_equals_matcher_rule_matches_exact_action(self):
+        """Equals matcher should match only exact actions."""
+        definition = valid_definition()
+        definition["rules"][0]["matcher"] = {
+            "type": "equals",
+            "value": "deploy production",
+        }
+
+        result = RuleDefinitionBuilder.build_rules(definition)
+        rule = result["rules"][0]
+
+        self.assertTrue(rule.matcher("deploy production"))
+        self.assertFalse(rule.matcher("please deploy production"))
+
+    def test_prefix_matcher_rule_matches_prefix(self):
+        """Prefix matcher should match action prefixes."""
+        definition = valid_definition()
+        definition["rules"][0]["matcher"] = {
+            "type": "prefix",
+            "value": "terraform destroy",
+        }
+
+        result = RuleDefinitionBuilder.build_rules(definition)
+        rule = result["rules"][0]
+
+        self.assertTrue(rule.matcher("terraform destroy -auto-approve"))
+        self.assertFalse(rule.matcher("echo terraform destroy"))
+
+    def test_built_custom_rule_can_be_evaluated_by_engine(self):
+        """Built custom rules should work with the existing engine."""
+        result = RuleDefinitionBuilder.build_rules(valid_definition())
+        engine = Engine()
+
+        decision, matched_rule = engine.evaluate("rm -rf /tmp/cache", result["rules"])
+
+        self.assertEqual(decision, Decision.BLOCK)
+        self.assertEqual(matched_rule.id, "custom_block_tmp_delete")
+
+    def test_matchers_reject_non_string_actions(self):
+        """Generated matchers should reject non-string actions."""
+        result = RuleDefinitionBuilder.build_rules(valid_definition())
+        rule = result["rules"][0]
+
+        self.assertFalse(rule.matcher(None))
+
+    def test_build_rules_is_deterministic_for_rule_fields(self):
+        """Repeated builds should produce equivalent rule fields."""
+        result1 = RuleDefinitionBuilder.build_rules(valid_definition())
+        result2 = RuleDefinitionBuilder.build_rules(valid_definition())
+        result3 = RuleDefinitionBuilder.build_rules(valid_definition())
+
+        fields1 = [(rule.id, rule.title, rule.severity, rule.response, rule.metadata) for rule in result1["rules"]]
+        fields2 = [(rule.id, rule.title, rule.severity, rule.response, rule.metadata) for rule in result2["rules"]]
+        fields3 = [(rule.id, rule.title, rule.severity, rule.response, rule.metadata) for rule in result3["rules"]]
+
+        self.assertEqual(result1["is_valid"], result2["is_valid"])
+        self.assertEqual(result2["is_valid"], result3["is_valid"])
+        self.assertEqual(fields1, fields2)
+        self.assertEqual(fields2, fields3)
 
 
 if __name__ == "__main__":
