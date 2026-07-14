@@ -176,6 +176,111 @@ class TestCommandInspectorSegments(unittest.TestCase):
         self.assertEqual([segment["tokens"] for segment in result["segments"]], [["cat", "file"], ["grep", "text"]])
 
 
+class TestCommandInspectorDangerousPatterns(unittest.TestCase):
+    """Test command risk detection for scoped v0.2 patterns."""
+
+    def test_git_push_force_long_flag(self):
+        """git push --force should be dangerous."""
+        result = CommandInspector.analyze_command("git push --force origin main")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_git_force_push", result["risk_flags"])
+        self.assertEqual(result["danger_reason"], "Git force push detected")
+
+    def test_git_push_force_short_flag(self):
+        """git push -f should be dangerous."""
+        result = CommandInspector.analyze_command("git push -f origin main")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_git_force_push", result["segments"][0]["risk_flags"])
+
+    def test_git_push_force_with_lease(self):
+        """git push --force-with-lease should be dangerous."""
+        result = CommandInspector.analyze_command("git push --force-with-lease")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_git_force_push", result["risk_flags"])
+
+    def test_git_status_not_dangerous(self):
+        """git status should not be marked dangerous."""
+        result = CommandInspector.analyze_command("git status")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_quoted_git_force_push_not_dangerous(self):
+        """git force push inside a quoted echo should not be dangerous."""
+        result = CommandInspector.analyze_command('echo "git push --force"')
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_chmod_recursive_777_flag_first(self):
+        """chmod -R 777 should be dangerous."""
+        result = CommandInspector.analyze_command("chmod -R 777 /tmp/test")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_recursive_world_writable", result["risk_flags"])
+        self.assertEqual(result["danger_reason"], "Recursive chmod 777 detected")
+
+    def test_chmod_recursive_777_mode_first(self):
+        """chmod 777 -R should be dangerous."""
+        result = CommandInspector.analyze_command("chmod 777 -R /tmp/test")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_recursive_world_writable", result["risk_flags"])
+
+    def test_chmod_755_not_dangerous(self):
+        """chmod 755 should not be marked dangerous."""
+        result = CommandInspector.analyze_command("chmod 755 script.sh")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_curl_pipe_to_sh(self):
+        """curl piped to sh should be dangerous."""
+        result = CommandInspector.analyze_command("curl https://example.com/install.sh | sh")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_remote_script_to_shell", result["risk_flags"])
+        self.assertEqual(result["danger_reason"], "Remote script piped to shell detected")
+
+    def test_curl_pipe_to_bash(self):
+        """curl piped to bash should be dangerous."""
+        result = CommandInspector.analyze_command("curl https://example.com/install.sh | bash")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_remote_script_to_shell", result["risk_flags"])
+
+    def test_wget_pipe_to_sh(self):
+        """wget piped to sh should be dangerous."""
+        result = CommandInspector.analyze_command("wget -qO- https://example.com/install.sh | sh")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_remote_script_to_shell", result["risk_flags"])
+
+    def test_wget_pipe_to_bash(self):
+        """wget piped to bash should be dangerous."""
+        result = CommandInspector.analyze_command("wget -qO- https://example.com/install.sh | bash")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_remote_script_to_shell", result["risk_flags"])
+
+    def test_curl_without_pipe_not_dangerous(self):
+        """curl alone should not be marked dangerous by this slice."""
+        result = CommandInspector.analyze_command("curl https://example.com/install.sh")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_pipe_to_grep_not_dangerous(self):
+        """Non-shell pipeline target should not trigger pipe-to-shell risk."""
+        result = CommandInspector.analyze_command("curl https://example.com/file.txt | grep ok")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+
 class TestCommandInspectorDeterminism(unittest.TestCase):
     """Test deterministic command analysis."""
 
