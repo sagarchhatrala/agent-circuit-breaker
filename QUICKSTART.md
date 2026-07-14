@@ -99,4 +99,4 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v0.6.0-alpha.1`: filesystem, command, SQL, external JSON rule safety, and a public Python API for direct integrations.
+The current target is `v0.7.0-alpha.1`: filesystem, command, SQL, external JSON rule safety, public Python API support, and adversarial regression coverage.

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="agent-circuit-breaker",
-    version="0.6.0a1",
+    version="0.7.0a1",
     description="Deterministic safety layer for AI coding agents",
     author="Sagar Chhatrala",
     author_email="sagarchhatrala2234@gmail.com",

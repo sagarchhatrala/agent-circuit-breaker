@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v0.6 alpha scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, and a public Python API: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
+The current v0.7 alpha scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, and adversarial regression coverage: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -246,6 +246,8 @@ The v0.5 schema hardening milestone adds a dedicated schema reference, exported 
 
 The v0.6 public API milestone exposes package-level `evaluate_action`, `validate_rule_file`, and `rule_schema_metadata` functions for callers that do not want to shell out to the CLI.
 
+The v0.7 adversarial testing milestone adds malformed-input and hostile-input regression coverage, including fail-closed behavior for invalid parsing and newline-separated command chains.
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests
@@ -262,6 +264,7 @@ The project uses the Python standard library test runner.
 - [v0.4.0-alpha.1](releases/v0.4.0-alpha.1.md)
 - [v0.5.0-alpha.1](releases/v0.5.0-alpha.1.md)
 - [v0.6.0-alpha.1](releases/v0.6.0-alpha.1.md)
+- [v0.7.0-alpha.1](releases/v0.7.0-alpha.1.md)
 
 ## Known Limits
 

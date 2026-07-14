@@ -1,8 +1,8 @@
-# Agent Circuit Breaker v0.6 Alpha Plan
+# Agent Circuit Breaker v0.7 Alpha Plan
 
 Project goal: build a deterministic safety layer between AI coding agents and the operating system.
 
-The current release target is `v0.6.0-alpha.1`. This alpha exposes a small public Python API on top of the v0.5 schema-hardened foundation.
+The current release target is `v0.7.0-alpha.1`. This alpha adds adversarial regression coverage and fail-closed parser hardening on top of the v0.6 public API foundation.
 
 ## Current Status
 
@@ -18,6 +18,9 @@ Completed:
 - Rule file loader
 - Rule schema metadata API
 - Public Python API
+- Adversarial regression tests
+- Fail-closed malformed parser handling
+- Newline-separated command chain inspection
 - Dedicated external rule schema documentation
 - Valid and invalid rule fixture coverage
 - CLI command: `circuit-breaker check <action>`
@@ -28,7 +31,7 @@ Completed:
 - GitHub `main` push workflow
 - GitHub prerelease workflow
 
-Remaining before tagging `v0.6.0-alpha.1`:
+Remaining before tagging `v0.7.0-alpha.1`:
 
 - Release-readiness cleanup
 - Editable install verification
@@ -37,7 +40,7 @@ Remaining before tagging `v0.6.0-alpha.1`:
 - Git tag and push
 - GitHub prerelease
 
-## v0.6 Alpha Scope
+## v0.7 Alpha Scope
 
 In scope:
 
@@ -59,6 +62,9 @@ In scope:
 - External JSON rule schema reference
 - Deterministic schema metadata export
 - Package-level Python API functions
+- Adversarial tests for malformed command and SQL inputs
+- Adversarial tests for invalid custom rule handling
+- Determinism tests for repeated risky and malformed evaluations
 - Fixture-backed valid and invalid schema examples
 - Safe rule construction for contains, equals, and prefix matchers
 - CLI validation through `validate-rules <path>`
@@ -94,18 +100,20 @@ Out of scope:
 - `evaluate_action("rm -rf /")` returns a block result
 - `evaluate_action("mkdir /tmp/example")` returns an allow result
 - `validate_rule_file("docs/examples/rules/custom_deploy_guard.json")` returns valid
+- malformed command quotes return `ERROR`
+- malformed SQL quotes return `ERROR`
+- newline-separated command chains are inspected
 - `circuit-breaker check "mkdir /tmp/example"` returns `ALLOW`
 - `circuit-breaker check "ls -la"` returns `UNKNOWN`
 - Documentation describes only currently supported behavior
 - `main` is pushed to GitHub
-- `v0.6.0-alpha.1` tag is pushed to GitHub
+- `v0.7.0-alpha.1` tag is pushed to GitHub
 - GitHub prerelease is published
 
 ## Next Milestones
 
-After `v0.6.0-alpha.1`, continue with:
+After `v0.7.0-alpha.1`, continue with:
 
-- v0.7: adversarial test alpha
 - v0.8: security documentation alpha
 - v0.9: release candidate
 - v1.0: stable API, release process, and production-readiness review

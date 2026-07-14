@@ -2,6 +2,8 @@
 
 The v0.7 milestone increases confidence by exercising hostile, malformed, and edge-case inputs across the existing safety surface.
 
+Status: implemented for `v0.7.0-alpha.1`.
+
 ## Goals
 
 - Add adversarial tests for command parsing, SQL parsing, rule loading, CLI behavior, and public API behavior.

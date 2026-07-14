@@ -170,7 +170,7 @@ Implemented so far:
 
 Goal: increase confidence with hostile, malformed, and edge-case inputs across inspectors and rule loading.
 
-Status: planned.
+Status: released as `v0.7.0-alpha.1`.
 
 Candidate work:
 
@@ -179,6 +179,12 @@ Candidate work:
 - malformed and suspicious custom rule cases.
 - CLI determinism checks.
 - regression tests for fail-closed behavior.
+
+Implemented so far:
+
+- adversarial test suite covering command chains, malformed parser inputs, SQL comments and quotes, blank inputs, non-string API inputs, invalid custom rules, and determinism.
+- newline-separated command chain inspection.
+- fail-closed `ERROR` results for malformed command and SQL analysis.
 
 ## v0.8: Security Documentation Alpha
 

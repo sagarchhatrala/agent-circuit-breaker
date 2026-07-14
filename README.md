@@ -98,7 +98,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 
 ---
 
-## v0.6 Alpha Scope
+## v0.7 Alpha Scope
 
 - Core engine with deterministic decision logic
 - Filesystem inspector (dangerous paths, recursive delete, bulk operations)
@@ -110,9 +110,12 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Schema metadata exported by the package
 - Valid and invalid rule schema fixtures
 - Public Python API for direct integration
+- Adversarial regression tests for malformed and hostile inputs
+- Fail-closed handling for malformed command and SQL parsing
+- Newline-separated command chain inspection
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 283 tests
+- 295 tests
 - Documentation for current alpha behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -161,9 +164,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v0.6.0-alpha.1
+**Current**: v0.7.0-alpha.1
 
-**Next**: adversarial testing alpha toward v1.0
+**Next**: security documentation alpha toward v1.0
 
 ---
 
