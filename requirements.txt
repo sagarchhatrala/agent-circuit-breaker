@@ -1,0 +1,2 @@
+# No external dependencies for core package.
+# Python 3.11+ stdlib is sufficient.
