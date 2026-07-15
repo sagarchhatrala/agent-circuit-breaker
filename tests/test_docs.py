@@ -59,6 +59,8 @@ class TestReleaseReadinessDocs(unittest.TestCase):
             "PUBLISHING.md",
             "BRANCH_PROTECTION.md",
             "V1_0_PRODUCTION_READINESS.md",
+            "V1_1_PLAN.md",
+            "ANNOUNCEMENT.md",
         ):
             with self.subTest(file_name=file_name):
                 self.assertTrue((DOCS_DIR / file_name).is_file())
@@ -72,6 +74,8 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         self.assertIn("[PUBLISHING.md](PUBLISHING.md)", docs_index)
         self.assertIn("[BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)", docs_index)
         self.assertIn("[V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)", docs_index)
+        self.assertIn("[V1_1_PLAN.md](V1_1_PLAN.md)", docs_index)
+        self.assertIn("[ANNOUNCEMENT.md](ANNOUNCEMENT.md)", docs_index)
 
     def test_compatibility_policy_defines_stable_contracts(self):
         """Compatibility docs should define stable API, CLI, and schema contracts."""
@@ -97,6 +101,8 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         publishing = (DOCS_DIR / "PUBLISHING.md").read_text(encoding="utf-8")
 
         self.assertIn("Use TestPyPI before publishing to PyPI.", publishing)
+        self.assertIn("trusted publishing", publishing)
+        self.assertIn(".github/workflows/publish.yml", publishing)
         self.assertIn("python -m build", publishing)
         self.assertIn("python -m twine check dist/*", publishing)
 
@@ -134,6 +140,16 @@ class TestRepositoryHygiene(unittest.TestCase):
 
         self.assertIn("Reporting A Vulnerability", security)
         self.assertIn("## [1.0.0] - 2026-07-15", changelog)
+
+    def test_publish_workflow_exists(self):
+        """The repository should have a trusted-publishing workflow."""
+        workflow = REPO_ROOT / ".github" / "workflows" / "publish.yml"
+        content = workflow.read_text(encoding="utf-8")
+
+        self.assertIn("id-token: write", content)
+        self.assertIn("pypa/gh-action-pypi-publish", content)
+        self.assertIn("testpypi", content)
+        self.assertIn("pypi", content)
 
 
 if __name__ == "__main__":

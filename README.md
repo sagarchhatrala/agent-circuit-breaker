@@ -57,6 +57,8 @@ circuit-breaker check "deploy production" --rules docs/examples/rules/custom_dep
 # Verdict: BLOCK
 ```
 
+See [examples/README.md](examples/README.md) for CLI, Python API, and custom rule integration examples.
+
 ---
 
 ## Why This Matters
@@ -139,6 +141,8 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - TestPyPI and PyPI publishing flow
 - **[docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md)** - recommended `main` protection
+- **[docs/V1_1_PLAN.md](docs/V1_1_PLAN.md)** - compatible v1.1 roadmap
+- **[docs/ANNOUNCEMENT.md](docs/ANNOUNCEMENT.md)** - v1.0 announcement copy
 - **[docs/V1_0_PRODUCTION_READINESS.md](docs/V1_0_PRODUCTION_READINESS.md)** - stable release readiness
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
 - **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale

@@ -69,6 +69,8 @@ Release readiness references:
 - [PUBLISHING.md](PUBLISHING.md)
 - [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)
 - [V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)
+- [V1_1_PLAN.md](V1_1_PLAN.md)
+- [ANNOUNCEMENT.md](ANNOUNCEMENT.md)
 
 Append validated custom rules to a check:
 

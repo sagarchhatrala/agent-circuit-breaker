@@ -255,6 +255,22 @@ Implemented so far:
 - security model, threat model, and integration guide.
 - adversarial and documentation regression tests.
 
+## v1.1: Compatible Additions
+
+Goal: add compatible safety coverage and integration polish without breaking v1.0 contracts.
+
+Status: planned.
+
+Detailed plan: [V1_1_PLAN.md](V1_1_PLAN.md)
+
+Candidate work:
+
+- more built-in command rules.
+- detailed JSON output contract documentation.
+- explicit allowlist pattern exploration.
+- additional integration examples and tests.
+- installed-package verification improvements.
+
 ## Companion Products
 
 These are intentionally outside the v0.1 core.
