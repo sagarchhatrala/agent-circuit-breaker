@@ -18,6 +18,8 @@ Use this checklist before tagging a release.
 Run:
 
 ```bash
+python -m build
+python -m twine check dist/*
 python -m unittest discover
 git diff --check
 ```
@@ -72,6 +74,15 @@ Expected:
 - Create the GitHub Release from `docs/releases/<version>.md`.
 - Verify the release appears in the GitHub Releases tab.
 - Verify `git status --short` is clean.
+
+## Package Publishing
+
+- Build artifacts with `python -m build`.
+- Validate artifacts with `python -m twine check dist/*`.
+- Upload to TestPyPI first.
+- Install from TestPyPI in a clean environment.
+- Upload to PyPI after TestPyPI verification.
+- Verify `pip install agent-circuit-breaker==<version>` works.
 
 ## Release Notes
 

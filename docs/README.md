@@ -66,6 +66,7 @@ Release readiness references:
 
 - [COMPATIBILITY.md](COMPATIBILITY.md)
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- [PUBLISHING.md](PUBLISHING.md)
 - [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)
 - [V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)
 
@@ -287,6 +288,7 @@ The project uses the Python standard library test runner.
 - [v0.8.0-alpha.1](releases/v0.8.0-alpha.1.md)
 - [v0.9.0-rc.1](releases/v0.9.0-rc.1.md)
 - [v1.0.0](releases/v1.0.0.md)
+- [v1.0.1](releases/v1.0.1.md)
 
 ## Known Limits
 

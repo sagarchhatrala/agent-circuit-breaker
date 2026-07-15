@@ -1,14 +1,30 @@
-from setuptools import setup, find_packages
+from pathlib import Path
+
+from setuptools import find_packages, setup
+
+
+ROOT = Path(__file__).parent
+README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.0.0",
+    version="1.0.1",
     description="Deterministic safety layer for AI coding agents",
+    long_description=README,
+    long_description_content_type="text/markdown",
     author="Sagar Chhatrala",
     author_email="sagarchhatrala2234@gmail.com",
     url="https://github.com/sagarchhatrala/agent-circuit-breaker",
+    project_urls={
+        "Homepage": "https://github.com/sagarchhatrala/agent-circuit-breaker",
+        "Documentation": "https://github.com/sagarchhatrala/agent-circuit-breaker/tree/main/docs",
+        "Source": "https://github.com/sagarchhatrala/agent-circuit-breaker",
+        "Issues": "https://github.com/sagarchhatrala/agent-circuit-breaker/issues",
+        "Releases": "https://github.com/sagarchhatrala/agent-circuit-breaker/releases",
+    },
     license="MIT",
-    packages=find_packages(),
+    license_files=["LICENSE"],
+    packages=find_packages(exclude=("tests", "tests.*")),
     python_requires=">=3.11",
     install_requires=[],
     entry_points={
@@ -19,11 +35,12 @@ setup(
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Topic :: Security",
+        "Topic :: Software Development :: Quality Assurance",
+        "Topic :: System :: Systems Administration",
     ],
     keywords="security safety ai-agents circuit-breaker deterministic",
 )

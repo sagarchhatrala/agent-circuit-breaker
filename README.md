@@ -118,8 +118,8 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Production-readiness documentation
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 304 tests
-- Documentation for current alpha behavior
+- 308 tests
+- Documentation for current stable behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
 
@@ -127,7 +127,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 
 ## Documentation
 
-- **[PLAN.md](PLAN.md)** - alpha release plan
+- **[PLAN.md](PLAN.md)** - stable release plan
 - **[ENGINEERING.md](ENGINEERING.md)** - project constitution and principles
 - **[docs/README.md](docs/README.md)** - usage guide
 - **[docs/API.md](docs/API.md)** - public Python API
@@ -137,6 +137,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - CLI and Python integration guidance
 - **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)** - API, CLI, decision, and rule schema compatibility
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
+- **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - TestPyPI and PyPI publishing flow
 - **[docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md)** - recommended `main` protection
 - **[docs/V1_0_PRODUCTION_READINESS.md](docs/V1_0_PRODUCTION_READINESS.md)** - stable release readiness
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
@@ -174,7 +175,7 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v1.0.0
+**Current**: v1.0.1
 
 **Next**: compatible patch and minor releases
 

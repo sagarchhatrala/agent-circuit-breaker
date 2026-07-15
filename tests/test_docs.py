@@ -56,6 +56,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         for file_name in (
             "COMPATIBILITY.md",
             "RELEASE_CHECKLIST.md",
+            "PUBLISHING.md",
             "BRANCH_PROTECTION.md",
             "V1_0_PRODUCTION_READINESS.md",
         ):
@@ -68,6 +69,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("[COMPATIBILITY.md](COMPATIBILITY.md)", docs_index)
         self.assertIn("[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)", docs_index)
+        self.assertIn("[PUBLISHING.md](PUBLISHING.md)", docs_index)
         self.assertIn("[BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)", docs_index)
         self.assertIn("[V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)", docs_index)
 
@@ -86,8 +88,17 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("python -m unittest discover", checklist)
         self.assertIn("git diff --check", checklist)
+        self.assertIn("python -m twine check dist/*", checklist)
         self.assertIn("Push `main`.", checklist)
         self.assertIn("Create the GitHub Release", checklist)
+
+    def test_publishing_docs_define_testpypi_first(self):
+        """Publishing docs should require TestPyPI before PyPI."""
+        publishing = (DOCS_DIR / "PUBLISHING.md").read_text(encoding="utf-8")
+
+        self.assertIn("Use TestPyPI before publishing to PyPI.", publishing)
+        self.assertIn("python -m build", publishing)
+        self.assertIn("python -m twine check dist/*", publishing)
 
     def test_production_readiness_defines_stable_release_gate(self):
         """Production-readiness docs should define stable release gates."""
