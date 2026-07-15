@@ -53,7 +53,12 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
     def test_release_readiness_docs_exist(self):
         """The v0.9 release-readiness docs should exist."""
-        for file_name in ("COMPATIBILITY.md", "RELEASE_CHECKLIST.md", "V1_0_PRODUCTION_READINESS.md"):
+        for file_name in (
+            "COMPATIBILITY.md",
+            "RELEASE_CHECKLIST.md",
+            "BRANCH_PROTECTION.md",
+            "V1_0_PRODUCTION_READINESS.md",
+        ):
             with self.subTest(file_name=file_name):
                 self.assertTrue((DOCS_DIR / file_name).is_file())
 
@@ -63,6 +68,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("[COMPATIBILITY.md](COMPATIBILITY.md)", docs_index)
         self.assertIn("[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)", docs_index)
+        self.assertIn("[BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)", docs_index)
         self.assertIn("[V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)", docs_index)
 
     def test_compatibility_policy_defines_stable_contracts(self):
@@ -89,6 +95,34 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("public Python API, CLI, decision contract, and rule schema version 1", readiness)
         self.assertIn("GitHub Release is published as a stable release, not a prerelease", readiness)
+
+
+class TestRepositoryHygiene(unittest.TestCase):
+    """Test repository hygiene files exist."""
+
+    def test_ci_workflow_exists(self):
+        """The repository should have a Python CI workflow."""
+        workflow = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+        content = workflow.read_text(encoding="utf-8")
+
+        self.assertIn("python -m unittest discover", content)
+        self.assertIn("git diff --check", content)
+        self.assertIn('"3.11"', content)
+        self.assertIn('"3.12"', content)
+
+    def test_issue_and_pr_templates_exist(self):
+        """The repository should have issue and PR templates."""
+        self.assertTrue((REPO_ROOT / ".github" / "pull_request_template.md").is_file())
+        self.assertTrue((REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "bug_report.md").is_file())
+        self.assertTrue((REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "feature_request.md").is_file())
+
+    def test_security_and_changelog_exist(self):
+        """The repository should have root security and changelog files."""
+        security = (REPO_ROOT / "SECURITY.md").read_text(encoding="utf-8")
+        changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+        self.assertIn("Reporting A Vulnerability", security)
+        self.assertIn("## [1.0.0] - 2026-07-15", changelog)
 
 
 if __name__ == "__main__":

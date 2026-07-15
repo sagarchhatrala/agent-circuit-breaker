@@ -66,6 +66,7 @@ Release readiness references:
 
 - [COMPATIBILITY.md](COMPATIBILITY.md)
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)
 - [V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)
 
 Append validated custom rules to a check:

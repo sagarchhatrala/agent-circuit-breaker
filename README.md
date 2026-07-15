@@ -137,6 +137,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - CLI and Python integration guidance
 - **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)** - API, CLI, decision, and rule schema compatibility
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
+- **[docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md)** - recommended `main` protection
 - **[docs/V1_0_PRODUCTION_READINESS.md](docs/V1_0_PRODUCTION_READINESS.md)** - stable release readiness
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
 - **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale
