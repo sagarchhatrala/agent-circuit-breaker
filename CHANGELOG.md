@@ -4,6 +4,21 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.1.0] - 2026-07-15
+
+### Added
+
+- Built-in command rules for package publish commands without explicit release context.
+- Built-in command rules for destructive Docker command shapes.
+- Built-in command rules for cloud resource deletion command shapes.
+- Built-in command rules for forceful Kubernetes deletion command shapes.
+- Detailed JSON output contract documentation.
+- Local allowlist pattern documentation and examples.
+
+### Changed
+
+- Known dangerous command rules can block before unrelated heuristic SQL parser errors.
+
 ## [1.0.1] - 2026-07-15
 
 ### Added

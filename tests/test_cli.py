@@ -211,6 +211,44 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertEqual(result["verdict"], "block")
         self.assertEqual(result["matched_rule"], "cmd_remote_script_to_shell")
 
+    def test_package_publish_without_context_blocks(self):
+        """Package publish without explicit context is enforced."""
+        result = self.cli.evaluate_command("twine upload dist/*")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "cmd_package_publish_without_context")
+
+    def test_package_publish_with_context_does_not_trigger_publish_rule(self):
+        """Package publish with explicit context should not match the v1.1 publish rule."""
+        result = self.cli.evaluate_command("twine upload --repository testpypi dist/*")
+
+        self.assertNotEqual(result["matched_rule"], "cmd_package_publish_without_context")
+        self.assertNotIn(
+            "cmd_package_publish_without_context",
+            result["command_analysis"]["risk_flags"],
+        )
+
+    def test_destructive_docker_blocks(self):
+        """Destructive Docker commands are enforced."""
+        result = self.cli.evaluate_command("docker system prune -a")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "cmd_destructive_docker")
+
+    def test_cloud_resource_deletion_blocks(self):
+        """Cloud resource deletion commands are enforced."""
+        result = self.cli.evaluate_command("az group delete --name prod")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "cmd_cloud_resource_deletion")
+
+    def test_forceful_kubernetes_delete_blocks(self):
+        """Forceful Kubernetes delete commands are enforced."""
+        result = self.cli.evaluate_command("kubectl delete namespace prod --force")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "cmd_forceful_kubernetes_delete")
+
     def test_git_status_remains_unknown(self):
         """Safe but unclassified git status remains unknown."""
         result = self.cli.evaluate_command("git status")

@@ -280,6 +280,102 @@ class TestCommandInspectorDangerousPatterns(unittest.TestCase):
         self.assertFalse(result["is_dangerous"])
         self.assertEqual(result["risk_flags"], [])
 
+    def test_twine_upload_without_repository_context_is_dangerous(self):
+        """twine upload without explicit repository context should be dangerous."""
+        result = CommandInspector.analyze_command("twine upload dist/*")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_package_publish_without_context", result["risk_flags"])
+
+    def test_python_module_twine_upload_without_repository_context_is_dangerous(self):
+        """python -m twine upload without explicit context should be dangerous."""
+        result = CommandInspector.analyze_command("python -m twine upload dist/*")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_package_publish_without_context", result["risk_flags"])
+
+    def test_publish_with_explicit_context_not_dangerous(self):
+        """Explicit publish context should avoid the package-publish risk flag."""
+        cases = [
+            "twine upload --repository testpypi dist/*",
+            "npm publish --tag beta",
+            "poetry publish --dry-run",
+        ]
+
+        for command in cases:
+            with self.subTest(command=command):
+                result = CommandInspector.analyze_command(command)
+
+                self.assertNotIn("cmd_package_publish_without_context", result["risk_flags"])
+
+    def test_destructive_docker_commands_are_dangerous(self):
+        """Destructive Docker command shapes should be dangerous."""
+        cases = [
+            "docker system prune -a",
+            "docker volume rm data",
+            "docker compose down --volumes",
+            "docker rm -f container_id",
+        ]
+
+        for command in cases:
+            with self.subTest(command=command):
+                result = CommandInspector.analyze_command(command)
+
+                self.assertTrue(result["is_dangerous"])
+                self.assertIn("cmd_destructive_docker", result["risk_flags"])
+
+    def test_non_destructive_docker_command_not_dangerous(self):
+        """Docker inspection commands should not trigger destructive Docker risk."""
+        result = CommandInspector.analyze_command("docker ps --all")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_cloud_resource_deletion_commands_are_dangerous(self):
+        """Common cloud deletion command shapes should be dangerous."""
+        cases = [
+            "aws cloudformation delete-stack --stack-name prod",
+            "aws ec2 terminate-instances --instance-ids i-123",
+            "az group delete --name prod",
+            "gcloud projects delete prod-project",
+        ]
+
+        for command in cases:
+            with self.subTest(command=command):
+                result = CommandInspector.analyze_command(command)
+
+                self.assertTrue(result["is_dangerous"])
+                self.assertIn("cmd_cloud_resource_deletion", result["risk_flags"])
+
+    def test_cloud_read_command_not_dangerous(self):
+        """Cloud read/list commands should not trigger deletion risk."""
+        result = CommandInspector.analyze_command("aws s3 ls s3://example")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
+    def test_forceful_kubernetes_delete_is_dangerous(self):
+        """Forceful Kubernetes deletion should be dangerous."""
+        cases = [
+            "kubectl delete pod api --force",
+            "kubectl delete namespace prod --grace-period=0",
+            "oc delete pod api --now",
+        ]
+
+        for command in cases:
+            with self.subTest(command=command):
+                result = CommandInspector.analyze_command(command)
+
+                self.assertTrue(result["is_dangerous"])
+                self.assertIn("cmd_forceful_kubernetes_delete", result["risk_flags"])
+
+    def test_regular_kubernetes_delete_not_forceful(self):
+        """Regular Kubernetes delete should not trigger forceful delete risk."""
+        result = CommandInspector.analyze_command("kubectl delete pod api")
+
+        self.assertFalse(result["is_dangerous"])
+        self.assertEqual(result["risk_flags"], [])
+
 
 class TestCommandInspectorDeterminism(unittest.TestCase):
     """Test deterministic command analysis."""

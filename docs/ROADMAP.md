@@ -259,7 +259,7 @@ Implemented so far:
 
 Goal: add compatible safety coverage and integration polish without breaking v1.0 contracts.
 
-Status: planned.
+Status: released as `v1.1.0`.
 
 Detailed plan: [V1_1_PLAN.md](V1_1_PLAN.md)
 
@@ -270,6 +270,15 @@ Candidate work:
 - explicit allowlist pattern exploration.
 - additional integration examples and tests.
 - installed-package verification improvements.
+
+Implemented so far:
+
+- command rules for package publish commands without explicit release context.
+- command rules for destructive Docker command shapes.
+- command rules for cloud resource deletion command shapes.
+- command rules for forceful Kubernetes deletion command shapes.
+- detailed JSON output contract documentation.
+- local allowlist pattern documentation and example.
 
 ## Companion Products
 

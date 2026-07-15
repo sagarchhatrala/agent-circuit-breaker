@@ -204,6 +204,34 @@ class CommandInspector:
                 "Recursive chmod 777 detected",
             )
 
+        if CommandInspector._is_package_publish_without_context(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_package_publish_without_context",
+                "Package publish command without explicit release context detected",
+            )
+
+        if CommandInspector._is_destructive_docker(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_destructive_docker",
+                "Destructive Docker command detected",
+            )
+
+        if CommandInspector._is_cloud_resource_deletion(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_cloud_resource_deletion",
+                "Cloud resource deletion command detected",
+            )
+
+        if CommandInspector._is_forceful_kubernetes_delete(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_forceful_kubernetes_delete",
+                "Forceful Kubernetes deletion detected",
+            )
+
     @staticmethod
     def _detect_pipeline_risks(result: Dict[str, Any], index: int) -> None:
         """Detect risk patterns that depend on adjacent pipeline segments."""
@@ -252,6 +280,114 @@ class CommandInspector:
         has_world_writable = "777" in args
 
         return has_recursive and has_world_writable
+
+    @staticmethod
+    def _is_package_publish_without_context(command: str, args: List[str]) -> bool:
+        """Return true for package publish commands without explicit release context."""
+        if not CommandInspector._is_package_publish_command(command, args):
+            return False
+
+        context_flags = {
+            "--access",
+            "--dry-run",
+            "--index-url",
+            "--otp",
+            "--publish-url",
+            "--registry",
+            "--repository",
+            "--repository-url",
+            "--tag",
+            "-r",
+        }
+
+        return not any(
+            arg in context_flags or any(arg.startswith(f"{flag}=") for flag in context_flags if flag.startswith("--"))
+            for arg in args
+        )
+
+    @staticmethod
+    def _is_package_publish_command(command: str, args: List[str]) -> bool:
+        """Return true for common package publish command shapes."""
+        if command == "twine" and args[:1] == ["upload"]:
+            return True
+
+        if command in {"python", "python3", "py"} and args[:3] == ["-m", "twine", "upload"]:
+            return True
+
+        if command in {"uv", "poetry", "npm", "pnpm"} and args[:1] == ["publish"]:
+            return True
+
+        if command == "yarn" and args[:2] == ["npm", "publish"]:
+            return True
+
+        return False
+
+    @staticmethod
+    def _is_destructive_docker(command: str, args: List[str]) -> bool:
+        """Return true for destructive Docker command shapes."""
+        if command != "docker" or not args:
+            return False
+
+        if args[:2] == ["system", "prune"] and ("-a" in args or "--all" in args or "--volumes" in args):
+            return True
+
+        if args[:2] in (["volume", "rm"], ["volume", "prune"], ["network", "rm"]):
+            return True
+
+        if args[:2] == ["image", "prune"] and ("-a" in args or "--all" in args):
+            return True
+
+        if args[:1] == ["rm"] and ("-f" in args or "--force" in args):
+            return True
+
+        if args[:3] in (["compose", "down", "--volumes"], ["compose", "down", "-v"]):
+            return True
+
+        if args[:2] == ["compose", "down"] and (
+            "--volumes" in args or "-v" in args or "--rmi" in args
+        ):
+            return True
+
+        return False
+
+    @staticmethod
+    def _is_cloud_resource_deletion(command: str, args: List[str]) -> bool:
+        """Return true for common cloud resource deletion command shapes."""
+        if command not in {"aws", "az", "gcloud"}:
+            return False
+
+        destructive_tokens = {
+            "delete",
+            "destroy",
+            "remove",
+            "terminate-instances",
+            "delete-stack",
+            "delete-cluster",
+            "delete-bucket",
+            "delete-function",
+            "delete-service",
+        }
+
+        return any(
+            arg in destructive_tokens or arg.startswith("delete-")
+            for arg in args
+        )
+
+    @staticmethod
+    def _is_forceful_kubernetes_delete(command: str, args: List[str]) -> bool:
+        """Return true for Kubernetes deletion commands using forceful flags."""
+        if command not in {"kubectl", "oc"}:
+            return False
+
+        if not args or args[0] != "delete":
+            return False
+
+        force_flags = {"--force", "--now"}
+        has_force = any(
+            arg in force_flags or arg == "--grace-period=0"
+            for arg in args[1:]
+        )
+        return has_force
 
     @staticmethod
     def _mark_dangerous(segment: Dict[str, Any], flag: str, reason: str) -> None:

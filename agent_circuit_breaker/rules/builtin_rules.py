@@ -109,6 +109,26 @@ def _is_remote_script_to_shell(action: str) -> bool:
     return _has_command_risk(action, "cmd_remote_script_to_shell")
 
 
+def _is_package_publish_without_context(action: str) -> bool:
+    """Detect package publish commands without explicit release context."""
+    return _has_command_risk(action, "cmd_package_publish_without_context")
+
+
+def _is_destructive_docker(action: str) -> bool:
+    """Detect destructive Docker command shapes."""
+    return _has_command_risk(action, "cmd_destructive_docker")
+
+
+def _is_cloud_resource_deletion(action: str) -> bool:
+    """Detect cloud resource deletion command shapes."""
+    return _has_command_risk(action, "cmd_cloud_resource_deletion")
+
+
+def _is_forceful_kubernetes_delete(action: str) -> bool:
+    """Detect forceful Kubernetes deletion command shapes."""
+    return _has_command_risk(action, "cmd_forceful_kubernetes_delete")
+
+
 def _is_sql_drop_table(action: str) -> bool:
     """Detect SQL DROP TABLE statements."""
     return _has_sql_risk(action, "sql_drop_table")
@@ -218,6 +238,54 @@ BUILTIN_RULES = [
         matcher=_is_remote_script_to_shell,
         metadata={
             "description": "Blocks curl/wget output piped directly to sh or bash",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_package_publish_without_context",
+        title="Package publish without explicit release context detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_package_publish_without_context,
+        metadata={
+            "description": "Blocks common package publish commands unless an explicit repository, registry, tag, or dry-run context is present",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_destructive_docker",
+        title="Destructive Docker command detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_destructive_docker,
+        metadata={
+            "description": "Blocks destructive Docker prune, remove, volume, network, and compose-down command shapes",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_cloud_resource_deletion",
+        title="Cloud resource deletion command detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_cloud_resource_deletion,
+        metadata={
+            "description": "Blocks common AWS, Azure CLI, and gcloud deletion command shapes",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_forceful_kubernetes_delete",
+        title="Forceful Kubernetes deletion detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_forceful_kubernetes_delete,
+        metadata={
+            "description": "Blocks kubectl/oc delete commands that use --force, --now, or --grace-period=0",
             "category": "command",
         }
     ),

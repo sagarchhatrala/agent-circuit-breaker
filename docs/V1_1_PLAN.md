@@ -2,6 +2,8 @@
 
 The v1.1 milestone should add compatible safety coverage without changing the v1.0 public contracts.
 
+Status: completed in `v1.1.0`.
+
 ## Goals
 
 - Add more built-in command rules for common high-risk agent actions.
@@ -64,6 +66,16 @@ Add tests that run examples and validate installed-package behavior where practi
 - New rules have focused tests.
 - Docs describe only supported behavior.
 - Compatibility policy remains true.
+
+## Completed Scope
+
+- Package publish commands without explicit release context.
+- Destructive Docker command shapes.
+- Cloud resource deletion command shapes.
+- Forceful Kubernetes deletion command shapes.
+- Detailed JSON output contract documentation.
+- Local allowlist pattern documentation and example.
+- Integration-focused example regression coverage.
 
 ## Release Target
 

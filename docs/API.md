@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker exposes a small package-level API for integrations that want deterministic safety checks without invoking the CLI.
 
-The current API is alpha and intentionally small.
+The current API is stable for v1.x compatible releases and intentionally small.
 
 ## `evaluate_action(action, rule_file_path=None)`
 
@@ -24,6 +24,8 @@ Important result fields:
 - `command_analysis`: command-oriented analysis.
 - `sql_analysis`: SQL-oriented analysis.
 - `error`: error text when evaluation fails.
+
+The detailed JSON-compatible result contract is documented in [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md).
 
 Custom rule files can be appended after built-in rules:
 
@@ -58,4 +60,4 @@ metadata = rule_schema_metadata()
 
 ## Stability
 
-The v0.6 API is the first public alpha surface. It is intended to become the v1.0 integration surface after adversarial testing, documentation hardening, and release-candidate review.
+The public API became stable at v1.0. Compatible v1.x releases may add result fields, built-in rules, docs, and examples without changing the meaning of existing fields or the external rule schema version.

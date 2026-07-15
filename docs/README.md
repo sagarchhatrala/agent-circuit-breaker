@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v1.0 stable scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
+The current v1.1 compatible scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, package publish commands without explicit release context, destructive Docker commands, cloud deletion commands, forceful Kubernetes deletion commands, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -56,11 +56,17 @@ The supported external rule format is documented in [RULE_SCHEMA.md](RULE_SCHEMA
 
 Python integrations can use the public API documented in [API.md](API.md).
 
+The stable JSON result fields are documented in [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md).
+
+The local allowlist pattern is documented in [ALLOWLIST_PATTERN.md](ALLOWLIST_PATTERN.md).
+
 Security and integration references:
 
 - [SECURITY_MODEL.md](SECURITY_MODEL.md)
 - [THREAT_MODEL.md](THREAT_MODEL.md)
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
+- [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md)
+- [ALLOWLIST_PATTERN.md](ALLOWLIST_PATTERN.md)
 
 Release readiness references:
 
@@ -270,6 +276,8 @@ The v0.9 release candidate milestone adds compatibility policy and release check
 
 The v1.0 stable milestone marks the public API, CLI, decision contract, and rule schema version 1 as stable.
 
+The v1.1 compatible additions milestone adds command rules for package publishing without explicit release context, destructive Docker commands, cloud resource deletion commands, and forceful Kubernetes deletion commands. It also documents the JSON output contract and a local allowlist pattern built on schema version 1 custom rules.
+
 The filesystem inspector also identifies common non-delete operations such as move, copy, chmod, directory creation, and file creation.
 
 ## Running Tests
@@ -291,6 +299,7 @@ The project uses the Python standard library test runner.
 - [v0.9.0-rc.1](releases/v0.9.0-rc.1.md)
 - [v1.0.0](releases/v1.0.0.md)
 - [v1.0.1](releases/v1.0.1.md)
+- [v1.1.0](releases/v1.1.0.md)
 
 ## Known Limits
 

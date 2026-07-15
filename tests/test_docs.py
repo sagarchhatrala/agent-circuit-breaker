@@ -60,6 +60,8 @@ class TestReleaseReadinessDocs(unittest.TestCase):
             "BRANCH_PROTECTION.md",
             "V1_0_PRODUCTION_READINESS.md",
             "V1_1_PLAN.md",
+            "JSON_OUTPUT_CONTRACT.md",
+            "ALLOWLIST_PATTERN.md",
             "ANNOUNCEMENT.md",
         ):
             with self.subTest(file_name=file_name):
@@ -75,6 +77,8 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         self.assertIn("[BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)", docs_index)
         self.assertIn("[V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)", docs_index)
         self.assertIn("[V1_1_PLAN.md](V1_1_PLAN.md)", docs_index)
+        self.assertIn("[JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md)", docs_index)
+        self.assertIn("[ALLOWLIST_PATTERN.md](ALLOWLIST_PATTERN.md)", docs_index)
         self.assertIn("[ANNOUNCEMENT.md](ANNOUNCEMENT.md)", docs_index)
 
     def test_compatibility_policy_defines_stable_contracts(self):
@@ -112,6 +116,23 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("public Python API, CLI, decision contract, and rule schema version 1", readiness)
         self.assertIn("GitHub Release is published as a stable release, not a prerelease", readiness)
+
+    def test_json_output_contract_defines_stable_fields(self):
+        """JSON output contract should document important result fields."""
+        contract = (DOCS_DIR / "JSON_OUTPUT_CONTRACT.md").read_text(encoding="utf-8")
+
+        self.assertIn("Top-Level Result", contract)
+        self.assertIn("`command_analysis`", contract)
+        self.assertIn("`sql_analysis`", contract)
+        self.assertIn("Custom Rule Summary", contract)
+
+    def test_allowlist_pattern_preserves_builtin_blocks(self):
+        """Allowlist docs should state that built-in blocks still win."""
+        allowlist = (DOCS_DIR / "ALLOWLIST_PATTERN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Built-in block rules are evaluated before custom rules", allowlist)
+        self.assertIn("allow_repo_status_checks", allowlist)
+        self.assertIn("Matched Rule: fs_recursive_delete", allowlist)
 
 
 class TestRepositoryHygiene(unittest.TestCase):

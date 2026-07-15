@@ -1,0 +1,97 @@
+# JSON Output Contract
+
+This document describes the stable JSON fields returned by the CLI and Python API.
+
+The contract is additive for v1.x compatible releases. Existing fields keep their meaning. New fields may be added when they do not change the meaning of existing fields.
+
+## Top-Level Result
+
+`circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
+
+- `command`: original action value passed by the caller.
+- `verdict`: lowercase result: `allow`, `block`, `error`, or `unknown`.
+- `decision`: uppercase engine decision: `ALLOW`, `BLOCK`, `ERROR`, or `UNKNOWN`.
+- `matched_rule`: matching rule ID, or `null` when no rule matched.
+- `rule_details`: matching rule object details, or `null`.
+- `operation_analysis`: filesystem-oriented analysis object, or `null` before analysis.
+- `command_analysis`: command-oriented analysis object, or `null` before analysis.
+- `sql_analysis`: SQL-oriented analysis object, or `null` before analysis.
+- `error`: error text when verdict is `error`, otherwise `null`.
+- `custom_rules`: present only when the Python API is called with `rule_file_path`.
+
+## Rule Details
+
+When a rule matches, `rule_details` contains:
+
+- `id`: stable rule identifier.
+- `title`: human-readable title.
+- `severity`: `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW`.
+- `response`: `allow` or `block`.
+- `metadata`: rule metadata object.
+
+## Operation Analysis
+
+`operation_analysis` contains:
+
+- `operation`: detected filesystem operation, or `unknown`.
+- `targets`: target paths detected by the filesystem inspector.
+- `flags`: operation flags detected by the filesystem inspector.
+- `is_dangerous`: boolean risk summary.
+- `danger_reason`: explanation text or `null`.
+
+## Command Analysis
+
+`command_analysis` contains:
+
+- `tokens`: first command segment tokens.
+- `command`: first segment command name, or `null`.
+- `args`: first segment arguments.
+- `segments`: list of analyzed command segments.
+- `operators`: shell operators between segments.
+- `is_valid`: whether command parsing succeeded.
+- `error`: command parsing error text or `null`.
+- `risk_flags`: aggregate command risk flags.
+- `is_dangerous`: boolean risk summary.
+- `danger_reason`: explanation text or `null`.
+
+Each command segment contains:
+
+- `raw`: raw segment text.
+- `tokens`: segment tokens.
+- `command`: segment command name, or `null`.
+- `args`: segment arguments.
+- `risk_flags`: segment risk flags.
+- `is_dangerous`: boolean segment risk summary.
+- `danger_reason`: explanation text or `null`.
+
+## SQL Analysis
+
+`sql_analysis` contains:
+
+- `tokens`: SQL tokens.
+- `statements`: analyzed SQL statements.
+- `is_valid`: whether SQL parsing succeeded.
+- `error`: SQL parsing error text or `null`.
+- `risk_flags`: aggregate SQL risk flags.
+- `is_dangerous`: boolean risk summary.
+- `danger_reason`: explanation text or `null`.
+
+Each SQL statement contains:
+
+- `raw`: raw statement text.
+- `tokens`: statement tokens.
+- `statement_type`: first token lowercased, or `null`.
+- `risk_flags`: statement risk flags.
+- `is_dangerous`: boolean statement risk summary.
+- `danger_reason`: explanation text or `null`.
+
+## Custom Rule Summary
+
+When `evaluate_action(action, rule_file_path=...)` is used, `custom_rules` contains:
+
+- `path`: supplied rule file path.
+- `is_valid`: whether the file loaded and validated.
+- `errors`: validation or build errors.
+- `rule_count`: number of built custom rules.
+
+Invalid custom rule files fail closed with `verdict` set to `error`.

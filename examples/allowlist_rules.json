@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "allow_repo_status_checks",
+      "title": "Allow local repository status checks",
+      "severity": "LOW",
+      "response": "allow",
+      "matcher": {
+        "type": "equals",
+        "value": "git status --short"
+      },
+      "metadata": {
+        "category": "allowlist",
+        "owner": "release-engineering"
+      }
+    }
+  ]
+}
