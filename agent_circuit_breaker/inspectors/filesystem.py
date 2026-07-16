@@ -4,11 +4,20 @@ import os
 import re
 import platform
 from pathlib import Path, PureWindowsPath, PurePosixPath
-from typing import Tuple, Optional, List, Set
+from typing import Any, Dict, Tuple, Optional, List, Set
+
+from agent_circuit_breaker.inspectors.command import CommandInspector
 
 
 class FilesystemInspector:
     """Inspects and analyzes filesystem operations for safety risks."""
+
+    DELETE_COMMANDS = {"rm", "remove", "del", "rmdir", "remove-item"}
+    MOVE_COMMANDS = {"mv", "move", "ren", "rename"}
+    COPY_COMMANDS = {"cp", "copy", "xcopy"}
+    CHMOD_COMMANDS = {"chmod", "icacls", "attrib"}
+    CREATE_DIR_COMMANDS = {"mkdir", "md"}
+    CREATE_FILE_COMMANDS = {"touch"}
 
     # System paths that should never be deleted (cross-platform)
     DANGEROUS_TARGETS = {
@@ -226,32 +235,40 @@ class FilesystemInspector:
             "danger_reason": None,
         }
 
-        # Normalize to lowercase for pattern matching
-        cmd_lower = command.lower()
+        command_analysis = CommandInspector.analyze_command(command)
+        if not command_analysis["is_valid"] or not command_analysis["segments"]:
+            return result
 
-        # Detect operation type and extract details
-        if any(
-            op in cmd_lower for op in ["rm ", "remove ", "del ", "rmdir ", "remove-item"]
-        ):
+        segment = command_analysis["segments"][0]
+        command_name = (segment["command"] or "").lower()
+        args = segment["args"]
+
+        if command_name in FilesystemInspector.DELETE_COMMANDS:
             result["operation"] = "delete"
-            result.update(FilesystemInspector._analyze_delete_command(command))
+            result.update(FilesystemInspector._analyze_delete_args(command_name, args))
 
-        elif any(op in cmd_lower for op in ["mv ", "move ", "ren ", "rename "]):
+        elif command_name in FilesystemInspector.MOVE_COMMANDS:
             result["operation"] = "move"
-            result.update(FilesystemInspector._analyze_move_command(command))
+            result.update(FilesystemInspector._analyze_target_args(args))
 
-        elif any(op in cmd_lower for op in ["cp ", "copy ", "xcopy "]):
+        elif command_name in FilesystemInspector.COPY_COMMANDS:
             result["operation"] = "copy"
-            result.update(FilesystemInspector._analyze_copy_command(command))
+            result.update(FilesystemInspector._analyze_copy_args(args))
 
-        elif any(op in cmd_lower for op in ["chmod ", "icacls ", "attrib "]):
+        elif command_name in FilesystemInspector.CHMOD_COMMANDS:
             result["operation"] = "chmod"
-            result.update(FilesystemInspector._analyze_chmod_command(command))
+            result.update(FilesystemInspector._analyze_target_args(args))
 
-        elif any(op in cmd_lower for op in ["mkdir ", "md ", "new-item -itemtype directory"]):
+        elif command_name in FilesystemInspector.CREATE_DIR_COMMANDS or (
+            command_name == "new-item"
+            and FilesystemInspector._has_option_value(args, "-itemtype", "directory")
+        ):
             result["operation"] = "create_dir"
 
-        elif any(op in cmd_lower for op in ["touch ", "new-item -itemtype file"]):
+        elif command_name in FilesystemInspector.CREATE_FILE_COMMANDS or (
+            command_name == "new-item"
+            and FilesystemInspector._has_option_value(args, "-itemtype", "file")
+        ):
             result["operation"] = "create_file"
 
         return result
@@ -259,81 +276,138 @@ class FilesystemInspector:
     @staticmethod
     def _analyze_delete_command(command: str) -> dict:
         """Analyze a delete/remove command."""
+        analysis = CommandInspector.analyze_command(command)
+        if not analysis["is_valid"] or not analysis["segments"]:
+            return {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
+
+        segment = analysis["segments"][0]
+        return FilesystemInspector._analyze_delete_args(
+            (segment["command"] or "").lower(),
+            segment["args"],
+        )
+
+    @staticmethod
+    def _analyze_delete_args(command: str, args: List[str]) -> dict:
+        """Analyze tokenized delete/remove arguments."""
         result = {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
 
-        # Extract flags
-        flags_patterns = [
-            (r"(?<!\S)-[A-Za-z]*r[A-Za-z]*(?:\s|$)", "recursive"),
-            (r"(?<!\S)-[A-Za-z]*f[A-Za-z]*(?:\s|$)", "force"),
-            (r"-r(?:\s|$|/|\\)", "recursive"),
-            (r"-f(?:\s|$|/|\\)", "force"),
-            (r"--recursive", "recursive"),
-            (r"--force", "force"),
-            (r"-Recurse", "recursive"),
-            (r"-Force", "force"),
-            (r"/s(?:\s|$|/)", "recursive"),
-            (r"/q(?:\s|$|/)", "force"),
-        ]
+        args_lower = [arg.lower() for arg in args]
+        for arg in args_lower:
+            if FilesystemInspector._is_recursive_delete_flag(arg):
+                result["flags"].add("recursive")
+            if FilesystemInspector._is_force_delete_flag(arg):
+                result["flags"].add("force")
 
-        for pattern, flag_name in flags_patterns:
-            if re.search(pattern, command, re.IGNORECASE):
-                result["flags"].add(flag_name)
+        result["targets"] = FilesystemInspector._target_args(args, command)
 
-        # Extract target paths (simple heuristic: unquoted or quoted strings after command)
-        # This is a simplified version - real parsing would be more complex
-        quoted_pattern = r'["\']([^"\']+)["\']'
-        quoted_paths = re.findall(quoted_pattern, command)
-        result["targets"].extend(quoted_paths)
+        for target in result["targets"]:
+            is_dangerous, reason = FilesystemInspector.is_dangerous_target(target)
+            if is_dangerous:
+                result["is_dangerous"] = True
+                result["danger_reason"] = reason
+                break
 
-        # If we found recursive + targets, check for danger
-        if "recursive" in result["flags"] and result["targets"]:
-            for target in result["targets"]:
-                is_dangerous, reason = FilesystemInspector.is_dangerous_target(target)
-                if is_dangerous:
-                    result["is_dangerous"] = True
-                    result["danger_reason"] = reason
-                    break
+        return result
 
+    @staticmethod
+    def _analyze_target_args(args: List[str]) -> dict:
+        """Analyze arguments where non-option tokens are target paths."""
+        result = {"targets": FilesystemInspector._target_args(args), "flags": set(), "is_dangerous": False, "danger_reason": None}
         return result
 
     @staticmethod
     def _analyze_move_command(command: str) -> dict:
         """Analyze a move/rename command."""
-        result = {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
+        analysis = CommandInspector.analyze_command(command)
+        if not analysis["is_valid"] or not analysis["segments"]:
+            return {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
 
-        # Extract quoted paths
-        quoted_pattern = r'["\']([^"\']+)["\']'
-        paths = re.findall(quoted_pattern, command)
-        if paths:
-            # First path is source, rest are destinations/targets
-            result["targets"] = paths
-
-        return result
+        return FilesystemInspector._analyze_target_args(analysis["segments"][0]["args"])
 
     @staticmethod
     def _analyze_copy_command(command: str) -> dict:
         """Analyze a copy command."""
-        result = {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
+        analysis = CommandInspector.analyze_command(command)
+        if not analysis["is_valid"] or not analysis["segments"]:
+            return {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
 
-        # Extract quoted paths
-        quoted_pattern = r'["\']([^"\']+)["\']'
-        paths = re.findall(quoted_pattern, command)
-        result["targets"] = paths
+        return FilesystemInspector._analyze_copy_args(analysis["segments"][0]["args"])
 
-        # Check for recursive flag
-        if re.search(r"(-r|--recursive|/s)", command, re.IGNORECASE):
-            result["flags"].add("recursive")
-
+    @staticmethod
+    def _analyze_copy_args(args: List[str]) -> dict:
+        """Analyze tokenized copy arguments."""
+        result = FilesystemInspector._analyze_target_args(args)
+        for arg in args:
+            if FilesystemInspector._is_recursive_delete_flag(arg.lower()):
+                result["flags"].add("recursive")
         return result
 
     @staticmethod
     def _analyze_chmod_command(command: str) -> dict:
         """Analyze a chmod/permissions command."""
-        result = {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
+        analysis = CommandInspector.analyze_command(command)
+        if not analysis["is_valid"] or not analysis["segments"]:
+            return {"targets": [], "flags": set(), "is_dangerous": False, "danger_reason": None}
 
-        # Extract quoted paths
-        quoted_pattern = r'["\']([^"\']+)["\']'
-        paths = re.findall(quoted_pattern, command)
-        result["targets"] = paths
+        return FilesystemInspector._analyze_target_args(analysis["segments"][0]["args"])
 
-        return result
+    @staticmethod
+    def _target_args(args: List[str], command: str = "") -> List[str]:
+        """Return non-option arguments that represent likely filesystem targets."""
+        targets: List[str] = []
+        skip_next = False
+        option_value_flags = {"-path", "--path", "-literalpath", "-destination", "-target"}
+
+        for index, arg in enumerate(args):
+            lower = arg.lower()
+            if skip_next:
+                skip_next = False
+                continue
+
+            if lower in option_value_flags:
+                if index + 1 < len(args):
+                    targets.append(args[index + 1])
+                    skip_next = True
+                continue
+
+            if FilesystemInspector._is_option_like(arg, command):
+                continue
+
+            targets.append(arg)
+
+        return targets
+
+    @staticmethod
+    def _is_option_like(arg: str, command: str = "") -> bool:
+        """Return true when a token is an option, not a target path."""
+        lower = arg.lower()
+        if lower.startswith("--") or lower.startswith("-"):
+            return True
+        if command in {"del", "rmdir"} and lower in {"/s", "/q"}:
+            return True
+        return False
+
+    @staticmethod
+    def _is_recursive_delete_flag(arg: str) -> bool:
+        """Return true for recursive flags used by delete-like commands."""
+        if arg in {"--recursive", "-recurse", "/s"}:
+            return True
+        return arg.startswith("-") and not arg.startswith("--") and "r" in arg
+
+    @staticmethod
+    def _is_force_delete_flag(arg: str) -> bool:
+        """Return true for force flags used by delete-like commands."""
+        if arg in {"--force", "-force", "/q"}:
+            return True
+        return arg.startswith("-") and not arg.startswith("--") and "f" in arg
+
+    @staticmethod
+    def _has_option_value(args: List[str], option_name: str, expected_value: str) -> bool:
+        """Return true when args contain an option followed by an expected value."""
+        args_lower = [arg.lower() for arg in args]
+        option_name = option_name.lower()
+        expected_value = expected_value.lower()
+        for index, arg in enumerate(args_lower[:-1]):
+            if arg == option_name and args_lower[index + 1] == expected_value:
+                return True
+        return False

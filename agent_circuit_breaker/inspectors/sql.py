@@ -61,10 +61,12 @@ class SQLInspector:
 
             if char == "-" and next_char == "-":
                 index = SQLInspector._skip_line_comment(sql, index + 2)
+                current.append(" ")
                 continue
 
             if char == "/" and next_char == "*":
                 index = SQLInspector._skip_block_comment(sql, index + 2)
+                current.append(" ")
                 continue
 
             if char == "'":
@@ -228,6 +230,13 @@ class SQLInspector:
             risks.append(("sql_unqualified_delete", "Unqualified DELETE detected"))
 
         if (
+            len(tokens_lower) >= 3
+            and tokens_lower[:2] == ["delete", "from"]
+            and SQLInspector._has_tautological_where(tokens_lower)
+        ):
+            risks.append(("sql_tautological_delete", "Tautological DELETE detected"))
+
+        if (
             len(tokens_lower) >= 4
             and tokens_lower[0] == "update"
             and "set" in tokens_lower
@@ -235,12 +244,46 @@ class SQLInspector:
         ):
             risks.append(("sql_unqualified_update", "Unqualified UPDATE detected"))
 
+        if (
+            len(tokens_lower) >= 4
+            and tokens_lower[0] == "update"
+            and "set" in tokens_lower
+            and SQLInspector._has_tautological_where(tokens_lower)
+        ):
+            risks.append(("sql_tautological_update", "Tautological UPDATE detected"))
+
         if not risks:
             return
 
         statement["risk_flags"] = [risk_flag for risk_flag, _ in risks]
         statement["is_dangerous"] = True
         statement["danger_reason"] = "; ".join(reason for _, reason in risks)
+
+    @staticmethod
+    def _has_tautological_where(tokens_lower: List[str]) -> bool:
+        """Return true for simple always-true WHERE predicates."""
+        if "where" not in tokens_lower:
+            return False
+
+        where_index = tokens_lower.index("where")
+        predicate = tokens_lower[where_index + 1 :]
+        joined = "".join(predicate)
+
+        tautologies = {
+            "1=1",
+            "true",
+            "(true)",
+            "'1'='1'",
+            "\"1\"=\"1\"",
+        }
+        if joined in tautologies:
+            return True
+
+        for index in range(0, len(predicate) - 2):
+            if predicate[index] == predicate[index + 2] and predicate[index + 1] == "=":
+                return True
+
+        return False
 
     @staticmethod
     def _read_quoted(sql: str, start: int, quote: str) -> tuple[str, int]:

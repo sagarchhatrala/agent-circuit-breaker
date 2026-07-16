@@ -4,6 +4,20 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.1.1] - 2026-07-16
+
+### Fixed
+
+- Replaced substring-based recursive delete matching with tokenized filesystem operation analysis.
+- Fixed false positives for non-delete commands containing `rm`, such as `transform -rf`.
+- Blocked split and long-form recursive delete flags such as `rm -r -f /etc` and `rm --recursive --force /etc`.
+- Blocked unquoted system path deletion targets such as `rm /etc/passwd`.
+- Blocked symbolic recursive world-writable chmod such as `chmod -R a+rwx /tmp`.
+- Blocked AWS S3 recursive removal through `aws s3 rm --recursive`.
+- Blocked simple SQL tautological bulk mutations such as `WHERE 1=1`.
+- Fixed SQL block comments between keywords, such as `DROP/**/TABLE`.
+- Added catastrophic command coverage for disk overwrite/format, root-level `find -delete`, and shell fork bomb patterns.
+
 ## [1.1.0] - 2026-07-15
 
 ### Added

@@ -107,7 +107,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Command inspector (tokenization, operator splitting, high-risk command patterns)
 - SQL inspector (tokenization, statement splitting, destructive statement detection)
 - Built-in filesystem, command, and SQL safety rules
-- Built-in command rules for package publish, Docker destruction, cloud deletion, and forceful Kubernetes deletion risk shapes
+- Built-in command rules for package publish, Docker destruction, cloud deletion, forceful Kubernetes deletion, disk overwrite/format, root find-delete, and fork bomb risk shapes
 - External JSON rule validation
 - Dedicated external rule schema reference
 - Schema metadata exported by the package
@@ -121,7 +121,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Production-readiness documentation
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 330 tests
+- 349 tests
 - Documentation for current stable behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -182,7 +182,7 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v1.1.0
+**Current**: v1.1.1
 
 **Next**: compatible patch and minor releases
 

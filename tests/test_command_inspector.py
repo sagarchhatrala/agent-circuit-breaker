@@ -230,6 +230,13 @@ class TestCommandInspectorDangerousPatterns(unittest.TestCase):
         self.assertTrue(result["is_dangerous"])
         self.assertIn("cmd_recursive_world_writable", result["risk_flags"])
 
+    def test_chmod_recursive_symbolic_world_writable(self):
+        """chmod -R a+rwx should be dangerous."""
+        result = CommandInspector.analyze_command("chmod -R a+rwx /tmp")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_recursive_world_writable", result["risk_flags"])
+
     def test_chmod_755_not_dangerous(self):
         """chmod 755 should not be marked dangerous."""
         result = CommandInspector.analyze_command("chmod 755 script.sh")
@@ -336,6 +343,7 @@ class TestCommandInspectorDangerousPatterns(unittest.TestCase):
         cases = [
             "aws cloudformation delete-stack --stack-name prod",
             "aws ec2 terminate-instances --instance-ids i-123",
+            "aws s3 rm --recursive s3://mybucket",
             "az group delete --name prod",
             "gcloud projects delete prod-project",
         ]
@@ -375,6 +383,34 @@ class TestCommandInspectorDangerousPatterns(unittest.TestCase):
 
         self.assertFalse(result["is_dangerous"])
         self.assertEqual(result["risk_flags"], [])
+
+    def test_disk_overwrite_and_format_are_dangerous(self):
+        """Disk overwrite and format command shapes should be dangerous."""
+        cases = [
+            ("dd if=/dev/zero of=/dev/sda", "cmd_disk_overwrite_or_format"),
+            ("mkfs.ext4 /dev/sda1", "cmd_disk_overwrite_or_format"),
+        ]
+
+        for command, expected_flag in cases:
+            with self.subTest(command=command):
+                result = CommandInspector.analyze_command(command)
+
+                self.assertTrue(result["is_dangerous"])
+                self.assertIn(expected_flag, result["risk_flags"])
+
+    def test_find_root_delete_is_dangerous(self):
+        """find -delete rooted at / should be dangerous."""
+        result = CommandInspector.analyze_command("find / -delete")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_find_root_delete", result["risk_flags"])
+
+    def test_shell_fork_bomb_is_dangerous(self):
+        """Classic shell fork bomb should be dangerous."""
+        result = CommandInspector.analyze_command(":(){ :|:& };:")
+
+        self.assertTrue(result["is_dangerous"])
+        self.assertIn("cmd_shell_fork_bomb", result["risk_flags"])
 
 
 class TestCommandInspectorDeterminism(unittest.TestCase):

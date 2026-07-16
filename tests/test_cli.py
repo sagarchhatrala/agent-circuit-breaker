@@ -76,6 +76,36 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertEqual(result["verdict"], "block")
         self.assertIsNotNone(result["matched_rule"])
 
+    def test_evaluate_split_recursive_delete_flags(self):
+        """Split recursive delete flags are blocked."""
+        result = self.cli.evaluate_command("rm -r -f /etc")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "fs_recursive_delete")
+
+    def test_evaluate_long_recursive_delete_flags(self):
+        """Long recursive delete flags are blocked."""
+        result = self.cli.evaluate_command("rm --recursive --force /etc")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "fs_recursive_delete")
+
+    def test_evaluate_unquoted_system_path_delete(self):
+        """Unquoted system path deletes are blocked."""
+        result = self.cli.evaluate_command("rm /etc/passwd")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "fs_system_path")
+
+    def test_evaluate_rm_substring_false_positives_do_not_block(self):
+        """Commands containing rm as a substring should not trigger rm rules."""
+        for command in ("transform -rf image.png", "terraform -rf apply", "firm -rf handshake"):
+            with self.subTest(command=command):
+                result = self.cli.evaluate_command(command)
+
+                self.assertNotEqual(result["matched_rule"], "fs_recursive_delete")
+                self.assertNotEqual(result["verdict"], "block")
+
     def test_evaluate_root_deletion(self):
         """Evaluate root directory deletion."""
         result = self.cli.evaluate_command('rm -rf "/"')
@@ -176,6 +206,21 @@ class TestCLIEvaluation(unittest.TestCase):
                 self.assertIsNone(result["matched_rule"])
                 self.assertEqual(result["sql_analysis"]["risk_flags"], [])
 
+    def test_sql_evasion_patterns_block(self):
+        """Common destructive SQL evasion patterns are enforced."""
+        cases = [
+            ("DELETE FROM users WHERE 1=1", "sql_tautological_delete"),
+            ("UPDATE users SET password='x' WHERE 1=1", "sql_tautological_update"),
+            ("DROP/**/TABLE users", "sql_drop_table"),
+        ]
+
+        for sql, expected_rule in cases:
+            with self.subTest(sql=sql):
+                result = self.cli.evaluate_command(sql)
+
+                self.assertEqual(result["verdict"], "block")
+                self.assertEqual(result["matched_rule"], expected_rule)
+
     def test_git_force_push_blocks(self):
         """Command inspector git force push risk is enforced."""
         result = self.cli.evaluate_command("git push --force origin main")
@@ -200,6 +245,13 @@ class TestCLIEvaluation(unittest.TestCase):
     def test_recursive_chmod_777_blocks(self):
         """Recursive chmod 777 is enforced."""
         result = self.cli.evaluate_command("chmod -R 777 /tmp/test")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "cmd_recursive_world_writable")
+
+    def test_recursive_symbolic_chmod_blocks(self):
+        """Recursive symbolic world-writable chmod is enforced."""
+        result = self.cli.evaluate_command("chmod -R a+rwx /tmp")
 
         self.assertEqual(result["verdict"], "block")
         self.assertEqual(result["matched_rule"], "cmd_recursive_world_writable")
@@ -242,12 +294,35 @@ class TestCLIEvaluation(unittest.TestCase):
         self.assertEqual(result["verdict"], "block")
         self.assertEqual(result["matched_rule"], "cmd_cloud_resource_deletion")
 
+    def test_aws_s3_recursive_rm_blocks(self):
+        """AWS S3 recursive removal is enforced."""
+        result = self.cli.evaluate_command("aws s3 rm --recursive s3://mybucket")
+
+        self.assertEqual(result["verdict"], "block")
+        self.assertEqual(result["matched_rule"], "cmd_cloud_resource_deletion")
+
     def test_forceful_kubernetes_delete_blocks(self):
         """Forceful Kubernetes delete commands are enforced."""
         result = self.cli.evaluate_command("kubectl delete namespace prod --force")
 
         self.assertEqual(result["verdict"], "block")
         self.assertEqual(result["matched_rule"], "cmd_forceful_kubernetes_delete")
+
+    def test_disk_and_find_catastrophic_commands_block(self):
+        """Disk overwrite/format, root find delete, and fork bomb shapes are enforced."""
+        cases = [
+            ("dd if=/dev/zero of=/dev/sda", "cmd_disk_overwrite_or_format"),
+            ("mkfs.ext4 /dev/sda1", "cmd_disk_overwrite_or_format"),
+            ("find / -delete", "cmd_find_root_delete"),
+            (":(){ :|:& };:", "cmd_shell_fork_bomb"),
+        ]
+
+        for command, expected_rule in cases:
+            with self.subTest(command=command):
+                result = self.cli.evaluate_command(command)
+
+                self.assertEqual(result["verdict"], "block")
+                self.assertEqual(result["matched_rule"], expected_rule)
 
     def test_git_status_remains_unknown(self):
         """Safe but unclassified git status remains unknown."""

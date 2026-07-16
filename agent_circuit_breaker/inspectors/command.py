@@ -165,6 +165,8 @@ class CommandInspector:
             CommandInspector._detect_segment_risks(segment)
             CommandInspector._detect_pipeline_risks(result, index)
 
+        CommandInspector._detect_full_command_risks(result)
+
         risk_flags: List[str] = []
         danger_reasons: List[str] = []
 
@@ -232,6 +234,34 @@ class CommandInspector:
                 "Forceful Kubernetes deletion detected",
             )
 
+        if CommandInspector._is_disk_overwrite_or_format(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_disk_overwrite_or_format",
+                "Disk overwrite or format command detected",
+            )
+
+        if CommandInspector._is_find_root_delete(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_find_root_delete",
+                "Root-level find delete command detected",
+            )
+
+    @staticmethod
+    def _detect_full_command_risks(result: Dict[str, Any]) -> None:
+        """Detect risks that are easier to identify from the full command text."""
+        normalized = "".join(result["raw"].split())
+        if ":(){:|:&};:" not in normalized:
+            return
+
+        for segment in result["segments"]:
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_shell_fork_bomb",
+                "Shell fork bomb pattern detected",
+            )
+
     @staticmethod
     def _detect_pipeline_risks(result: Dict[str, Any], index: int) -> None:
         """Detect risk patterns that depend on adjacent pipeline segments."""
@@ -272,12 +302,18 @@ class CommandInspector:
 
     @staticmethod
     def _is_recursive_world_writable(args: List[str]) -> bool:
-        """Return true when chmod args represent recursive chmod 777."""
+        """Return true when chmod args represent recursive world-writable permissions."""
         has_recursive = any(
             arg == "-r" or (arg.startswith("-") and "r" in arg and not arg.startswith("--"))
             for arg in args
         )
-        has_world_writable = "777" in args
+        has_world_writable = any(
+            arg == "777"
+            or arg == "a+rwx"
+            or arg == "a=rwX".lower()
+            or arg.startswith("a+") and all(permission in arg for permission in ("r", "w", "x"))
+            for arg in args
+        )
 
         return has_recursive and has_world_writable
 
@@ -356,6 +392,9 @@ class CommandInspector:
         if command not in {"aws", "az", "gcloud"}:
             return False
 
+        if args[:2] == ["s3", "rm"] and "--recursive" in args:
+            return True
+
         destructive_tokens = {
             "delete",
             "destroy",
@@ -388,6 +427,26 @@ class CommandInspector:
             for arg in args[1:]
         )
         return has_force
+
+    @staticmethod
+    def _is_disk_overwrite_or_format(command: str, args: List[str]) -> bool:
+        """Return true for commands that can overwrite or format block devices."""
+        if command == "dd":
+            return any(arg.startswith("of=/dev/") for arg in args)
+
+        if command.startswith("mkfs"):
+            return any(arg.startswith("/dev/") for arg in args)
+
+        return False
+
+    @staticmethod
+    def _is_find_root_delete(command: str, args: List[str]) -> bool:
+        """Return true for find-delete rooted at system-level paths."""
+        if command != "find" or "-delete" not in args:
+            return False
+
+        dangerous_roots = {"/", "/etc", "/home", "/var", "/usr", "/root", "/sys"}
+        return any(arg in dangerous_roots for arg in args)
 
     @staticmethod
     def _mark_dangerous(segment: Dict[str, Any], flag: str, reason: str) -> None:

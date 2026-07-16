@@ -108,6 +108,14 @@ class TestSQLInspectorTokenize(unittest.TestCase):
 
         self.assertEqual(tokens, ["SELECT", "1"])
 
+    def test_block_comment_between_keywords_preserves_token_boundary(self):
+        """Block comments between SQL keywords should not merge tokens."""
+        result = SQLInspector.analyze_sql("DROP/**/TABLE users")
+
+        self.assertTrue(result["is_valid"])
+        self.assertEqual(result["statements"][0]["tokens"], ["DROP", "TABLE", "users"])
+        self.assertIn("sql_drop_table", result["risk_flags"])
+
     def test_unclosed_single_quote_invalid(self):
         """Unclosed single quote should be explicit invalid input."""
         result = SQLInspector.analyze_sql("SELECT 'abc")
@@ -312,6 +320,22 @@ class TestSQLInspectorDestructiveStatements(unittest.TestCase):
         self.assertTrue(result["is_valid"])
         self.assertFalse(result["is_dangerous"])
         self.assertEqual(result["risk_flags"], [])
+
+    def test_tautological_delete_dangerous(self):
+        """DELETE with WHERE 1=1 should be marked dangerous."""
+        self.assertDangerousSql(
+            "DELETE FROM users WHERE 1=1",
+            ["sql_tautological_delete"],
+            "Tautological DELETE detected",
+        )
+
+    def test_tautological_update_dangerous(self):
+        """UPDATE with WHERE 1=1 should be marked dangerous."""
+        self.assertDangerousSql(
+            "UPDATE users SET password='x' WHERE 1=1",
+            ["sql_tautological_update"],
+            "Tautological UPDATE detected",
+        )
 
     def test_identifier_containing_truncate_not_dangerous(self):
         """A table name containing truncate should not be marked dangerous."""

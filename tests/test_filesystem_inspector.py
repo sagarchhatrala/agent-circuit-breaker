@@ -204,6 +204,41 @@ class TestCommandAnalysis(unittest.TestCase):
         self.assertIn("recursive", result["flags"])
         self.assertIn("force", result["flags"])
 
+    def test_analyze_split_recursive_force_delete_flags(self):
+        """Split rm flags should be recognized."""
+        result = FilesystemInspector.analyze_operation("rm -r -f /etc")
+
+        self.assertEqual(result["operation"], "delete")
+        self.assertIn("recursive", result["flags"])
+        self.assertIn("force", result["flags"])
+        self.assertIn("/etc", result["targets"])
+
+    def test_analyze_long_recursive_force_delete_flags(self):
+        """Long rm flags should be recognized."""
+        result = FilesystemInspector.analyze_operation("rm --recursive --force /etc")
+
+        self.assertEqual(result["operation"], "delete")
+        self.assertIn("recursive", result["flags"])
+        self.assertIn("force", result["flags"])
+        self.assertIn("/etc", result["targets"])
+
+    def test_analyze_unquoted_delete_target(self):
+        """Unquoted delete targets should be extracted."""
+        result = FilesystemInspector.analyze_operation("rm /etc/passwd")
+
+        self.assertEqual(result["operation"], "delete")
+        self.assertIn("/etc/passwd", result["targets"])
+        self.assertTrue(result["is_dangerous"])
+
+    def test_similar_command_names_are_not_delete_operations(self):
+        """Commands containing rm as a substring should not be delete operations."""
+        for command in ("transform -rf image.png", "terraform -rf apply", "firm -rf handshake"):
+            with self.subTest(command=command):
+                result = FilesystemInspector.analyze_operation(command)
+
+                self.assertEqual(result["operation"], "unknown")
+                self.assertEqual(result["targets"], [])
+
     def test_analyze_windows_remove_item(self):
         """Analyze Windows Remove-Item command."""
         result = FilesystemInspector.analyze_operation('Remove-Item -Path "C:\\temp" -Recurse')

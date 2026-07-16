@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
 
-The current v1.1 compatible scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive chmod 777, remote scripts piped to shells, package publish commands without explicit release context, destructive Docker commands, cloud deletion commands, forceful Kubernetes deletion commands, destructive SQL statements, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
+The current v1.1 compatible scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive world-writable chmod, remote scripts piped to shells, package publish commands without explicit release context, destructive Docker commands, cloud deletion commands, forceful Kubernetes deletion commands, disk overwrite and format commands, root-level find-delete, fork bomb patterns, destructive SQL statements, SQL tautological bulk mutations, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
 
 ## Installation
 
@@ -245,8 +245,11 @@ The v0.1 built-in rule set focuses on filesystem deletion risks:
 The command inspector also enforces a small v0.2 command safety set:
 
 - `git push --force`, `git push -f`, and `git push --force-with-lease`
-- recursive world-writable permissions such as `chmod -R 777 <target>`
+- recursive world-writable permissions such as `chmod -R 777 <target>` and `chmod -R a+rwx <target>`
 - remote script execution patterns such as `curl ... | sh` and `wget ... | bash`
+- disk overwrite or format command shapes such as `dd ... of=/dev/sda` and `mkfs.ext4 /dev/sda1`
+- root-level `find / -delete`
+- classic shell fork bomb command text
 
 The SQL inspector enforces a small v0.3 destructive statement set:
 
@@ -255,6 +258,7 @@ The SQL inspector enforces a small v0.3 destructive statement set:
 - `TRUNCATE` and `TRUNCATE TABLE`
 - `DELETE FROM <table>` without `WHERE`
 - `UPDATE <table> SET ...` without `WHERE`
+- `DELETE` or `UPDATE` with simple tautological `WHERE` predicates such as `WHERE 1=1`
 
 The v0.4 rule loader supports external JSON rule files with deterministic matcher types:
 
@@ -300,6 +304,7 @@ The project uses the Python standard library test runner.
 - [v1.0.0](releases/v1.0.0.md)
 - [v1.0.1](releases/v1.0.1.md)
 - [v1.1.0](releases/v1.1.0.md)
+- [v1.1.1](releases/v1.1.1.md)
 
 ## Known Limits
 

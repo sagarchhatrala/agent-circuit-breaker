@@ -10,69 +10,65 @@ from ..inspectors.command import CommandInspector
 from ..inspectors.sql import SQLInspector
 
 
+def _filesystem_analyses(action: str) -> list[dict]:
+    """Return filesystem analyses for each parsed command segment."""
+    command_analysis = CommandInspector.analyze_command(action)
+    if not command_analysis["is_valid"]:
+        return []
+
+    return [
+        FilesystemInspector.analyze_operation(segment["raw"])
+        for segment in command_analysis["segments"]
+    ]
+
+
 def _is_recursive_delete(action: str) -> bool:
     """Detect recursive filesystem deletion patterns."""
-    action_lower = action.lower().strip()
-    
-    # Unix/Linux patterns
-    if "rm" in action_lower:
-        if "-rf" in action_lower or "-fr" in action_lower:
-            return True
-        if "rmdir" in action_lower and "/s" in action_lower:
-            return True
-    
-    # Windows PowerShell patterns
-    if "remove-item" in action_lower:
-        if "-recurse" in action_lower or "-r " in action_lower:
-            return True
-    
-    # Windows cmd patterns
-    if "rmdir" in action_lower and "/s" in action_lower:
-        return True
-    
-    return False
+    return any(
+        analysis["operation"] == "delete" and "recursive" in analysis["flags"]
+        for analysis in _filesystem_analyses(action)
+    )
 
 
 def _is_system_path(action: str) -> bool:
     """Detect attempts to delete system directories."""
-    analysis = FilesystemInspector.analyze_operation(action)
-    if analysis["operation"] != "delete":
-        return False
+    for analysis in _filesystem_analyses(action):
+        if analysis["operation"] != "delete":
+            continue
 
-    for target in analysis["targets"]:
-        is_dangerous, _ = FilesystemInspector.is_dangerous_target(target)
-        if is_dangerous:
-            return True
+        for target in analysis["targets"]:
+            is_dangerous, _ = FilesystemInspector.is_dangerous_target(target)
+            if is_dangerous:
+                return True
 
     return False
 
 
 def _is_root_deletion(action: str) -> bool:
     """Detect deletion targeting root or home directory without qualification."""
-    action_lower = action.lower()
-    
-    # Pattern: rm -rf / or rm -rf ~
-    if "rm -rf /" in action_lower or "rmdir /s /:" in action_lower:
-        return True
-    
-    if "rm -rf ~" in action_lower:
-        return True
-    
+    for analysis in _filesystem_analyses(action):
+        if analysis["operation"] != "delete":
+            continue
+
+        for target in analysis["targets"]:
+            if target in {"/", "\\", "~"}:
+                return True
+
     return False
 
 
 def _is_unqualified_glob_delete(action: str) -> bool:
     """Detect bulk delete operations without proper qualification."""
-    action_lower = action.lower()
-    
-    # Pattern: rm -rf /* or rm -rf *
-    if "rm -rf /*" in action_lower or "rm -rf *" in action_lower:
-        return True
-    
-    if "remove-item -path" in action_lower and ("*" in action_lower or "/*" in action_lower):
-        if "-recurse" in action_lower:
+    for analysis in _filesystem_analyses(action):
+        if analysis["operation"] != "delete":
+            continue
+
+        if "recursive" not in analysis["flags"]:
+            continue
+
+        if any(target in {"*", "/*", "\\*"} for target in analysis["targets"]):
             return True
-    
+
     return False
 
 
@@ -129,6 +125,21 @@ def _is_forceful_kubernetes_delete(action: str) -> bool:
     return _has_command_risk(action, "cmd_forceful_kubernetes_delete")
 
 
+def _is_disk_overwrite_or_format(action: str) -> bool:
+    """Detect disk overwrite or format command shapes."""
+    return _has_command_risk(action, "cmd_disk_overwrite_or_format")
+
+
+def _is_find_root_delete(action: str) -> bool:
+    """Detect root-level find delete command shapes."""
+    return _has_command_risk(action, "cmd_find_root_delete")
+
+
+def _is_shell_fork_bomb(action: str) -> bool:
+    """Detect shell fork bomb command shapes."""
+    return _has_command_risk(action, "cmd_shell_fork_bomb")
+
+
 def _is_sql_drop_table(action: str) -> bool:
     """Detect SQL DROP TABLE statements."""
     return _has_sql_risk(action, "sql_drop_table")
@@ -152,6 +163,16 @@ def _is_sql_unqualified_delete(action: str) -> bool:
 def _is_sql_unqualified_update(action: str) -> bool:
     """Detect SQL UPDATE statements without WHERE."""
     return _has_sql_risk(action, "sql_unqualified_update")
+
+
+def _is_sql_tautological_delete(action: str) -> bool:
+    """Detect SQL DELETE statements with tautological WHERE predicates."""
+    return _has_sql_risk(action, "sql_tautological_delete")
+
+
+def _is_sql_tautological_update(action: str) -> bool:
+    """Detect SQL UPDATE statements with tautological WHERE predicates."""
+    return _has_sql_risk(action, "sql_tautological_update")
 
 
 # Built-in filesystem safety rules
@@ -225,7 +246,7 @@ BUILTIN_RULES = [
         response="block",
         matcher=_is_recursive_world_writable,
         metadata={
-            "description": "Blocks recursive chmod 777 operations",
+            "description": "Blocks recursive chmod operations that make targets world-writable",
             "category": "command",
         }
     ),
@@ -291,6 +312,42 @@ BUILTIN_RULES = [
     ),
 
     Rule(
+        id="cmd_disk_overwrite_or_format",
+        title="Disk overwrite or format command detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_disk_overwrite_or_format,
+        metadata={
+            "description": "Blocks dd writes to /dev devices and mkfs formatting of /dev devices",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_find_root_delete",
+        title="Root-level find delete command detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_find_root_delete,
+        metadata={
+            "description": "Blocks find -delete command shapes rooted at system-level paths",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_shell_fork_bomb",
+        title="Shell fork bomb detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_shell_fork_bomb,
+        metadata={
+            "description": "Blocks classic shell fork bomb command text",
+            "category": "command",
+        }
+    ),
+
+    Rule(
         id="sql_drop_table",
         title="SQL DROP TABLE detected",
         severity="CRITICAL",
@@ -346,6 +403,30 @@ BUILTIN_RULES = [
         matcher=_is_sql_unqualified_update,
         metadata={
             "description": "Blocks SQL UPDATE statements that do not include a WHERE clause",
+            "category": "sql",
+        }
+    ),
+
+    Rule(
+        id="sql_tautological_delete",
+        title="SQL DELETE with tautological WHERE detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_sql_tautological_delete,
+        metadata={
+            "description": "Blocks SQL DELETE statements with simple always-true WHERE predicates",
+            "category": "sql",
+        }
+    ),
+
+    Rule(
+        id="sql_tautological_update",
+        title="SQL UPDATE with tautological WHERE detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_sql_tautological_update,
+        metadata={
+            "description": "Blocks SQL UPDATE statements with simple always-true WHERE predicates",
             "category": "sql",
         }
     ),
