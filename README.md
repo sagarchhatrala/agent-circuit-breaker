@@ -121,7 +121,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Production-readiness documentation
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 349 tests
+- 352 tests
 - Documentation for current stable behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -182,7 +182,7 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v1.1.1
+**Current**: v1.1.2
 
 **Next**: compatible patch and minor releases
 

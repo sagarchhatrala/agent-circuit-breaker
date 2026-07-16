@@ -305,6 +305,7 @@ The project uses the Python standard library test runner.
 - [v1.0.1](releases/v1.0.1.md)
 - [v1.1.0](releases/v1.1.0.md)
 - [v1.1.1](releases/v1.1.1.md)
+- [v1.1.2](releases/v1.1.2.md)
 
 ## Known Limits
 

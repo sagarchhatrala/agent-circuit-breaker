@@ -4,6 +4,15 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.1.2] - 2026-07-16
+
+### Fixed
+
+- Blocked renamed shell fork-bomb variants such as `f(){ f|f& };f` and `bomb(){ bomb|bomb& };bomb`.
+- Blocked `find -delete` rooted at protected path children and trailing-slash variants such as `find /etc/ -delete` and `find /home/someuser -delete`.
+- Blocked AWS S3 bucket removal through `aws s3 rb`.
+- Blocked comma-separated and grouped symbolic recursive world-writable chmod modes such as `u+rwx,g+rwx,o+rwx` and `ugo+rwx`.
+
 ## [1.1.1] - 2026-07-16
 
 ### Fixed

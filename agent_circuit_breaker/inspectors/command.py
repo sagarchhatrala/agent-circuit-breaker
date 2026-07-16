@@ -1,5 +1,6 @@
 """Command Inspector - Tokenizes shell commands for later safety analysis."""
 
+import re
 from typing import Any, Dict, List, Optional
 
 
@@ -251,8 +252,7 @@ class CommandInspector:
     @staticmethod
     def _detect_full_command_risks(result: Dict[str, Any]) -> None:
         """Detect risks that are easier to identify from the full command text."""
-        normalized = "".join(result["raw"].split())
-        if ":(){:|:&};:" not in normalized:
+        if not CommandInspector._has_shell_fork_bomb_shape(result["raw"]):
             return
 
         for segment in result["segments"]:
@@ -307,15 +307,43 @@ class CommandInspector:
             arg == "-r" or (arg.startswith("-") and "r" in arg and not arg.startswith("--"))
             for arg in args
         )
-        has_world_writable = any(
-            arg == "777"
-            or arg == "a+rwx"
-            or arg == "a=rwX".lower()
-            or arg.startswith("a+") and all(permission in arg for permission in ("r", "w", "x"))
-            for arg in args
-        )
+        has_world_writable = any(CommandInspector._is_world_writable_mode(arg) for arg in args)
 
         return has_recursive and has_world_writable
+
+    @staticmethod
+    def _is_world_writable_mode(arg: str) -> bool:
+        """Return true when a chmod mode grants write+execute access to everyone."""
+        if arg == "777":
+            return True
+
+        if not any(operator in arg for operator in ("+", "=")):
+            return False
+
+        clauses = [clause for clause in arg.split(",") if clause]
+        if not clauses:
+            return False
+
+        grants = {
+            "u": set(),
+            "g": set(),
+            "o": set(),
+        }
+
+        for clause in clauses:
+            match = re.fullmatch(r"([ugoa]*)([+=])([rwxXstugo]+)", clause)
+            if not match:
+                continue
+
+            classes, _operator, permissions = match.groups()
+            target_classes = set(classes or "a")
+            if "a" in target_classes:
+                target_classes.update({"u", "g", "o"})
+
+            for class_name in target_classes & set(grants):
+                grants[class_name].update(permissions.lower())
+
+        return all({"r", "w", "x"}.issubset(grants[class_name]) for class_name in grants)
 
     @staticmethod
     def _is_package_publish_without_context(command: str, args: List[str]) -> bool:
@@ -395,6 +423,9 @@ class CommandInspector:
         if args[:2] == ["s3", "rm"] and "--recursive" in args:
             return True
 
+        if args[:2] == ["s3", "rb"]:
+            return True
+
         destructive_tokens = {
             "delete",
             "destroy",
@@ -446,7 +477,34 @@ class CommandInspector:
             return False
 
         dangerous_roots = {"/", "/etc", "/home", "/var", "/usr", "/root", "/sys"}
-        return any(arg in dangerous_roots for arg in args)
+        return any(CommandInspector._is_dangerous_find_root(arg, dangerous_roots) for arg in args)
+
+    @staticmethod
+    def _is_dangerous_find_root(arg: str, dangerous_roots: set[str]) -> bool:
+        """Return true when a find root is a protected path or its child."""
+        if not arg.startswith("/"):
+            return False
+
+        normalized = arg.rstrip("/") or "/"
+        if normalized == "/":
+            return True
+
+        for root in dangerous_roots - {"/"}:
+            if normalized == root or normalized.startswith(f"{root}/"):
+                return True
+
+        return False
+
+    @staticmethod
+    def _has_shell_fork_bomb_shape(command: str) -> bool:
+        """Return true for shell function fork bombs, regardless of function name."""
+        pattern = re.compile(
+            r"(?P<name>[:A-Za-z_][A-Za-z0-9_:-]*)"
+            r"\s*\(\s*\)\s*\{\s*"
+            r"(?P=name)\s*\|\s*(?P=name)\s*&\s*"
+            r"\}\s*;\s*(?P=name)(?=$|\s|[;&|])"
+        )
+        return bool(pattern.search(command))
 
     @staticmethod
     def _mark_dangerous(segment: Dict[str, Any], flag: str, reason: str) -> None:
