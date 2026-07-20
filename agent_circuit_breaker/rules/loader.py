@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Set
 
 from agent_circuit_breaker.engine import Rule
 from agent_circuit_breaker.normalization import normalize_for_matching
+from agent_circuit_breaker.signing import strip_signature, verify_signed_document
 
 RULE_SCHEMA_VERSION = 1
 
@@ -15,7 +16,7 @@ RULE_SCHEMA_VERSION = 1
 class RuleDefinitionValidator:
     """Validates parsed external rule definitions without executing them."""
 
-    ALLOWED_TOP_LEVEL_FIELDS = {"version", "rules"}
+    ALLOWED_TOP_LEVEL_FIELDS = {"version", "rules", "signature"}
     REQUIRED_RULE_FIELDS = {"id", "title", "severity", "response", "matcher"}
     OPTIONAL_RULE_FIELDS = {"metadata"}
     ALLOWED_RULE_FIELDS = REQUIRED_RULE_FIELDS | OPTIONAL_RULE_FIELDS
@@ -209,7 +210,7 @@ class RuleFileLoader:
     """Loads and validates external rule definition files."""
 
     @staticmethod
-    def load(path: str) -> Dict[str, Any]:
+    def load(path: str, *, require_signature: bool = False) -> Dict[str, Any]:
         """Load and validate a JSON rule definition file."""
         result: Dict[str, Any] = {
             "is_valid": False,
@@ -240,10 +241,23 @@ class RuleFileLoader:
             result["errors"] = [f"Could not read rule file: {exc}"]
             return result
 
-        validation = RuleDefinitionValidator.validate(definition)
+        if not isinstance(definition, dict):
+            validation = RuleDefinitionValidator.validate(definition)
+            result["is_valid"] = validation["is_valid"]
+            result["errors"] = validation["errors"]
+            return result
+
+        signature = verify_signed_document(definition, require_signature=require_signature)
+        if not signature["is_valid"]:
+            result["errors"] = signature["errors"]
+            return result
+
+        unsigned_definition = strip_signature(definition) if isinstance(definition, dict) else definition
+        validation = RuleDefinitionValidator.validate(unsigned_definition)
         result["is_valid"] = validation["is_valid"]
         result["errors"] = validation["errors"]
-        result["definition"] = definition if validation["is_valid"] else None
+        result["definition"] = unsigned_definition if validation["is_valid"] else None
+        result["signature"] = signature["signature"]
         return result
 
 

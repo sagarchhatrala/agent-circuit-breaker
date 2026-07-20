@@ -22,6 +22,7 @@ The contract is additive for v1.x compatible releases. Existing fields keep thei
 - `approval`: present when a pending approval record is created by the CLI.
 - `audit`: present when CLI audit logging is requested.
 - `policy_source`: present when a central policy file or URL was loaded.
+- `policy_signature`: present when a loaded policy contained a verified signature.
 - `custom_rules`: present only when the Python API is called with `rule_file_path`.
 
 ## Rule Details

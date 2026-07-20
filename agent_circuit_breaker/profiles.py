@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from agent_circuit_breaker.engine import Decision
+
 
 PROFILE_NAMES = ("solo", "repo", "team", "prod")
 MODE_NAMES = ("strict", "advisory", "approval")
@@ -16,6 +18,7 @@ class SafetyProfile:
     mode: str
     approval_threshold: int
     block_threshold: int
+    unknown_action: str
     description: str
 
 
@@ -25,6 +28,7 @@ PROFILES: Dict[str, SafetyProfile] = {
         mode="advisory",
         approval_threshold=100,
         block_threshold=100,
+        unknown_action="preserve",
         description="Low-friction personal mode. Report risk without changing existing decisions.",
     ),
     "repo": SafetyProfile(
@@ -32,6 +36,7 @@ PROFILES: Dict[str, SafetyProfile] = {
         mode="strict",
         approval_threshold=90,
         block_threshold=90,
+        unknown_action="block",
         description="Protect source trees, git history, and local filesystem state.",
     ),
     "team": SafetyProfile(
@@ -39,6 +44,7 @@ PROFILES: Dict[str, SafetyProfile] = {
         mode="approval",
         approval_threshold=80,
         block_threshold=100,
+        unknown_action="approval",
         description="Require human approval for high-risk agent actions.",
     ),
     "prod": SafetyProfile(
@@ -46,6 +52,7 @@ PROFILES: Dict[str, SafetyProfile] = {
         mode="approval",
         approval_threshold=60,
         block_threshold=100,
+        unknown_action="approval",
         description="Production posture. Route medium and high risk actions to approval.",
     ),
 }
@@ -86,6 +93,7 @@ def apply_policy_mode(
         "profile": profile.name if profile else None,
         "approval_threshold": profile.approval_threshold if profile else 80,
         "block_threshold": profile.block_threshold if profile else 100,
+        "unknown_action": profile.unknown_action if profile else ("block" if selected_mode == "strict" else "preserve"),
     }
     result["policy"] = policy
 
@@ -98,6 +106,15 @@ def apply_policy_mode(
         result["policy"]["original_verdict"] = original_verdict
         return result
 
+    if selected_mode == "strict" and original_verdict == "unknown":
+        result["decision"] = Decision.BLOCK.name
+        result["verdict"] = "block"
+        result["risk_score"] = max(risk_score, int(policy["block_threshold"]))
+        result["policy"]["original_decision"] = original_decision
+        result["policy"]["original_verdict"] = original_verdict
+        result["policy"]["strict_reason"] = "unknown verdict blocked by strict policy"
+        return result
+
     if selected_mode == "approval":
         threshold = int(policy["approval_threshold"])
         if original_verdict == "block" and risk_score >= threshold:
@@ -105,6 +122,13 @@ def apply_policy_mode(
             result["verdict"] = "pending_approval"
             result["policy"]["original_decision"] = original_decision
             result["policy"]["original_verdict"] = original_verdict
+        elif original_verdict == "unknown" and policy["unknown_action"] == "approval":
+            result["decision"] = "PENDING_APPROVAL"
+            result["verdict"] = "pending_approval"
+            result["risk_score"] = max(risk_score, threshold)
+            result["policy"]["original_decision"] = original_decision
+            result["policy"]["original_verdict"] = original_verdict
+            result["policy"]["approval_reason"] = "unknown verdict routed to approval by profile"
 
     return result
 
@@ -117,6 +141,7 @@ def profile_metadata() -> Dict[str, Any]:
                 "mode": profile.mode,
                 "approval_threshold": profile.approval_threshold,
                 "block_threshold": profile.block_threshold,
+                "unknown_action": profile.unknown_action,
                 "description": profile.description,
             }
             for name, profile in sorted(PROFILES.items())

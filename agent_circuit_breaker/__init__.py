@@ -1,6 +1,6 @@
 """Agent Circuit Breaker - Local-first safety runtime for AI agents."""
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 __author__ = "Sagar Chhatrala"
 
 from .engine import Engine, Decision, Rule

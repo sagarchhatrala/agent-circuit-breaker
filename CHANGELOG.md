@@ -4,6 +4,28 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.0] - 2026-07-21
+
+### Added
+
+- Added a dependency-free stdio JSON-RPC MCP proxy entry point: `circuit-breaker-mcp-proxy`.
+- Added MCP `tools/call` argument inspection with JSON-RPC error responses for blocked, pending, or error verdicts.
+- Added optional JSON policy/rule-pack signature verification with deterministic `sha256` and `hmac-sha256` support.
+- Added `--require-signature` for policy and rule-file loading.
+
+### Changed
+
+- `--mode strict` now actively blocks `UNKNOWN` verdicts instead of acting as metadata only.
+- `team` and `prod` profiles now route `UNKNOWN` verdicts to `PENDING_APPROVAL`.
+- CI workflows use newer GitHub Action majors for Node 24-era runner compatibility.
+
+### Fixed
+
+- `scan` command extraction now recognizes capitalized markers such as `Run:` and `- Run:`.
+- Ambient `.agent-circuit-breaker/policy.json` can now contain inline `rules` without breaking `check`.
+- Policy rule-file paths now resolve relative to the policy file location.
+- Rule-file validation preserves existing schema errors for non-object JSON while adding signature checks for object documents.
+
 ## [1.3.0] - 2026-07-20
 
 ### Added

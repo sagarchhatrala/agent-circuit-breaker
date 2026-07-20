@@ -2,7 +2,7 @@
 
 Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, unknown, or pending approval.
 
-The current v1.3 compatible scope includes filesystem safety, command safety, SQL safety, external JSON rules, safety profiles, approval mode, audit timeline, scan mode, SARIF output, plugin discovery, hook scaffolding, central policy loading, and a minimal optional MCP-style proxy scaffold.
+The current v1.4 compatible scope includes filesystem safety, command safety, SQL safety, external JSON rules, safety profiles, approval mode, audit timeline, scan mode, SARIF output, plugin discovery, hook scaffolding, central policy loading, signed policy/rule-pack verification, and a stdio JSON-RPC MCP proxy.
 
 ## Installation
 
@@ -332,8 +332,9 @@ The project uses the Python standard library test runner.
 - [v1.1.0](releases/v1.1.0.md)
 - [v1.1.1](releases/v1.1.1.md)
 - [v1.1.2](releases/v1.1.2.md)
-- [v1.3.0](releases/v1.3.0.md)
 - [v1.2.0](releases/v1.2.0.md)
+- [v1.3.0](releases/v1.3.0.md)
+- [v1.4.0](releases/v1.4.0.md)
 
 ## Known Limits
 

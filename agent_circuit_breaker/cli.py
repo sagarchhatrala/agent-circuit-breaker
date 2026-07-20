@@ -269,21 +269,37 @@ class CircuitBreakerCLI:
         mode: Optional[str],
         policy_path: Optional[str],
         include_plugins: bool,
+        require_signature: bool = False,
     ) -> Dict[str, Any]:
         """Load optional policy, rules, and plugins for a command mode."""
-        policy = load_policy(policy_path) if policy_path else load_policy(start_dir=".")
-        resolved_rule_path = rule_file_path or policy.get("rules")
+        policy = (
+            load_policy(policy_path, require_signature=require_signature)
+            if policy_path
+            else load_policy(start_dir=".", require_signature=require_signature)
+        )
+        resolved_rule_path = rule_file_path or policy.get("rules_path")
+        resolved_rule_definition = None if rule_file_path else policy.get("rules_definition")
         resolved_profile = profile_name or policy.get("profile")
-        resolved_mode = mode or policy.get("mode")
+        resolved_mode = mode or policy.get("mode") or ("strict" if policy.get("strict") else None)
 
         custom_rules = []
         if resolved_rule_path:
-            custom_rule_result = self.load_custom_rules(resolved_rule_path)
+            custom_rule_result = self.load_custom_rules(resolved_rule_path, require_signature=require_signature)
             if not custom_rule_result["is_valid"]:
                 return {
                     "is_valid": False,
                     "errors": custom_rule_result["errors"],
                     "rule_path": resolved_rule_path,
+                    "rules": [],
+                }
+            custom_rules = custom_rule_result["rules"]
+        elif resolved_rule_definition is not None:
+            custom_rule_result = self.load_custom_rule_definition(resolved_rule_definition)
+            if not custom_rule_result["is_valid"]:
+                return {
+                    "is_valid": False,
+                    "errors": custom_rule_result["errors"],
+                    "rule_path": f"{policy.get('path')}:rules",
                     "rules": [],
                 }
             custom_rules = custom_rule_result["rules"]
@@ -294,11 +310,12 @@ class CircuitBreakerCLI:
         return {
             "is_valid": True,
             "errors": [],
-            "rule_path": resolved_rule_path,
+            "rule_path": resolved_rule_path or (f"{policy.get('path')}:rules" if resolved_rule_definition else None),
             "rules": custom_rules,
             "profile_name": resolved_profile,
             "mode": resolved_mode,
             "policy_source": policy.get("path"),
+            "policy_signature": policy.get("signature"),
         }
 
     def format_output(self, result: Dict[str, Any]) -> str:
@@ -429,6 +446,7 @@ class CircuitBreakerCLI:
         policy_path: Optional[str] = None,
         include_plugins: bool = False,
         audit: bool = False,
+        require_signature: bool = False,
     ) -> int:
         """
         Run in command mode, evaluating a single command.
@@ -439,7 +457,14 @@ class CircuitBreakerCLI:
         Returns:
             Exit code (0 for allow, 1 for block/error, 2 for unknown)
         """
-        runtime = self._load_runtime_options(rule_file_path, profile_name, mode, policy_path, include_plugins)
+        runtime = self._load_runtime_options(
+            rule_file_path,
+            profile_name,
+            mode,
+            policy_path,
+            include_plugins,
+            require_signature=require_signature,
+        )
         if not runtime["is_valid"]:
             output = self.format_rule_validation_output(
                 runtime["rule_path"],
@@ -456,6 +481,8 @@ class CircuitBreakerCLI:
         )
         if runtime.get("policy_source"):
             result["policy_source"] = runtime["policy_source"]
+        if runtime.get("policy_signature"):
+            result["policy_signature"] = runtime["policy_signature"]
         if result["verdict"] == "pending_approval":
             try:
                 approval = ApprovalStore().create(result)
@@ -489,9 +516,17 @@ class CircuitBreakerCLI:
         mode: Optional[str] = None,
         policy_path: Optional[str] = None,
         include_plugins: bool = False,
+        require_signature: bool = False,
     ) -> int:
         """Run explanation mode for a single action."""
-        runtime = self._load_runtime_options(rule_file_path, profile_name, mode, policy_path, include_plugins)
+        runtime = self._load_runtime_options(
+            rule_file_path,
+            profile_name,
+            mode,
+            policy_path,
+            include_plugins,
+            require_signature=require_signature,
+        )
         if not runtime["is_valid"]:
             print(
                 self.format_rule_validation_output(
@@ -528,9 +563,17 @@ class CircuitBreakerCLI:
         include_plugins: bool = False,
         audit: bool = False,
         sarif: bool = False,
+        require_signature: bool = False,
     ) -> int:
         """Run static scan mode over text files."""
-        runtime = self._load_runtime_options(rule_file_path, profile_name, mode, policy_path, include_plugins)
+        runtime = self._load_runtime_options(
+            rule_file_path,
+            profile_name,
+            mode,
+            policy_path,
+            include_plugins,
+            require_signature=require_signature,
+        )
         if not runtime["is_valid"]:
             print(
                 self.format_rule_validation_output(
@@ -657,9 +700,9 @@ class CircuitBreakerCLI:
         return 2
 
     @staticmethod
-    def load_custom_rules(path: str) -> Dict[str, Any]:
+    def load_custom_rules(path: str, *, require_signature: bool = False) -> Dict[str, Any]:
         """Load, validate, and build external rule definitions."""
-        load_result = RuleFileLoader.load(path)
+        load_result = RuleFileLoader.load(path, require_signature=require_signature)
         if not load_result["is_valid"]:
             return {
                 "is_valid": False,
@@ -676,7 +719,18 @@ class CircuitBreakerCLI:
             "rules": build_result["rules"],
         }
 
-    def run_validate_rules_mode(self, path: str) -> int:
+    @staticmethod
+    def load_custom_rule_definition(definition: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and build inline external rule definitions."""
+        build_result = RuleDefinitionBuilder.build_rules(definition)
+        return {
+            "is_valid": build_result["is_valid"],
+            "errors": build_result["errors"],
+            "definition": definition if build_result["is_valid"] else None,
+            "rules": build_result["rules"],
+        }
+
+    def run_validate_rules_mode(self, path: str, *, require_signature: bool = False) -> int:
         """
         Run rule-file validation mode.
 
@@ -686,7 +740,7 @@ class CircuitBreakerCLI:
         Returns:
             Exit code (0 for valid, 1 for invalid)
         """
-        result = RuleFileLoader.load(path)
+        result = RuleFileLoader.load(path, require_signature=require_signature)
         output = self.format_rule_validation_output(path, result)
         print(output)
 
@@ -745,6 +799,7 @@ Options:
   --mode MODE             Policy mode: strict, advisory, approval
   --audit                 Append a tamper-evident audit entry
   --policy PATH_OR_URL    Load central policy before local CLI overrides
+  --require-signature     Require policy/rule JSON signatures before loading
   --plugins               Load optional rule-provider plugins
   --sarif                 Emit SARIF for scan mode
 
@@ -808,6 +863,7 @@ def main() -> int:
     parser.add_argument("--mode", dest="mode", type=str, help="Policy mode")
     parser.add_argument("--audit", action="store_true", help="Append an audit entry")
     parser.add_argument("--policy", dest="policy_path", type=str, help="Central policy file or URL")
+    parser.add_argument("--require-signature", action="store_true", help="Require signed policy/rule JSON")
     parser.add_argument("--plugins", action="store_true", help="Load installed rule plugins")
     parser.add_argument("--sarif", action="store_true", help="Emit SARIF for scan mode")
     parser.add_argument("--write", action="store_true", help="Write generated scaffolds where supported")
@@ -847,6 +903,7 @@ def main() -> int:
                 policy_path=args.policy_path,
                 include_plugins=args.plugins,
                 audit=args.audit,
+                require_signature=args.require_signature,
             )
 
         if args.command_parts:
@@ -859,6 +916,7 @@ def main() -> int:
                     policy_path=args.policy_path,
                     include_plugins=args.plugins,
                     audit=args.audit,
+                    require_signature=args.require_signature,
                 )
 
             if args.command_parts[0] == "explain" and len(args.command_parts) >= 2:
@@ -869,6 +927,7 @@ def main() -> int:
                     mode=args.mode,
                     policy_path=args.policy_path,
                     include_plugins=args.plugins,
+                    require_signature=args.require_signature,
                 )
 
             if args.command_parts[0] == "scan" and len(args.command_parts) >= 2:
@@ -881,6 +940,7 @@ def main() -> int:
                     include_plugins=args.plugins,
                     audit=args.audit,
                     sarif=args.sarif,
+                    require_signature=args.require_signature,
                 )
 
             if args.command_parts[0] == "install-hooks":
@@ -901,7 +961,7 @@ def main() -> int:
                 return 0
 
             if args.command_parts[0] == "validate-rules" and len(args.command_parts) == 2:
-                return cli.run_validate_rules_mode(args.command_parts[1])
+                return cli.run_validate_rules_mode(args.command_parts[1], require_signature=args.require_signature)
 
             print(
                 "Error: expected 'circuit-breaker check <action>' or "

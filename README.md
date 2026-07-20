@@ -65,6 +65,12 @@ circuit-breaker scan ./scripts ./README.md
 circuit-breaker scan . --sarif > acb.sarif
 # SARIF for GitHub code scanning
 
+circuit-breaker check "ls /home" --mode strict
+# Verdict: BLOCK
+
+circuit-breaker-mcp-proxy --profile team -- python -m my_mcp_server
+# Inspect MCP tools/call arguments before forwarding to the server
+
 circuit-breaker check "rm -rf /" --audit
 circuit-breaker timeline --verify
 # Tamper-evident local audit timeline
@@ -74,6 +80,9 @@ circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 
 circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
 # Verdict: BLOCK
+
+circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json --require-signature
+# Load only signed policy/rule JSON
 ```
 
 See [examples/README.md](examples/README.md) for CLI, Python API, and custom rule integration examples.
@@ -137,7 +146,8 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Plugin discovery and optional rule-provider loading
 - External rule schema with scalar, regex, and boolean composite matchers
 - Hook scaffold generation and pre-commit hook manifest
-- Minimal optional MCP-style proxy scaffold
+- Stdio JSON-RPC MCP proxy for guarding `tools/call` arguments before forwarding
+- Optional signed policy and rule-pack verification
 - External JSON rule validation
 - Dedicated external rule schema reference
 - Schema metadata exported by the package
@@ -151,7 +161,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Production-readiness documentation
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 368 tests
+- 380 tests
 - Documentation for current stable behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -173,6 +183,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)** - API, CLI, decision, and rule schema compatibility
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
 - **[docs/V1_3_RUNTIME_NOTES.md](docs/V1_3_RUNTIME_NOTES.md)** - v1.3 runtime scope and deferred hardening notes
+- **[docs/releases/v1.4.0.md](docs/releases/v1.4.0.md)** - v1.4 proxy and policy hardening notes
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - TestPyPI and PyPI publishing flow
 - **[docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md)** - recommended `main` protection
 - **[docs/V1_1_PLAN.md](docs/V1_1_PLAN.md)** - compatible v1.1 roadmap
@@ -213,9 +224,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v1.3.0
+**Current**: v1.4.0
 
-**Next**: harden the optional MCP proxy and enterprise policy signing surface.
+**Next**: adoption polish, broader integration examples, and release validation from TestPyPI/PyPI artifacts.
 
 ---
 

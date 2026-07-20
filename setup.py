@@ -8,7 +8,7 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.3.0",
+    version="1.4.0",
     description="Local-first safety runtime for AI coding agents",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -30,6 +30,7 @@ setup(
     entry_points={
         "console_scripts": [
             "circuit-breaker=agent_circuit_breaker.cli:main",
+            "circuit-breaker-mcp-proxy=agent_circuit_breaker_mcp.proxy:main",
         ],
     },
     classifiers=[

@@ -44,6 +44,18 @@ Built-in rules are evaluated before custom rules.
 
 This means a custom `allow` rule cannot override a built-in `block` rule. Custom rules are append-only policy extensions in the current design.
 
+## Network Use
+
+Core command evaluation is offline by default. The only built-in network path is explicit central policy loading with `--policy https://...` or `--policy http://...`; that URL is selected by the caller and fetched as policy data before evaluation. Local policy auto-discovery never performs network I/O.
+
+## Signed Policy and Rule Packs
+
+Policy files and external rule packs can include an embedded `signature` object. `--require-signature` rejects unsigned or tampered JSON before any rules are built. The stdlib verifier supports deterministic `sha256` integrity checks and `hmac-sha256` signatures using a key supplied through the configured environment variable. Heavier public-key or transparency-log verification should be added through an optional integration package so the core remains dependency-free.
+
+## Strict and Approval Modes
+
+Default `check` behavior preserves `UNKNOWN` for unclassified actions. `--mode strict` converts `UNKNOWN` to `BLOCK` for fail-secure environments. `team` and `prod` profiles route `UNKNOWN` to `PENDING_APPROVAL`, making ambiguity visible to a human instead of silently passing through.
+
 ## Fail-Closed Behavior
 
 The project intentionally treats these conditions as stop conditions:
@@ -61,13 +73,14 @@ CLI callers receive a non-zero exit code for `BLOCK`, `ERROR`, and `UNKNOWN`.
 
 The core package has no runtime dependency outside the Python standard library.
 
-Agent Circuit Breaker does not:
+Agent Circuit Breaker does not by default:
 
-- fetch remote rules.
 - send telemetry.
 - call an LLM.
 - execute shell commands.
 - connect to databases.
+
+It fetches a remote policy only when the caller explicitly supplies an `http://` or `https://` policy URL.
 
 ## Explicit Non-Goals
 

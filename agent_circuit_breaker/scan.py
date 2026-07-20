@@ -1,5 +1,6 @@
 """Static scanning helpers for files and directories."""
 
+import re
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List
 
@@ -139,7 +140,10 @@ def _extract_candidate(line: str) -> str:
     stripped = line.strip()
     if not stripped:
         return ""
-    for marker in ("$", ">", "- run:", "run:"):
+    for marker in ("$", ">"):
         if stripped.startswith(marker):
             return stripped[len(marker) :].strip()
+    marker_match = re.match(r"^(?:[-*]\s*)?(?:run|command|cmd|shell|sql)\s*:\s*(.+)$", stripped, re.IGNORECASE)
+    if marker_match:
+        return marker_match.group(1).strip()
     return stripped

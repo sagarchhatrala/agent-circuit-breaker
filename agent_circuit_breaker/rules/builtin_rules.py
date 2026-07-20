@@ -4,6 +4,8 @@ Built-in rules - Default filesystem safety policy.
 These rules describe dangerous filesystem operations that should be blocked.
 """
 
+from functools import lru_cache
+
 from ..engine import Rule
 from ..inspectors.filesystem import FilesystemInspector
 from ..inspectors.command import CommandInspector
@@ -12,7 +14,7 @@ from ..inspectors.sql import SQLInspector
 
 def _filesystem_analyses(action: str) -> list[dict]:
     """Return filesystem analyses for each parsed command segment."""
-    command_analysis = CommandInspector.analyze_command(action)
+    command_analysis = _command_analysis(action)
     if not command_analysis["is_valid"]:
         return []
 
@@ -20,6 +22,18 @@ def _filesystem_analyses(action: str) -> list[dict]:
         FilesystemInspector.analyze_operation(segment["raw"])
         for segment in command_analysis["segments"]
     ]
+
+
+@lru_cache(maxsize=128)
+def _command_analysis(action: str) -> dict:
+    """Return cached command analysis for a single evaluation input."""
+    return CommandInspector.analyze_command(action)
+
+
+@lru_cache(maxsize=128)
+def _sql_analysis(action: str) -> dict:
+    """Return cached SQL analysis for a single evaluation input."""
+    return SQLInspector.analyze_sql(action)
 
 
 def _is_recursive_delete(action: str) -> bool:
@@ -74,7 +88,7 @@ def _is_unqualified_glob_delete(action: str) -> bool:
 
 def _has_command_risk(action: str, risk_flag: str) -> bool:
     """Return true when command analysis reports a specific risk flag."""
-    analysis = CommandInspector.analyze_command(action)
+    analysis = _command_analysis(action)
     if not analysis["is_valid"]:
         return False
 
@@ -83,7 +97,7 @@ def _has_command_risk(action: str, risk_flag: str) -> bool:
 
 def _has_sql_risk(action: str, risk_flag: str) -> bool:
     """Return true when SQL analysis reports a specific risk flag."""
-    analysis = SQLInspector.analyze_sql(action)
+    analysis = _sql_analysis(action)
     if not analysis["is_valid"]:
         return False
 

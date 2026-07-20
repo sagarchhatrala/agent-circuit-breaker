@@ -67,7 +67,7 @@ python -m twine upload --repository testpypi dist/*
 Install verification:
 
 ```bash
-python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.3.0
+python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.4.0
 python -m agent_circuit_breaker.cli check "rm -rf /"
 ```
 
