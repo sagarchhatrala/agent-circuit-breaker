@@ -8,8 +8,8 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.4.0",
-    description="Local-first safety runtime for AI coding agents",
+    version="1.4.1",
+    description="Deterministic safety gate for AI coding agents",
     long_description=README,
     long_description_content_type="text/markdown",
     author="Sagar Chhatrala",
@@ -43,5 +43,5 @@ setup(
         "Topic :: Software Development :: Quality Assurance",
         "Topic :: System :: Systems Administration",
     ],
-    keywords="security safety ai-agents circuit-breaker deterministic",
+    keywords="security safety ai-agents mcp circuit-breaker deterministic",
 )

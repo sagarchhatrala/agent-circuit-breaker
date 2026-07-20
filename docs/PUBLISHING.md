@@ -2,6 +2,13 @@
 
 Use TestPyPI before publishing to PyPI.
 
+Project links:
+
+- PyPI: https://pypi.org/project/agent-circuit-breaker/
+- TestPyPI: https://test.pypi.org/project/agent-circuit-breaker/
+- GitHub Releases: https://github.com/sagarchhatrala/agent-circuit-breaker/releases
+- Publish workflow: https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/publish.yml
+
 ## Prerequisites
 
 - `build`
@@ -67,8 +74,8 @@ python -m twine upload --repository testpypi dist/*
 Install verification:
 
 ```bash
-python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.4.0
-python -m agent_circuit_breaker.cli check "rm -rf /"
+python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.4.1
+python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_action('rm -rf /')['verdict'])"
 ```
 
 ## PyPI
@@ -77,6 +84,13 @@ After TestPyPI verification:
 
 ```bash
 python -m twine upload dist/*
+```
+
+Install verification:
+
+```bash
+python -m pip install --no-deps agent-circuit-breaker==1.4.1
+python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_action('rm -rf /')['verdict'])"
 ```
 
 ## Notes

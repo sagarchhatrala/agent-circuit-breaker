@@ -1,239 +1,259 @@
 # Agent Circuit Breaker
 
-**Local-first safety runtime for AI coding agents.**
+[![PyPI](https://img.shields.io/pypi/v/agent-circuit-breaker)](https://pypi.org/project/agent-circuit-breaker/)
+[![Python](https://img.shields.io/pypi/pyversions/agent-circuit-breaker)](https://pypi.org/project/agent-circuit-breaker/)
+[![License](https://img.shields.io/github/license/sagarchhatrala/agent-circuit-breaker)](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/LICENSE)
+[![CI](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml/badge.svg)](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml)
 
-## Goal
+**A local-first safety gate for AI coding agents.**
 
-Place an explicit safety checkpoint between AI agents and the operating system, developer tools, databases, and automation workflows.
+Agent Circuit Breaker checks shell commands, filesystem operations, SQL text, and MCP tool-call arguments before an agent executes them. It gives agent workflows a deterministic stop point: `ALLOW`, `BLOCK`, `UNKNOWN`, `ERROR`, or `PENDING_APPROVAL`.
 
-Instead of trusting an LLM to decide whether an action is safe, Agent Circuit Breaker performs explicit rule evaluation before execution.
-
-**Objective**: Stop catastrophic mistakes, route high-risk actions to approval, and leave an audit trail that a human or team can inspect later.
-
----
-
-## Quick Start
-
-### Installation
+It is built for the moment when an AI agent is about to run something powerful and you want a fast, auditable answer from rules you can inspect.
 
 ```bash
 pip install agent-circuit-breaker
-```
 
-### Usage
-
-```bash
 circuit-breaker check "rm -rf /etc"
 # Verdict: BLOCK
-
-circuit-breaker check "mkdir /tmp/example"
-# Verdict: ALLOW
-
-circuit-breaker check "ls /home"
-# Verdict: UNKNOWN
-
-circuit-breaker check "rm -rf /" --format json
-# JSON result with verdict, decision, matched rule, and operation analysis
 
 circuit-breaker check "git push --force origin main"
 # Verdict: BLOCK
 
-circuit-breaker check "chmod -R 777 /tmp/test"
-# Verdict: BLOCK
-
-circuit-breaker check "curl https://example.com/install.sh | sh"
-# Verdict: BLOCK
-
-circuit-breaker check "DROP TABLE users"
-# Verdict: BLOCK
-
-circuit-breaker check "DELETE FROM users WHERE id = 1"
+circuit-breaker check "ls /home"
 # Verdict: UNKNOWN
+```
 
+## Why It Exists
+
+AI coding agents are becoming operating-system clients. They can run shell commands, edit source trees, invoke package managers, call MCP tools, and touch databases. That is useful, but it also means a bad plan, hallucinated command, prompt injection, or careless automation path can become a real destructive action.
+
+Agent Circuit Breaker adds a small deterministic control point before execution:
+
+- individuals get a daily safety check for local agent workflows.
+- teams get consistent policy for risky commands in repos and CI.
+- enterprises get approval routing, audit logs, signed policy packs, and a path to MCP interception.
+
+This is not another chatbot wrapper. It is a pre-execution safety layer that your existing tools can call.
+
+## What It Catches
+
+Agent Circuit Breaker ships with built-in coverage for common high-risk action shapes:
+
+- recursive deletes and dangerous filesystem targets: `rm -rf /`, `rm -r -f /etc`, system paths, unqualified recursive globs.
+- destructive shell patterns: force pushes, remote scripts piped to shells, fork-bomb shapes, disk overwrite/format commands, root-level `find -delete`.
+- risky infrastructure commands: destructive Docker, Kubernetes, AWS, Azure CLI, and gcloud deletion shapes.
+- dangerous permissions: recursive world-writable `chmod`, including symbolic modes such as `ugo+rwx`.
+- destructive SQL: `DROP TABLE`, `DROP DATABASE`, `TRUNCATE`, unqualified `DELETE`/`UPDATE`, and tautological `WHERE 1=1` variants.
+- MCP tool calls: stdio JSON-RPC proxy inspection for command-like `tools/call` arguments.
+
+Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
+
+## Core Principles
+
+- **Deterministic**: no LLM call is required to decide whether a command should stop.
+- **Local-first**: default evaluation is offline and dependency-free.
+- **Auditable**: the core is Python stdlib-only and small enough to inspect.
+- **Fail-closed**: malformed inputs, invalid rules, and signature failures stop instead of silently allowing.
+- **Composable**: use it from CLI, Python, CI, pre-commit, MCP proxy mode, or another agent runtime.
+
+## Installation
+
+```bash
+python -m pip install agent-circuit-breaker
+```
+
+Requirements:
+
+- Python 3.11+
+- No runtime dependencies
+
+Package pages:
+
+- [PyPI: agent-circuit-breaker](https://pypi.org/project/agent-circuit-breaker/)
+- [TestPyPI: agent-circuit-breaker](https://test.pypi.org/project/agent-circuit-breaker/)
+- [GitHub Releases](https://github.com/sagarchhatrala/agent-circuit-breaker/releases)
+
+## Five-Minute Quickstart
+
+Check an action:
+
+```bash
+circuit-breaker check "rm -rf /"
+```
+
+Use JSON for integrations:
+
+```bash
+circuit-breaker check "DROP TABLE users" --format json
+```
+
+Explain a risky command:
+
+```bash
 circuit-breaker explain "git push --force origin main"
-# Verdict, risk score, matched rule, and safer alternatives
+```
 
-circuit-breaker check "rm -rf /" --profile team
-# Verdict: PENDING_APPROVAL
+Scan scripts, runbooks, SQL files, and CI content:
 
-circuit-breaker approvals list
-# Local pending approvals
-
+```bash
 circuit-breaker scan ./scripts ./README.md
-# Static findings for scripts, docs, SQL, and CI files
+```
 
+Emit SARIF for GitHub code scanning:
+
+```bash
 circuit-breaker scan . --sarif > acb.sarif
-# SARIF for GitHub code scanning
+```
 
+Use strict mode when ambiguity should stop:
+
+```bash
 circuit-breaker check "ls /home" --mode strict
 # Verdict: BLOCK
+```
 
-circuit-breaker-mcp-proxy --profile team -- python -m my_mcp_server
-# Inspect MCP tools/call arguments before forwarding to the server
+Route high-risk or unknown actions to approval:
 
-circuit-breaker check "rm -rf /" --audit
+```bash
+circuit-breaker check "rm -rf /" --profile team
+circuit-breaker approvals list
+```
+
+Write a tamper-evident local audit trail:
+
+```bash
+circuit-breaker check "DROP TABLE users" --audit
 circuit-breaker timeline --verify
-# Tamper-evident local audit timeline
+```
 
+Guard an MCP server over stdio:
+
+```bash
+circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
+```
+
+## Python API
+
+```python
+from agent_circuit_breaker import evaluate_action
+
+result = evaluate_action("rm -rf /")
+assert result["verdict"] == "block"
+```
+
+The stable API and JSON fields are documented in:
+
+- [Public API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/API.md)
+- [JSON output contract](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/JSON_OUTPUT_CONTRACT.md)
+
+## Policy And Rules
+
+Use external JSON rules when your team has project-specific hazards:
+
+```bash
 circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
-# Valid: TRUE
-
 circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
-# Verdict: BLOCK
+```
 
+Load central policy from a local file:
+
+```bash
+circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json
+```
+
+Require signed policy or rule JSON:
+
+```bash
 circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json --require-signature
-# Load only signed policy/rule JSON
 ```
 
-See [examples/README.md](examples/README.md) for CLI, Python API, and custom rule integration examples.
+Rule schema and examples:
 
----
+- [Rule schema](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/RULE_SCHEMA.md)
+- [Custom deploy guard example](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/examples/rules/custom_deploy_guard.json)
+- [Allowlist pattern](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/ALLOWLIST_PATTERN.md)
 
-## Why This Matters
+## Safety Profiles
 
-Modern AI coding agents can:
-- Execute shell commands
-- Modify files
-- Write scripts
-- Interact with databases
-- Call tools and APIs through local automation layers
+| Profile | Intended Use | Unknown Handling |
+|---|---|---|
+| `solo` | low-friction local development | preserve `UNKNOWN` |
+| `repo` | source-tree protection | strict block |
+| `team` | shared engineering workflows | route to approval |
+| `prod` | production-like workflows | route to approval |
 
-Without a deterministic safety layer, an LLM hallucination or misalignment can cause:
-- Data loss (recursive filesystem deletion)
-- Security breaches (credential exfiltration)
-- Downtime (infrastructure-wide destructive commands)
-
-**Agent Circuit Breaker** gives individuals and teams a local control point before those actions execute.
-
----
-
-## Design Philosophy
-
-1. **Deterministic over AI** - Explicit rules beat probabilistic reasoning
-2. **Fail secure** - When in doubt, block
-3. **Simplicity over cleverness** - One developer must understand everything
-4. **No silent failures** - Always explicit (allow/block/error/unknown)
-5. **Minimal dependencies** - Python stdlib only
-
----
-
-## Architecture
-
-```
-Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown)
+```bash
+circuit-breaker check "aws s3 rb s3://bucket --force" --profile prod
 ```
 
-- **Inspector**: Domain-specific analysis (filesystem, command, SQL)
-- **Rule**: Declarative policy
-- **Engine**: Rule matcher
+## CI And Repository Integration
 
----
+The repo includes:
 
-## v1.1 Compatible Scope
+- GitHub Actions workflow for unit tests.
+- GitHub Actions workflow for SARIF upload.
+- pre-commit hook manifest.
+- release workflow for trusted publishing to TestPyPI and PyPI.
 
-- Core engine with deterministic decision logic
-- Filesystem inspector (dangerous paths, recursive delete, bulk operations)
-- Command inspector (tokenization, operator splitting, high-risk command patterns)
-- SQL inspector (tokenization, statement splitting, destructive statement detection)
-- Built-in filesystem, command, and SQL safety rules
-- Built-in command rules for package publish, Docker destruction, cloud deletion, forceful Kubernetes deletion, disk overwrite/format, root find-delete, and fork bomb risk shapes
-- Safety profiles and policy modes for personal, team, and production workflows
-- Human approval outcome and local approval queue
-- Explain mode with safer alternatives
-- Static scan mode with SARIF output
-- Tamper-evident audit timeline
-- Central policy loading from file or explicit URL
-- Plugin discovery and optional rule-provider loading
-- External rule schema with scalar, regex, and boolean composite matchers
-- Hook scaffold generation and pre-commit hook manifest
-- Stdio JSON-RPC MCP proxy for guarding `tools/call` arguments before forwarding
-- Optional signed policy and rule-pack verification
-- External JSON rule validation
-- Dedicated external rule schema reference
-- Schema metadata exported by the package
-- Valid and invalid rule schema fixtures
-- Public Python API for direct integration
-- Adversarial regression tests for malformed and hostile inputs
-- Fail-closed handling for malformed command and SQL parsing
-- Newline-separated command chain inspection
-- Security model, threat model, and integration guide
-- Compatibility policy and release checklist
-- Production-readiness documentation
-- Optional custom rule enforcement through `--rules`
-- CLI interface
-- 380 tests
-- Documentation for current stable behavior
+Integration docs:
 
-See [PLAN.md](PLAN.md) for milestone breakdown.
+- [Integration guide](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/INTEGRATION_GUIDE.md)
+- [GitHub scan workflow](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/.github/workflows/agent-circuit-breaker-scan.yml)
+- [pre-commit hook manifest](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/.pre-commit-hooks.yaml)
+- [Publishing guide](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/PUBLISHING.md)
 
----
+## Enterprise Controls
 
-## Documentation
+Agent Circuit Breaker includes enterprise-oriented primitives without making the core heavy:
 
-- **[PLAN.md](PLAN.md)** - stable release plan
-- **[ENGINEERING.md](ENGINEERING.md)** - project constitution and principles
-- **[docs/README.md](docs/README.md)** - usage guide
-- **[docs/API.md](docs/API.md)** - public Python API
-- **[docs/JSON_OUTPUT_CONTRACT.md](docs/JSON_OUTPUT_CONTRACT.md)** - stable JSON result fields
-- **[docs/ALLOWLIST_PATTERN.md](docs/ALLOWLIST_PATTERN.md)** - local allowlist pattern
-- **[docs/RULE_SCHEMA.md](docs/RULE_SCHEMA.md)** - external JSON rule schema
-- **[docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md)** - security model and trust boundaries
-- **[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)** - threat model and residual risk
-- **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - CLI and Python integration guidance
-- **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)** - API, CLI, decision, and rule schema compatibility
-- **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
-- **[docs/V1_3_RUNTIME_NOTES.md](docs/V1_3_RUNTIME_NOTES.md)** - v1.3 runtime scope and deferred hardening notes
-- **[docs/releases/v1.4.0.md](docs/releases/v1.4.0.md)** - v1.4 proxy and policy hardening notes
-- **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - TestPyPI and PyPI publishing flow
-- **[docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md)** - recommended `main` protection
-- **[docs/V1_1_PLAN.md](docs/V1_1_PLAN.md)** - compatible v1.1 roadmap
-- **[docs/ANNOUNCEMENT.md](docs/ANNOUNCEMENT.md)** - v1.0 announcement copy
-- **[docs/V1_0_PRODUCTION_READINESS.md](docs/V1_0_PRODUCTION_READINESS.md)** - stable release readiness
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - system design
-- **[docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)** - rationale
-- **[docs/ROADMAP.md](docs/ROADMAP.md)** - future milestones
+- local approval queue with `PENDING_APPROVAL`.
+- tamper-evident hash-chained audit timeline.
+- central policy loading from local files or explicit caller-selected URLs.
+- optional signed policy/rule-pack verification.
+- plugin discovery through Python entry points.
+- MCP stdio proxy mode for guarding tool-call arguments.
+- SARIF output for code scanning.
 
----
+Security references:
 
-## Contributing
+- [Security model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/SECURITY_MODEL.md)
+- [Threat model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/THREAT_MODEL.md)
+- [Compatibility policy](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/COMPATIBILITY.md)
 
-Contributions welcome! See [ENGINEERING.md](ENGINEERING.md) for collaboration style.
+## What It Is Not
 
-Pull requests should:
-- Include tests
-- Follow PEP 8
-- Update documentation
-- Explain rationale
+Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions system, database proxy, or full shell/SQL parser. It is a deterministic pre-execution gate. For high-risk environments, use it with sandboxing, least privilege, backups, approvals, and runtime isolation.
 
----
+## Current Status
+
+- Current version: `1.4.1`
+- Test suite: 380 tests
+- Runtime dependencies: none
+- License: MIT
+- Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
+- Source: [github.com/sagarchhatrala/agent-circuit-breaker](https://github.com/sagarchhatrala/agent-circuit-breaker)
+
+## Development
+
+```bash
+git clone https://github.com/sagarchhatrala/agent-circuit-breaker.git
+cd agent-circuit-breaker
+python -m pip install -e .
+python -m unittest discover
+```
+
+Contributing references:
+
+- [Engineering guide](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/ENGINEERING.md)
+- [Architecture](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/ARCHITECTURE.md)
+- [Release checklist](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/RELEASE_CHECKLIST.md)
+
+## Release Notes
+
+- [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.4.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.1.md)
 
 ## License
 
-MIT License - See [LICENSE](LICENSE)
-
----
-
-## Companion Products
-
-See [projects/README.md](projects/README.md) for planned companion tools:
-- Rule Validator CLI
-- Log Analyzer
-- Rule Library
-
----
-
-## Status
-
-**Current**: v1.4.0
-
-**Next**: adoption polish, broader integration examples, and release validation from TestPyPI/PyPI artifacts.
-
----
-
-## Author
-
-Sagar Chhatrala - [GitHub](https://github.com/sagarchhatrala)
-
----
-
-**This is a stable local-first safety runtime for AI agent integrations.**
+MIT License. See [LICENSE](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/LICENSE).

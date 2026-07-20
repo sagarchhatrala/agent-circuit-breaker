@@ -4,6 +4,16 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.1] - 2026-07-21
+
+### Changed
+
+- Rewrote the top-level README for a mature open-source project presentation.
+- Replaced stale milestone-heavy README sections with current quickstart, coverage, integration, enterprise-control, and limitation sections.
+- Updated PyPI/TestPyPI-facing package metadata through the README long description.
+- Updated documentation links to use valid GitHub/PyPI/TestPyPI URLs where the README is rendered outside GitHub.
+- Simplified the docs index around current v1.x behavior and moved historical notes out of the primary path.
+
 ## [1.4.0] - 2026-07-21
 
 ### Added
