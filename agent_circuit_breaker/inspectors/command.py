@@ -1,11 +1,27 @@
 """Command Inspector - Tokenizes shell commands for later safety analysis."""
 
 import re
+import shlex
 from typing import Any, Dict, List, Optional
+
+from agent_circuit_breaker.normalization import normalize_for_matching
 
 
 class CommandInspector:
     """Inspects shell command text without executing it."""
+
+    RISK_SCORES = {
+        "cmd_git_force_push": 85,
+        "cmd_recursive_world_writable": 85,
+        "cmd_remote_script_to_shell": 100,
+        "cmd_package_publish_without_context": 75,
+        "cmd_destructive_docker": 85,
+        "cmd_cloud_resource_deletion": 85,
+        "cmd_forceful_kubernetes_delete": 85,
+        "cmd_disk_overwrite_or_format": 100,
+        "cmd_find_root_delete": 100,
+        "cmd_shell_fork_bomb": 100,
+    }
 
     @staticmethod
     def analyze_command(command: str) -> Dict[str, Any]:
@@ -17,6 +33,7 @@ class CommandInspector:
         """
         result: Dict[str, Any] = {
             "raw": command,
+            "normalized": command,
             "tokens": [],
             "command": None,
             "args": [],
@@ -25,6 +42,7 @@ class CommandInspector:
             "is_valid": True,
             "error": None,
             "risk_flags": [],
+            "risk_score": 0,
             "is_dangerous": False,
             "danger_reason": None,
         }
@@ -34,11 +52,14 @@ class CommandInspector:
             result["error"] = "Command must be a string"
             return result
 
-        if not command.strip():
+        normalized = normalize_for_matching(command)
+        result["normalized"] = normalized
+
+        if not normalized.strip():
             return result
 
         try:
-            split_result = CommandInspector.split_segments(command)
+            split_result = CommandInspector.split_segments(normalized)
         except ValueError as exc:
             result["is_valid"] = False
             result["error"] = str(exc)
@@ -155,6 +176,7 @@ class CommandInspector:
             "command": tokens[0] if tokens else None,
             "args": tokens[1:] if len(tokens) > 1 else [],
             "risk_flags": [],
+            "risk_score": 0,
             "is_dangerous": False,
             "danger_reason": None,
         }
@@ -180,6 +202,7 @@ class CommandInspector:
                 danger_reasons.append(segment["danger_reason"])
 
         result["risk_flags"] = risk_flags
+        result["risk_score"] = CommandInspector._score_risks(risk_flags)
         result["is_dangerous"] = any(segment["is_dangerous"] for segment in result["segments"])
         result["danger_reason"] = "; ".join(danger_reasons) if danger_reasons else None
 
@@ -252,7 +275,7 @@ class CommandInspector:
     @staticmethod
     def _detect_full_command_risks(result: Dict[str, Any]) -> None:
         """Detect risks that are easier to identify from the full command text."""
-        if not CommandInspector._has_shell_fork_bomb_shape(result["raw"]):
+        if not CommandInspector._has_shell_fork_bomb_shape(result["normalized"]):
             return
 
         for segment in result["segments"]:
@@ -512,61 +535,37 @@ class CommandInspector:
         if flag not in segment["risk_flags"]:
             segment["risk_flags"].append(flag)
 
+        segment["risk_score"] = CommandInspector._score_risks(segment["risk_flags"])
         segment["is_dangerous"] = True
         segment["danger_reason"] = reason
 
     @staticmethod
+    def _score_risks(risk_flags: List[str]) -> int:
+        """Return the highest score for the detected command risk flags."""
+        if not risk_flags:
+            return 0
+        return max(CommandInspector.RISK_SCORES.get(flag, 50) for flag in risk_flags)
+
+    @staticmethod
     def tokenize(command: str) -> List[str]:
         """
-        Tokenize command text while preserving quoted strings as single tokens.
+        Tokenize command text using POSIX shell lexical rules.
 
-        Handles whitespace, single quotes, double quotes, and simple backslash
-        escaping. Raises ValueError for malformed quoted input.
+        Handles shell quote removal, quote concatenation, and backslash
+        escaping through the Python stdlib `shlex` parser. Raises ValueError
+        for malformed quoted input.
         """
         if not isinstance(command, str):
             raise ValueError("Command must be a string")
 
-        tokens: List[str] = []
-        current: List[str] = []
-        quote: Optional[str] = None
-        escaped = False
-
-        for char in command:
-            if escaped:
-                current.append(char)
-                escaped = False
-                continue
-
-            if char == "\\":
-                escaped = True
-                continue
-
-            if quote:
-                if char == quote:
-                    quote = None
-                else:
-                    current.append(char)
-                continue
-
-            if char in ("'", '"'):
-                quote = char
-                continue
-
-            if char.isspace():
-                if current:
-                    tokens.append("".join(current))
-                    current = []
-                continue
-
-            current.append(char)
-
-        if escaped:
-            current.append("\\")
-
-        if quote:
-            raise ValueError(f"Unclosed {quote} quote")
-
-        if current:
-            tokens.append("".join(current))
-
-        return tokens
+        try:
+            lexer = shlex.shlex(normalize_for_matching(command), posix=True)
+            lexer.whitespace_split = True
+            lexer.commenters = ""
+            return list(lexer)
+        except ValueError as exc:
+            message = str(exc)
+            if "No closing quotation" in message:
+                quote = "'" if "'" in command and '"' not in command else '"'
+                raise ValueError(f"Unclosed {quote} quote") from exc
+            raise

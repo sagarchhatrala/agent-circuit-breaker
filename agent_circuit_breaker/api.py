@@ -79,5 +79,6 @@ def _error_result(action: Any, error: str) -> Dict[str, Any]:
         "operation_analysis": None,
         "command_analysis": None,
         "sql_analysis": None,
+        "risk_score": 100,
         "error": error,
     }

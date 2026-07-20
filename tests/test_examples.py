@@ -1,5 +1,6 @@
 """Example regression tests."""
 
+import os
 import subprocess
 import sys
 import unittest
@@ -8,6 +9,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
+
+
+def example_env():
+    """Return an environment where subprocess examples import the checkout."""
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = str(REPO_ROOT) if not existing else f"{REPO_ROOT}{os.pathsep}{existing}"
+    return env
 
 
 class TestExamples(unittest.TestCase):
@@ -35,6 +44,7 @@ class TestExamples(unittest.TestCase):
             text=True,
             capture_output=True,
             cwd=str(REPO_ROOT),
+            env=example_env(),
         )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -48,6 +58,7 @@ class TestExamples(unittest.TestCase):
             text=True,
             capture_output=True,
             cwd=str(REPO_ROOT),
+            env=example_env(),
         )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -61,6 +72,7 @@ class TestExamples(unittest.TestCase):
             text=True,
             capture_output=True,
             cwd=str(REPO_ROOT),
+            env=example_env(),
         )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)

@@ -2,11 +2,22 @@
 
 from typing import Any, Dict, List, Optional
 
+from agent_circuit_breaker.normalization import normalize_for_matching
+
 
 class SQLInspector:
     """Inspects SQL text without executing it."""
 
     PUNCTUATION = {"*", "=", ",", "(", ")"}
+    RISK_SCORES = {
+        "sql_drop_table": 100,
+        "sql_drop_database": 100,
+        "sql_truncate": 100,
+        "sql_unqualified_delete": 85,
+        "sql_unqualified_update": 85,
+        "sql_tautological_delete": 90,
+        "sql_tautological_update": 90,
+    }
 
     @staticmethod
     def analyze_sql(sql: str) -> Dict[str, Any]:
@@ -18,11 +29,13 @@ class SQLInspector:
         """
         result: Dict[str, Any] = {
             "raw": sql,
+            "normalized": sql,
             "tokens": [],
             "statements": [],
             "is_valid": True,
             "error": None,
             "risk_flags": [],
+            "risk_score": 0,
             "is_dangerous": False,
             "danger_reason": None,
         }
@@ -32,12 +45,15 @@ class SQLInspector:
             result["error"] = "SQL must be a string"
             return result
 
-        if not sql.strip():
+        normalized = normalize_for_matching(sql)
+        result["normalized"] = normalized
+
+        if not normalized.strip():
             return result
 
         try:
-            result["tokens"] = SQLInspector.tokenize(sql)
-            result["statements"] = SQLInspector.split_statements(sql)
+            result["tokens"] = SQLInspector.tokenize(normalized)
+            result["statements"] = SQLInspector.split_statements(normalized)
             SQLInspector._apply_risk_analysis(result)
         except ValueError as exc:
             result["is_valid"] = False
@@ -182,6 +198,7 @@ class SQLInspector:
             "tokens": tokens,
             "statement_type": tokens[0].lower() if tokens else None,
             "risk_flags": [],
+            "risk_score": 0,
             "is_dangerous": False,
             "danger_reason": None,
         }
@@ -204,6 +221,7 @@ class SQLInspector:
                 danger_reasons.append(danger_reason)
 
         result["risk_flags"] = risk_flags
+        result["risk_score"] = SQLInspector._score_risks(risk_flags)
         result["is_dangerous"] = bool(risk_flags)
         result["danger_reason"] = "; ".join(danger_reasons) if danger_reasons else None
 
@@ -256,8 +274,16 @@ class SQLInspector:
             return
 
         statement["risk_flags"] = [risk_flag for risk_flag, _ in risks]
+        statement["risk_score"] = SQLInspector._score_risks(statement["risk_flags"])
         statement["is_dangerous"] = True
         statement["danger_reason"] = "; ".join(reason for _, reason in risks)
+
+    @staticmethod
+    def _score_risks(risk_flags: List[str]) -> int:
+        """Return the highest score for detected SQL risk flags."""
+        if not risk_flags:
+            return 0
+        return max(SQLInspector.RISK_SCORES.get(flag, 50) for flag in risk_flags)
 
     @staticmethod
     def _has_tautological_where(tokens_lower: List[str]) -> bool:

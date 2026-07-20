@@ -306,10 +306,11 @@ The project uses the Python standard library test runner.
 - [v1.1.0](releases/v1.1.0.md)
 - [v1.1.1](releases/v1.1.1.md)
 - [v1.1.2](releases/v1.1.2.md)
+- [v1.2.0](releases/v1.2.0.md)
 
 ## Known Limits
 
-- Shell parsing is heuristic, not a complete shell grammar.
+- Shell parsing uses POSIX lexical tokenization, but it is not a full shell executor or expansion engine.
 - SQL parsing is heuristic, not a complete SQL grammar or dialect parser.
 - External rule files support only JSON and a small deterministic matcher set.
 - External rule files cannot execute arbitrary code.

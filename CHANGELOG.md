@@ -4,6 +4,26 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.2.0] - 2026-07-20
+
+### Added
+
+- Added additive `risk_score` output fields at the top level and inside command/SQL analyses without changing existing verdicts, decisions, exit codes, or rule IDs.
+- Added Unicode normalization before matching, including zero-width character removal and a narrow Cyrillic/Greek homoglyph map for risky ASCII tokens.
+- Added a structured Phase 1 bug log for sandbox findings and fixed reproductions.
+- Added adversarial regressions for quote-splitting, Unicode smuggling, false-positive probes, deterministic fuzz-style inputs, and large-input latency.
+
+### Changed
+
+- Switched shell tokenization to Python stdlib POSIX `shlex` parsing for quote removal, quote concatenation, and backslash handling.
+- Normalized external rule matcher inputs before evaluation while preserving the existing schema version and matcher types.
+
+### Fixed
+
+- Blocked quote-split command tokens such as `r''m -r''f /etc`, `g'it' push --for''ce origin main`, and `ch''mod -R ugo+r''wx /tmp`.
+- Blocked zero-width and homoglyph smuggling such as `r\u200bm -rf /etc`, `rм -rf /etc`, `DRОP TABLE users`, and `DRO\u200bP TABLE users`.
+- Preserved false-positive behavior for unrelated commands such as `transform -rf image.png`, `terraform -rf apply`, `confirm -rf change`, `dropbox table users`, and `findings /etc/ -delete`.
+
 ## [1.1.2] - 2026-07-16
 
 ### Fixed
