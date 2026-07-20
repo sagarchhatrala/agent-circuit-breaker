@@ -9,7 +9,9 @@ from typing import Any, Dict, List
 
 
 SIGNATURE_FIELD = "signature"
-SUPPORTED_ALGORITHMS = ("sha256", "hmac-sha256")
+CHECKSUM_ALGORITHMS = ("checksum-sha256", "sha256")
+AUTHENTICITY_ALGORITHMS = ("hmac-sha256",)
+SUPPORTED_ALGORITHMS = CHECKSUM_ALGORITHMS + AUTHENTICITY_ALGORITHMS
 
 
 def verify_signed_document(document: Any, *, require_signature: bool = False) -> Dict[str, Any]:
@@ -42,6 +44,13 @@ def verify_signed_document(document: Any, *, require_signature: bool = False) ->
         result["is_valid"] = False
         result["errors"] = [f"signature.algorithm must be one of: {', '.join(SUPPORTED_ALGORITHMS)}"]
         return result
+    if require_signature and algorithm not in AUTHENTICITY_ALGORITHMS:
+        result["is_valid"] = False
+        result["errors"] = [
+            "signature.algorithm must provide authenticity when --require-signature is used; "
+            "use hmac-sha256"
+        ]
+        return result
 
     expected = signature.get("digest")
     if not isinstance(expected, str) or not expected.strip():
@@ -63,7 +72,7 @@ def verify_signed_document(document: Any, *, require_signature: bool = False) ->
     return result
 
 
-def sign_document(document: Dict[str, Any], *, algorithm: str = "sha256", key: str = "") -> Dict[str, Any]:
+def sign_document(document: Dict[str, Any], *, algorithm: str = "hmac-sha256", key: str = "") -> Dict[str, Any]:
     """Return a copy of a JSON document with a deterministic signature field."""
     if algorithm not in SUPPORTED_ALGORITHMS:
         raise ValueError(f"algorithm must be one of: {', '.join(SUPPORTED_ALGORITHMS)}")
@@ -101,7 +110,7 @@ def _digest(
     key_override: str = "",
 ) -> str:
     payload = canonical_payload(document)
-    if algorithm == "sha256":
+    if algorithm in CHECKSUM_ALGORITHMS:
         return hashlib.sha256(payload).hexdigest()
 
     key = key_override

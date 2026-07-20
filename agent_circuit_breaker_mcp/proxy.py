@@ -193,17 +193,23 @@ def inspect_stdin(
 
 
 def _command_candidates(value: Any, path: str = "") -> Iterable[tuple[str, str]]:
+    if isinstance(value, str):
+        yield path or "$", value
+        return
+
     if isinstance(value, dict):
         for key, child in value.items():
             child_path = f"{path}.{key}" if path else str(key)
-            if isinstance(child, str) and str(key).lower() in COMMAND_FIELDS:
+            if isinstance(child, str):
                 yield child_path, child
             elif isinstance(child, (dict, list)):
                 yield from _command_candidates(child, child_path)
     elif isinstance(value, list):
         for index, child in enumerate(value):
             child_path = f"{path}[{index}]"
-            if isinstance(child, (dict, list)):
+            if isinstance(child, str):
+                yield child_path, child
+            elif isinstance(child, (dict, list)):
                 yield from _command_candidates(child, child_path)
 
 

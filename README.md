@@ -45,7 +45,7 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - risky infrastructure commands: destructive Docker, Kubernetes, AWS, Azure CLI, and gcloud deletion shapes.
 - dangerous permissions: recursive world-writable `chmod`, including symbolic modes such as `ugo+rwx`.
 - destructive SQL: `DROP TABLE`, `DROP DATABASE`, `TRUNCATE`, unqualified `DELETE`/`UPDATE`, and tautological `WHERE 1=1` variants.
-- MCP tool calls: stdio JSON-RPC proxy inspection for command-like `tools/call` arguments.
+- MCP tool calls: stdio JSON-RPC proxy inspection for string-valued `tools/call` arguments, including arbitrary schema field names.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
@@ -168,6 +168,8 @@ Require signed policy or rule JSON:
 circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json --require-signature
 ```
 
+`--require-signature` requires authenticity, not just a same-file checksum. Use `hmac-sha256` with a key supplied through the configured environment variable for signed policy/rule packs.
+
 Rule schema and examples:
 
 - [Rule schema](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/RULE_SCHEMA.md)
@@ -213,6 +215,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - optional signed policy/rule-pack verification.
 - plugin discovery through Python entry points.
 - MCP stdio proxy mode for guarding tool-call arguments.
+- HMAC-backed policy/rule-pack signatures for authenticity checks.
 - SARIF output for code scanning.
 
 Security references:
@@ -227,8 +230,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.4.1`
-- Test suite: 380 tests
+- Current version: `1.4.2`
+- Test suite: 383 tests
 - Runtime dependencies: none
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -252,7 +255,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
-- [v1.4.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.1.md)
+- [v1.4.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.2.md)
 
 ## License
 

@@ -74,7 +74,7 @@ python -m twine upload --repository testpypi dist/*
 Install verification:
 
 ```bash
-python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.4.1
+python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.4.2
 python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_action('rm -rf /')['verdict'])"
 ```
 
@@ -89,7 +89,7 @@ python -m twine upload dist/*
 Install verification:
 
 ```bash
-python -m pip install --no-deps agent-circuit-breaker==1.4.1
+python -m pip install --no-deps agent-circuit-breaker==1.4.2
 python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_action('rm -rf /')['verdict'])"
 ```
 

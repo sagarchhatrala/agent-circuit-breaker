@@ -113,27 +113,53 @@ class TestV14StrictApprovalAndSigning(unittest.TestCase):
         self.assertFalse(result["is_valid"])
         self.assertIn("signature is required", result["errors"])
 
-    def test_rule_pack_sha256_signature_verifies_and_detects_tampering(self):
-        signed = sign_document(rule_definition())
+    def test_rule_pack_hmac_signature_verifies_and_detects_tampering(self):
+        signed = sign_document(rule_definition(), key="test-secret")
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "rules.json"
             path.write_text(json.dumps(signed), encoding="utf-8")
-            valid = RuleFileLoader.load(str(path), require_signature=True)
-            signed["rules"][0]["matcher"]["value"] = "different"
-            path.write_text(json.dumps(signed), encoding="utf-8")
-            tampered = RuleFileLoader.load(str(path), require_signature=True)
+            old_key = os.environ.get("ACB_POLICY_HMAC_KEY")
+            os.environ["ACB_POLICY_HMAC_KEY"] = "test-secret"
+            try:
+                valid = RuleFileLoader.load(str(path), require_signature=True)
+                signed["rules"][0]["matcher"]["value"] = "different"
+                path.write_text(json.dumps(signed), encoding="utf-8")
+                tampered = RuleFileLoader.load(str(path), require_signature=True)
+            finally:
+                if old_key is None:
+                    os.environ.pop("ACB_POLICY_HMAC_KEY", None)
+                else:
+                    os.environ["ACB_POLICY_HMAC_KEY"] = old_key
 
         self.assertTrue(valid["is_valid"])
         self.assertFalse(tampered["is_valid"])
         self.assertIn("signature verification failed", tampered["errors"])
 
-    def test_policy_sha256_signature_verifies(self):
-        signed = sign_document({"mode": "strict"})
+    def test_checksum_signature_is_not_accepted_for_required_signature(self):
+        signed = sign_document(rule_definition(), algorithm="checksum-sha256")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "rules.json"
+            path.write_text(json.dumps(signed), encoding="utf-8")
+
+            result = RuleFileLoader.load(str(path), require_signature=True)
+
+        self.assertFalse(result["is_valid"])
+        self.assertIn("must provide authenticity", result["errors"][0])
+
+    def test_policy_hmac_signature_verifies(self):
+        signed = sign_document({"mode": "strict"}, key="test-secret")
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "policy.json"
             path.write_text(json.dumps(signed), encoding="utf-8")
-
-            policy = load_policy(str(path), require_signature=True)
+            old_key = os.environ.get("ACB_POLICY_HMAC_KEY")
+            os.environ["ACB_POLICY_HMAC_KEY"] = "test-secret"
+            try:
+                policy = load_policy(str(path), require_signature=True)
+            finally:
+                if old_key is None:
+                    os.environ.pop("ACB_POLICY_HMAC_KEY", None)
+                else:
+                    os.environ["ACB_POLICY_HMAC_KEY"] = old_key
 
         self.assertEqual(policy["mode"], "strict")
         self.assertIsNotNone(policy["signature"])
@@ -176,6 +202,38 @@ class TestV14MCPProxy(unittest.TestCase):
 
         self.assertFalse(inspection["allowed"])
         self.assertEqual(inspection["response"]["error"]["data"]["field"], "payload.sql")
+
+    def test_mcp_proxy_inspects_arbitrary_string_argument_names(self):
+        risky_keys = ("input", "code", "action", "text", "payload", "exec", "bash", "expr", "value")
+
+        for key in risky_keys:
+            with self.subTest(key=key):
+                message = {
+                    "jsonrpc": "2.0",
+                    "id": key,
+                    "method": "tools/call",
+                    "params": {"name": "tool", "arguments": {key: "rm -rf /"}},
+                }
+
+                inspection = inspect_jsonrpc_message(message)
+
+                self.assertFalse(inspection["allowed"])
+                self.assertEqual(inspection["checks"][0]["field"], key)
+                self.assertEqual(inspection["response"]["error"]["data"]["matched_rule"], "fs_recursive_delete")
+
+    def test_mcp_proxy_inspects_raw_string_arguments(self):
+        message = {
+            "jsonrpc": "2.0",
+            "id": "raw",
+            "method": "tools/call",
+            "params": {"name": "tool", "arguments": "DROP TABLE users"},
+        }
+
+        inspection = inspect_jsonrpc_message(message)
+
+        self.assertFalse(inspection["allowed"])
+        self.assertEqual(inspection["checks"][0]["field"], "$")
+        self.assertEqual(inspection["response"]["error"]["data"]["matched_rule"], "sql_drop_table")
 
 
 if __name__ == "__main__":

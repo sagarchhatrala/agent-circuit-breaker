@@ -4,6 +4,20 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.2] - 2026-07-21
+
+### Fixed
+
+- Fixed MCP proxy inspection bypasses caused by arbitrary third-party argument names such as `input`, `code`, `payload`, or `value`.
+- Fixed MCP proxy inspection for raw string `arguments` payloads.
+- Fixed misleading `--require-signature` semantics by rejecting checksum-only SHA-256 documents as required signatures.
+
+### Changed
+
+- `circuit-breaker-mcp-proxy` now inspects every string-valued tool-call argument recursively instead of only a short key allowlist.
+- `--require-signature` now requires an authenticity-providing algorithm, currently `hmac-sha256`.
+- Plain SHA-256 is treated as checksum-only integrity metadata, not an authenticity signature.
+
 ## [1.4.1] - 2026-07-21
 
 ### Changed

@@ -51,11 +51,13 @@ The current stable package includes:
 - signed policy/rule-pack verification.
 - plugin discovery.
 - pre-commit hook manifest.
-- stdio JSON-RPC MCP proxy.
+- stdio JSON-RPC MCP proxy that inspects all string-valued tool-call arguments.
+- HMAC-backed policy/rule-pack signatures for authenticity checks.
 - trusted publishing workflow for TestPyPI and PyPI.
 
 ## Release Notes
 
+- [v1.4.2](releases/v1.4.2.md)
 - [v1.4.1](releases/v1.4.1.md)
 - [v1.4.0](releases/v1.4.0.md)
 - [v1.3.0](releases/v1.3.0.md)

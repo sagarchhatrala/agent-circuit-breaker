@@ -50,7 +50,7 @@ Core command evaluation is offline by default. The only built-in network path is
 
 ## Signed Policy and Rule Packs
 
-Policy files and external rule packs can include an embedded `signature` object. `--require-signature` rejects unsigned or tampered JSON before any rules are built. The stdlib verifier supports deterministic `sha256` integrity checks and `hmac-sha256` signatures using a key supplied through the configured environment variable. Heavier public-key or transparency-log verification should be added through an optional integration package so the core remains dependency-free.
+Policy files and external rule packs can include an embedded `signature` object. `--require-signature` rejects unsigned or tampered JSON before any rules are built. The stdlib verifier requires `hmac-sha256` for authenticity when `--require-signature` is used. Plain SHA-256 checksums are integrity checks only and are not accepted as required signatures because an attacker can recompute a same-file checksum after tampering. Heavier public-key or transparency-log verification should be added through an optional integration package so the core remains dependency-free.
 
 ## Strict and Approval Modes
 
