@@ -70,8 +70,8 @@ class TestPublicAPI(unittest.TestCase):
         self.assertEqual(result["error"], "Invalid rule file")
         self.assertFalse(result["custom_rules"]["is_valid"])
         self.assertIn(
-            "rules[0].matcher.type must be one of contains, equals, prefix",
-            result["custom_rules"]["errors"],
+            "rules[0].matcher.type must be one of",
+            result["custom_rules"]["errors"][0],
         )
 
     def test_validate_rule_file_for_valid_fixture(self):
@@ -99,8 +99,8 @@ class TestPublicAPI(unittest.TestCase):
         metadata = rule_schema_metadata()
 
         self.assertEqual(metadata["version"], 1)
-        self.assertEqual(metadata["matcher_types"], ["contains", "equals", "prefix"])
-        self.assertEqual(metadata["response_values"], ["allow", "block"])
+        self.assertEqual(metadata["matcher_types"], ["all_of", "any_of", "contains", "equals", "not", "prefix", "regex"])
+        self.assertEqual(metadata["response_values"], ["allow", "approval", "block"])
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ Each rule object must include:
 - `id`: non-empty string.
 - `title`: non-empty string.
 - `severity`: one of `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`.
-- `response`: one of `allow`, `block`.
+- `response`: one of `allow`, `block`, `approval`.
 - `matcher`: matcher object.
 
 Optional fields:
@@ -31,14 +31,14 @@ Unknown rule fields are rejected. Duplicate rule IDs are rejected.
 
 ## Matcher Object
 
-Each matcher object must include:
+Scalar matcher objects include:
 
-- `type`: one of `contains`, `equals`, `prefix`.
+- `type`: one of `contains`, `equals`, `prefix`, `regex`.
 - `value`: non-empty string.
 
 Unknown matcher fields are rejected.
 
-Matcher behavior is case-sensitive.
+Matcher values are normalized with the same command normalization used by the core engine.
 
 ### `contains`
 
@@ -51,6 +51,32 @@ Matches when the action exactly equals the configured value.
 ### `prefix`
 
 Matches when the action starts with the configured value.
+
+### `regex`
+
+Matches when the configured regular expression matches the normalized action. Regex patterns are bounded and compiled during validation.
+
+### `all_of`
+
+Matches when every child matcher matches.
+
+```json
+{
+  "type": "all_of",
+  "matchers": [
+    {"type": "contains", "value": "deploy"},
+    {"type": "contains", "value": "production"}
+  ]
+}
+```
+
+### `any_of`
+
+Matches when at least one child matcher matches.
+
+### `not`
+
+Matches when the child matcher does not match.
 
 ## Security Properties
 
@@ -86,8 +112,6 @@ Built-in rules are evaluated before custom rules. A custom `allow` rule cannot o
 ## Unsupported
 
 - YAML files.
-- Regex matchers.
-- Remote rule fetching.
-- Rule signing.
 - Arbitrary Python matchers.
 - Dynamic expressions.
+- Unbounded regular expressions.

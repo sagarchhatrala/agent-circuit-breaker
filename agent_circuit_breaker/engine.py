@@ -17,6 +17,7 @@ class Decision(Enum):
     BLOCK = "block"
     ERROR = "error"
     UNKNOWN = "unknown"
+    PENDING_APPROVAL = "pending_approval"
 
 
 @dataclass
@@ -59,8 +60,8 @@ class Rule:
         if self.severity not in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
             raise ValueError(f"Rule severity must be one of (CRITICAL, HIGH, MEDIUM, LOW), got: {self.severity}")
         
-        if self.response not in ("allow", "block"):
-            raise ValueError(f"Rule response must be 'allow' or 'block', got: {self.response}")
+        if self.response not in ("allow", "block", "approval"):
+            raise ValueError(f"Rule response must be 'allow', 'block', or 'approval', got: {self.response}")
         
         if not callable(self.matcher):
             raise ValueError("Rule matcher must be callable")
@@ -118,6 +119,8 @@ class Engine:
                         return Decision.BLOCK, rule
                     elif rule.response == "allow":
                         return Decision.ALLOW, rule
+                    elif rule.response == "approval":
+                        return Decision.PENDING_APPROVAL, rule
             
             except Exception as e:
                 # Matcher raised an exception - treat as error

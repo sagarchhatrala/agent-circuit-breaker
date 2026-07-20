@@ -933,7 +933,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stderr = sys.stderr
         try:
-            sys.argv = ["circuit-breaker", "scan", 'rm -rf "/"']
+            sys.argv = ["circuit-breaker", "unsupported", 'rm -rf "/"']
             sys.stderr = StringIO()
             exit_code = main()
             output = sys.stderr.getvalue()

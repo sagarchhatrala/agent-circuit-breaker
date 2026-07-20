@@ -1,0 +1,7 @@
+- id: agent-circuit-breaker-scan
+  name: Agent Circuit Breaker scan
+  description: Scan staged text files for high-risk agent commands.
+  entry: circuit-breaker scan
+  language: python
+  types: [text]
+  pass_filenames: true

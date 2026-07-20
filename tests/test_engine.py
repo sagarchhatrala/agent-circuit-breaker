@@ -21,10 +21,11 @@ class TestDecisionEnum(unittest.TestCase):
         self.assertEqual(Decision.BLOCK.value, "block")
         self.assertEqual(Decision.ERROR.value, "error")
         self.assertEqual(Decision.UNKNOWN.value, "unknown")
+        self.assertEqual(Decision.PENDING_APPROVAL.value, "pending_approval")
     
     def test_decision_count(self):
-        """Should have exactly 4 decision types."""
-        self.assertEqual(len(Decision), 4)
+        """Should have exactly 5 decision types."""
+        self.assertEqual(len(Decision), 5)
 
 
 class TestRuleValidation(unittest.TestCase):
