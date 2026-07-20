@@ -56,6 +56,7 @@ class CircuitBreakerCLI:
             "operation_analysis": None,
             "command_analysis": None,
             "sql_analysis": None,
+            "risk_score": 0,
             "error": None,
         }
 
@@ -63,6 +64,7 @@ class CircuitBreakerCLI:
             if not isinstance(command, str):
                 result["verdict"] = "error"
                 result["decision"] = Decision.ERROR.name
+                result["risk_score"] = 100
                 result["operation_analysis"] = {
                     "operation": "unknown",
                     "targets": [],
@@ -79,6 +81,7 @@ class CircuitBreakerCLI:
                     "is_valid": False,
                     "error": "Command must be a string",
                     "risk_flags": [],
+                    "risk_score": 0,
                     "is_dangerous": False,
                     "danger_reason": None,
                 }
@@ -88,6 +91,7 @@ class CircuitBreakerCLI:
                     "is_valid": False,
                     "error": "SQL must be a string",
                     "risk_flags": [],
+                    "risk_score": 0,
                     "is_dangerous": False,
                     "danger_reason": None,
                 }
@@ -114,6 +118,7 @@ class CircuitBreakerCLI:
                 "is_valid": command_analysis["is_valid"],
                 "error": command_analysis["error"],
                 "risk_flags": command_analysis["risk_flags"],
+                "risk_score": command_analysis["risk_score"],
                 "is_dangerous": command_analysis["is_dangerous"],
                 "danger_reason": command_analysis["danger_reason"],
             }
@@ -125,6 +130,7 @@ class CircuitBreakerCLI:
                 "is_valid": sql_analysis["is_valid"],
                 "error": sql_analysis["error"],
                 "risk_flags": sql_analysis["risk_flags"],
+                "risk_score": sql_analysis["risk_score"],
                 "is_dangerous": sql_analysis["is_dangerous"],
                 "danger_reason": sql_analysis["danger_reason"],
             }
@@ -132,6 +138,7 @@ class CircuitBreakerCLI:
             if not command_analysis["is_valid"]:
                 result["decision"] = Decision.ERROR.name
                 result["verdict"] = "error"
+                result["risk_score"] = 100
                 result["error"] = command_analysis["error"]
                 return result
 
@@ -141,6 +148,7 @@ class CircuitBreakerCLI:
             if decision != Decision.BLOCK and not sql_analysis["is_valid"]:
                 result["decision"] = Decision.ERROR.name
                 result["verdict"] = "error"
+                result["risk_score"] = 100
                 result["error"] = sql_analysis["error"]
                 return result
 
@@ -169,8 +177,17 @@ class CircuitBreakerCLI:
             else:  # UNKNOWN
                 result["verdict"] = "unknown"
 
+            result["risk_score"] = self._risk_score_for_result(
+                decision,
+                matched_rule,
+                command_analysis,
+                sql_analysis,
+            )
+
         except Exception as e:
             result["verdict"] = "error"
+            result["decision"] = Decision.ERROR.name
+            result["risk_score"] = 100
             result["error"] = str(e)
             if self.verbose:
                 import traceback
@@ -178,6 +195,37 @@ class CircuitBreakerCLI:
                 result["traceback"] = traceback.format_exc()
 
         return result
+
+    @staticmethod
+    def _risk_score_for_result(
+        decision: Decision,
+        matched_rule: Optional[Any],
+        command_analysis: Dict[str, Any],
+        sql_analysis: Dict[str, Any],
+    ) -> int:
+        """Return additive 0-100 risk score without changing the decision enum."""
+        if decision == Decision.ERROR:
+            return 100
+
+        scores = [
+            int(command_analysis.get("risk_score") or 0),
+            int(sql_analysis.get("risk_score") or 0),
+        ]
+
+        if decision == Decision.BLOCK and matched_rule:
+            scores.append(
+                {
+                    "CRITICAL": 100,
+                    "HIGH": 85,
+                    "MEDIUM": 60,
+                    "LOW": 35,
+                }.get(matched_rule.severity, 50)
+            )
+
+        if decision == Decision.ALLOW:
+            scores.append(0)
+
+        return max(scores)
 
     @staticmethod
     def _is_known_safe_operation(operation_analysis: Dict[str, Any]) -> bool:
@@ -213,6 +261,7 @@ class CircuitBreakerCLI:
 
         if result["decision"]:
             lines.append(f"Decision: {result['decision']}")
+            lines.append(f"Risk Score: {result.get('risk_score', 0)}")
 
         if result["matched_rule"]:
             lines.append(f"Matched Rule: {result['matched_rule']}")

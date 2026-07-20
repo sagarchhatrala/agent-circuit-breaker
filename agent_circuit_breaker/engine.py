@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, List, Any, Optional
 
+from agent_circuit_breaker.normalization import normalize_for_matching
+
 
 class Decision(Enum):
     """Possible engine decisions."""
@@ -96,6 +98,11 @@ class Engine:
         if not rules:
             # No rules provided - nothing to evaluate against
             return Decision.UNKNOWN, None
+
+        try:
+            normalized_action = normalize_for_matching(action)
+        except ValueError:
+            return Decision.ERROR, None
         
         # Evaluate each rule in order
         for rule in rules:
@@ -105,7 +112,7 @@ class Engine:
             
             try:
                 # Call the matcher function
-                if rule.matcher(action):
+                if rule.matcher(normalized_action):
                     # Rule matched - return the decision based on rule response
                     if rule.response == "block":
                         return Decision.BLOCK, rule

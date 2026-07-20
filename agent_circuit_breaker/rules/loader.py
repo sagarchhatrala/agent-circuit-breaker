@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Set
 
 from agent_circuit_breaker.engine import Rule
+from agent_circuit_breaker.normalization import normalize_for_matching
 
 RULE_SCHEMA_VERSION = 1
 
@@ -260,16 +261,16 @@ class RuleDefinitionBuilder:
     def _build_matcher(matcher_definition: Dict[str, str]) -> Callable[[str], bool]:
         """Build a deterministic matcher callable."""
         matcher_type = matcher_definition["type"]
-        matcher_value = matcher_definition["value"]
+        matcher_value = normalize_for_matching(matcher_definition["value"])
 
         if matcher_type == "contains":
-            return lambda action, value=matcher_value: isinstance(action, str) and value in action
+            return lambda action, value=matcher_value: isinstance(action, str) and value in normalize_for_matching(action)
 
         if matcher_type == "equals":
-            return lambda action, value=matcher_value: isinstance(action, str) and action == value
+            return lambda action, value=matcher_value: isinstance(action, str) and normalize_for_matching(action) == value
 
         if matcher_type == "prefix":
-            return lambda action, value=matcher_value: isinstance(action, str) and action.startswith(value)
+            return lambda action, value=matcher_value: isinstance(action, str) and normalize_for_matching(action).startswith(value)
 
         raise ValueError(f"Unsupported matcher type: {matcher_type}")
 
