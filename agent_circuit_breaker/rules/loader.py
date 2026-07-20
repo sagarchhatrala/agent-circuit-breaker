@@ -1,6 +1,7 @@
 """External rule definition loading and validation."""
 
 import json
+import re
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Set
@@ -19,10 +20,12 @@ class RuleDefinitionValidator:
     OPTIONAL_RULE_FIELDS = {"metadata"}
     ALLOWED_RULE_FIELDS = REQUIRED_RULE_FIELDS | OPTIONAL_RULE_FIELDS
     ALLOWED_SEVERITIES = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
-    ALLOWED_RESPONSES = {"allow", "block"}
-    ALLOWED_MATCHER_TYPES = {"contains", "equals", "prefix"}
+    ALLOWED_RESPONSES = {"allow", "block", "approval"}
+    ALLOWED_MATCHER_TYPES = {"contains", "equals", "prefix", "regex", "all_of", "any_of", "not"}
     REQUIRED_MATCHER_FIELDS = {"type", "value"}
-    ALLOWED_MATCHER_FIELDS = REQUIRED_MATCHER_FIELDS
+    ALLOWED_MATCHER_FIELDS = {"type", "value", "matchers", "matcher"}
+    MAX_REGEX_LENGTH = 500
+    MAX_MATCHER_DEPTH = 8
 
     @classmethod
     def validate(cls, definition: Any) -> Dict[str, Any]:
@@ -104,7 +107,7 @@ class RuleDefinitionValidator:
             errors.append(f"{path}.severity must be one of CRITICAL, HIGH, MEDIUM, LOW")
 
         if "response" in rule and rule["response"] not in cls.ALLOWED_RESPONSES:
-            errors.append(f"{path}.response must be allow or block")
+            errors.append(f"{path}.response must be allow, block, or approval")
 
     @staticmethod
     def _validate_non_empty_string(
@@ -144,27 +147,56 @@ class RuleDefinitionValidator:
         """Validate matcher object shape."""
         if "matcher" not in rule:
             return
+        cls._validate_matcher_object(rule["matcher"], f"{path}.matcher", errors, depth=0)
 
-        matcher = rule["matcher"]
+    @classmethod
+    def _validate_matcher_object(cls, matcher: Any, path: str, errors: List[str], depth: int) -> None:
+        """Validate matcher object shape recursively."""
         if not isinstance(matcher, dict):
-            errors.append(f"{path}.matcher must be an object")
+            errors.append(f"{path} must be an object")
+            return
+
+        if depth > cls.MAX_MATCHER_DEPTH:
+            errors.append(f"{path} exceeds max matcher depth")
             return
 
         for field in matcher:
             if field not in cls.ALLOWED_MATCHER_FIELDS:
-                errors.append(f"{path}.matcher.{field} is not supported")
-
-        for field in sorted(cls.REQUIRED_MATCHER_FIELDS):
-            if field not in matcher:
-                errors.append(f"{path}.matcher.{field} is required")
+                errors.append(f"{path}.{field} is not supported")
 
         matcher_type = matcher.get("type")
         if matcher_type not in cls.ALLOWED_MATCHER_TYPES:
-            errors.append(f"{path}.matcher.type must be one of contains, equals, prefix")
+            errors.append(f"{path}.type must be one of {', '.join(sorted(cls.ALLOWED_MATCHER_TYPES))}")
+            return
 
-        matcher_value = matcher.get("value")
-        if not isinstance(matcher_value, str) or not matcher_value:
-            errors.append(f"{path}.matcher.value must be a non-empty string")
+        if matcher_type in {"contains", "equals", "prefix", "regex"}:
+            matcher_value = matcher.get("value")
+            if not isinstance(matcher_value, str) or not matcher_value:
+                errors.append(f"{path}.value must be a non-empty string")
+            if matcher_type == "regex":
+                if isinstance(matcher_value, str) and len(matcher_value) > cls.MAX_REGEX_LENGTH:
+                    errors.append(f"{path}.value exceeds max regex length")
+                try:
+                    re.compile(matcher_value or "")
+                except re.error as exc:
+                    errors.append(f"{path}.value is not a valid regex: {exc}")
+            return
+
+        if matcher_type in {"all_of", "any_of"}:
+            matchers = matcher.get("matchers")
+            if not isinstance(matchers, list) or not matchers:
+                errors.append(f"{path}.matchers must be a non-empty list")
+                return
+            for index, child in enumerate(matchers):
+                cls._validate_matcher_object(child, f"{path}.matchers[{index}]", errors, depth + 1)
+            return
+
+        if matcher_type == "not":
+            child = matcher.get("matcher")
+            if not isinstance(child, dict):
+                errors.append(f"{path}.matcher must be an object")
+                return
+            cls._validate_matcher_object(child, f"{path}.matcher", errors, depth + 1)
 
     @staticmethod
     def _validate_metadata(rule: Dict[str, Any], path: str, errors: List[str]) -> None:
@@ -258,19 +290,37 @@ class RuleDefinitionBuilder:
         )
 
     @staticmethod
-    def _build_matcher(matcher_definition: Dict[str, str]) -> Callable[[str], bool]:
+    def _build_matcher(matcher_definition: Dict[str, Any]) -> Callable[[str], bool]:
         """Build a deterministic matcher callable."""
         matcher_type = matcher_definition["type"]
-        matcher_value = normalize_for_matching(matcher_definition["value"])
 
         if matcher_type == "contains":
+            matcher_value = normalize_for_matching(matcher_definition["value"])
             return lambda action, value=matcher_value: isinstance(action, str) and value in normalize_for_matching(action)
 
         if matcher_type == "equals":
+            matcher_value = normalize_for_matching(matcher_definition["value"])
             return lambda action, value=matcher_value: isinstance(action, str) and normalize_for_matching(action) == value
 
         if matcher_type == "prefix":
+            matcher_value = normalize_for_matching(matcher_definition["value"])
             return lambda action, value=matcher_value: isinstance(action, str) and normalize_for_matching(action).startswith(value)
+
+        if matcher_type == "regex":
+            pattern = re.compile(matcher_definition["value"])
+            return lambda action, compiled=pattern: isinstance(action, str) and compiled.search(normalize_for_matching(action)) is not None
+
+        if matcher_type == "all_of":
+            children = [RuleDefinitionBuilder._build_matcher(child) for child in matcher_definition["matchers"]]
+            return lambda action, matchers=children: all(matcher(action) for matcher in matchers)
+
+        if matcher_type == "any_of":
+            children = [RuleDefinitionBuilder._build_matcher(child) for child in matcher_definition["matchers"]]
+            return lambda action, matchers=children: any(matcher(action) for matcher in matchers)
+
+        if matcher_type == "not":
+            child = RuleDefinitionBuilder._build_matcher(matcher_definition["matcher"])
+            return lambda action, matcher=child: not matcher(action)
 
         raise ValueError(f"Unsupported matcher type: {matcher_type}")
 

@@ -1,14 +1,14 @@
 # Agent Circuit Breaker
 
-**Deterministic safety layer for AI coding agents.**
+**Local-first safety runtime for AI coding agents.**
 
 ## Goal
 
-Place an explicit safety checkpoint between AI agents and the operating system.
+Place an explicit safety checkpoint between AI agents and the operating system, developer tools, databases, and automation workflows.
 
 Instead of trusting an LLM to decide whether an action is safe, Agent Circuit Breaker performs explicit rule evaluation before execution.
 
-**Objective**: Stop catastrophic mistakes (recursive deletion, destructive SQL, accidental production access) while keeping false positives extremely low.
+**Objective**: Stop catastrophic mistakes, route high-risk actions to approval, and leave an audit trail that a human or team can inspect later.
 
 ---
 
@@ -50,6 +50,25 @@ circuit-breaker check "DROP TABLE users"
 circuit-breaker check "DELETE FROM users WHERE id = 1"
 # Verdict: UNKNOWN
 
+circuit-breaker explain "git push --force origin main"
+# Verdict, risk score, matched rule, and safer alternatives
+
+circuit-breaker check "rm -rf /" --profile team
+# Verdict: PENDING_APPROVAL
+
+circuit-breaker approvals list
+# Local pending approvals
+
+circuit-breaker scan ./scripts ./README.md
+# Static findings for scripts, docs, SQL, and CI files
+
+circuit-breaker scan . --sarif > acb.sarif
+# SARIF for GitHub code scanning
+
+circuit-breaker check "rm -rf /" --audit
+circuit-breaker timeline --verify
+# Tamper-evident local audit timeline
+
 circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 # Valid: TRUE
 
@@ -68,13 +87,14 @@ Modern AI coding agents can:
 - Modify files
 - Write scripts
 - Interact with databases
+- Call tools and APIs through local automation layers
 
 Without a deterministic safety layer, an LLM hallucination or misalignment can cause:
 - Data loss (recursive filesystem deletion)
 - Security breaches (credential exfiltration)
 - Downtime (infrastructure-wide destructive commands)
 
-**Agent Circuit Breaker** catches these before they execute.
+**Agent Circuit Breaker** gives individuals and teams a local control point before those actions execute.
 
 ---
 
@@ -108,6 +128,16 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - SQL inspector (tokenization, statement splitting, destructive statement detection)
 - Built-in filesystem, command, and SQL safety rules
 - Built-in command rules for package publish, Docker destruction, cloud deletion, forceful Kubernetes deletion, disk overwrite/format, root find-delete, and fork bomb risk shapes
+- Safety profiles and policy modes for personal, team, and production workflows
+- Human approval outcome and local approval queue
+- Explain mode with safer alternatives
+- Static scan mode with SARIF output
+- Tamper-evident audit timeline
+- Central policy loading from file or explicit URL
+- Plugin discovery and optional rule-provider loading
+- External rule schema with scalar, regex, and boolean composite matchers
+- Hook scaffold generation and pre-commit hook manifest
+- Minimal optional MCP-style proxy scaffold
 - External JSON rule validation
 - Dedicated external rule schema reference
 - Schema metadata exported by the package
@@ -121,7 +151,7 @@ Action -> Inspector(s) -> Rules -> Engine -> Decision (allow/block/error/unknown
 - Production-readiness documentation
 - Optional custom rule enforcement through `--rules`
 - CLI interface
-- 358 tests
+- 368 tests
 - Documentation for current stable behavior
 
 See [PLAN.md](PLAN.md) for milestone breakdown.
@@ -142,6 +172,7 @@ See [PLAN.md](PLAN.md) for milestone breakdown.
 - **[docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md)** - CLI and Python integration guidance
 - **[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)** - API, CLI, decision, and rule schema compatibility
 - **[docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)** - repeatable release process
+- **[docs/V1_3_RUNTIME_NOTES.md](docs/V1_3_RUNTIME_NOTES.md)** - v1.3 runtime scope and deferred hardening notes
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - TestPyPI and PyPI publishing flow
 - **[docs/BRANCH_PROTECTION.md](docs/BRANCH_PROTECTION.md)** - recommended `main` protection
 - **[docs/V1_1_PLAN.md](docs/V1_1_PLAN.md)** - compatible v1.1 roadmap
@@ -182,9 +213,9 @@ See [projects/README.md](projects/README.md) for planned companion tools:
 
 ## Status
 
-**Current**: v1.2.0 prepared on `v2-phase1`
+**Current**: v1.3.0
 
-**Next**: compatible patch and minor releases
+**Next**: harden the optional MCP proxy and enterprise policy signing surface.
 
 ---
 
@@ -194,4 +225,4 @@ Sagar Chhatrala - [GitHub](https://github.com/sagarchhatrala)
 
 ---
 
-**This is a stable deterministic safety gate for AI agent integrations.**
+**This is a stable local-first safety runtime for AI agent integrations.**

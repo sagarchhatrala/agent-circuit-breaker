@@ -106,7 +106,7 @@ class TestRuleDefinitionValidator(unittest.TestCase):
         self.assertIn("rules[0].id must be a non-empty string", result["errors"])
         self.assertIn("rules[0].title must be a non-empty string", result["errors"])
         self.assertIn("rules[0].severity must be one of CRITICAL, HIGH, MEDIUM, LOW", result["errors"])
-        self.assertIn("rules[0].response must be allow or block", result["errors"])
+        self.assertIn("rules[0].response must be allow, block, or approval", result["errors"])
 
     def test_missing_required_rule_fields_return_invalid(self):
         """Missing required rule fields should fail validation."""
@@ -138,12 +138,12 @@ class TestRuleDefinitionValidator(unittest.TestCase):
     def test_unknown_matcher_type_returns_invalid(self):
         """Unknown matcher types should fail validation."""
         definition = valid_definition()
-        definition["rules"][0]["matcher"]["type"] = "regex"
+        definition["rules"][0]["matcher"]["type"] = "glob"
 
         result = RuleDefinitionValidator.validate(definition)
 
         self.assertFalse(result["is_valid"])
-        self.assertIn("rules[0].matcher.type must be one of contains, equals, prefix", result["errors"])
+        self.assertIn("rules[0].matcher.type must be one of", result["errors"][0])
 
     def test_non_string_matcher_value_returns_invalid(self):
         """Matcher values should be strings."""
@@ -166,8 +166,8 @@ class TestRuleDefinitionValidator(unittest.TestCase):
         self.assertEqual(result["errors"], ["rules[0].metadata must be an object"])
 
     def test_supported_matcher_types_return_valid(self):
-        """All v0.4 matcher types should be accepted."""
-        for matcher_type in ("contains", "equals", "prefix"):
+        """All v1.3 scalar matcher types should be accepted."""
+        for matcher_type in ("contains", "equals", "prefix", "regex"):
             with self.subTest(matcher_type=matcher_type):
                 definition = valid_definition()
                 definition["rules"][0]["matcher"]["type"] = matcher_type
@@ -180,7 +180,7 @@ class TestRuleDefinitionValidator(unittest.TestCase):
     def test_validation_is_deterministic(self):
         """Repeated validation should return the same structure."""
         definition = valid_definition()
-        definition["rules"][0]["matcher"]["type"] = "regex"
+        definition["rules"][0]["matcher"]["type"] = "glob"
 
         result1 = RuleDefinitionValidator.validate(definition)
         result2 = RuleDefinitionValidator.validate(definition)
@@ -194,8 +194,8 @@ class TestRuleDefinitionValidator(unittest.TestCase):
         metadata = RuleSchema.metadata()
 
         self.assertEqual(metadata["version"], RULE_SCHEMA_VERSION)
-        self.assertEqual(metadata["matcher_types"], ["contains", "equals", "prefix"])
-        self.assertEqual(metadata["response_values"], ["allow", "block"])
+        self.assertEqual(metadata["matcher_types"], ["all_of", "any_of", "contains", "equals", "not", "prefix", "regex"])
+        self.assertEqual(metadata["response_values"], ["allow", "approval", "block"])
         self.assertEqual(metadata["severity_values"], ["CRITICAL", "HIGH", "LOW", "MEDIUM"])
         self.assertEqual(metadata["required_rule_fields"], ["id", "matcher", "response", "severity", "title"])
 
@@ -310,7 +310,7 @@ class TestRuleSchemaFixtures(unittest.TestCase):
         """Invalid documented fixtures should fail loader validation."""
         cases = {
             "invalid_duplicate_ids.json": "rules[1].id duplicates rule id: duplicate_rule",
-            "invalid_matcher_type.json": "rules[0].matcher.type must be one of contains, equals, prefix",
+            "invalid_matcher_type.json": "rules[0].matcher.type must be one of all_of, any_of, contains, equals, not, prefix, regex",
             "invalid_metadata.json": "rules[0].metadata must be an object",
             "invalid_missing_rules.json": "Missing required top-level field: rules",
         }

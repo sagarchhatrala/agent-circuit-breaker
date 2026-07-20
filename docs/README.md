@@ -1,8 +1,8 @@
 # Agent Circuit Breaker Usage Guide
 
-Agent Circuit Breaker is a deterministic safety layer for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, or unknown.
+Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It evaluates an intended action before execution and returns an explicit decision: allow, block, error, unknown, or pending approval.
 
-The current v1.1 compatible scope focuses on filesystem safety, selected command safety rules, scoped SQL safety rules, fixture-backed external JSON rule validation, a public Python API, adversarial regression coverage, security documentation, and compatibility readiness: recursive deletion, dangerous filesystem targets, git force pushes, recursive world-writable chmod, remote scripts piped to shells, package publish commands without explicit release context, destructive Docker commands, cloud deletion commands, forceful Kubernetes deletion commands, disk overwrite and format commands, root-level find-delete, fork bomb patterns, destructive SQL statements, SQL tautological bulk mutations, custom rule files, schema metadata, and safe handling of malformed or unrecognized input.
+The current v1.3 compatible scope includes filesystem safety, command safety, SQL safety, external JSON rules, safety profiles, approval mode, audit timeline, scan mode, SARIF output, plugin discovery, hook scaffolding, central policy loading, and a minimal optional MCP-style proxy scaffold.
 
 ## Installation
 
@@ -53,6 +53,32 @@ circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 ```
 
 The supported external rule format is documented in [RULE_SCHEMA.md](RULE_SCHEMA.md).
+
+Explain risky actions:
+
+```bash
+circuit-breaker explain "git push --force origin main"
+```
+
+Scan files:
+
+```bash
+circuit-breaker scan ./scripts --sarif > acb.sarif
+```
+
+Use approval mode:
+
+```bash
+circuit-breaker check "rm -rf /" --profile team
+circuit-breaker approvals list
+```
+
+Audit local evaluations:
+
+```bash
+circuit-breaker check "DROP TABLE users" --audit
+circuit-breaker timeline --verify
+```
 
 Python integrations can use the public API documented in [API.md](API.md).
 
@@ -306,6 +332,7 @@ The project uses the Python standard library test runner.
 - [v1.1.0](releases/v1.1.0.md)
 - [v1.1.1](releases/v1.1.1.md)
 - [v1.1.2](releases/v1.1.2.md)
+- [v1.3.0](releases/v1.3.0.md)
 - [v1.2.0](releases/v1.2.0.md)
 
 ## Known Limits

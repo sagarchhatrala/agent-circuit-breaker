@@ -9,8 +9,8 @@ The contract is additive for v1.x compatible releases. Existing fields keep thei
 `circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
 
 - `command`: original action value passed by the caller.
-- `verdict`: lowercase result: `allow`, `block`, `error`, or `unknown`.
-- `decision`: uppercase engine decision: `ALLOW`, `BLOCK`, `ERROR`, or `UNKNOWN`.
+- `verdict`: lowercase result: `allow`, `block`, `error`, `unknown`, or `pending_approval`.
+- `decision`: uppercase engine decision: `ALLOW`, `BLOCK`, `ERROR`, `UNKNOWN`, or `PENDING_APPROVAL`.
 - `matched_rule`: matching rule ID, or `null` when no rule matched.
 - `rule_details`: matching rule object details, or `null`.
 - `operation_analysis`: filesystem-oriented analysis object, or `null` before analysis.
@@ -18,6 +18,10 @@ The contract is additive for v1.x compatible releases. Existing fields keep thei
 - `sql_analysis`: SQL-oriented analysis object, or `null` before analysis.
 - `risk_score`: additive integer risk score from `0` to `100`; existing `verdict` and `decision` remain authoritative for compatibility.
 - `error`: error text when verdict is `error`, otherwise `null`.
+- `policy`: present when a safety profile or policy mode is applied, otherwise `null`.
+- `approval`: present when a pending approval record is created by the CLI.
+- `audit`: present when CLI audit logging is requested.
+- `policy_source`: present when a central policy file or URL was loaded.
 - `custom_rules`: present only when the Python API is called with `rule_file_path`.
 
 ## Rule Details
@@ -27,7 +31,7 @@ When a rule matches, `rule_details` contains:
 - `id`: stable rule identifier.
 - `title`: human-readable title.
 - `severity`: `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW`.
-- `response`: `allow` or `block`.
+- `response`: `allow`, `block`, or `approval`.
 - `metadata`: rule metadata object.
 
 ## Operation Analysis
@@ -100,3 +104,13 @@ When `evaluate_action(action, rule_file_path=...)` is used, `custom_rules` conta
 - `rule_count`: number of built custom rules.
 
 Invalid custom rule files fail closed with `verdict` set to `error`.
+
+## Scan Output
+
+`circuit-breaker scan <path...> --format json` returns:
+
+- `files_scanned`: number of scanned text files.
+- `findings`: list of blocked, pending approval, or error findings.
+- `summary`: counts for total findings, blocked findings, pending approvals, and errors.
+
+`circuit-breaker scan <path...> --sarif` emits SARIF 2.1.0 for GitHub code scanning integrations.

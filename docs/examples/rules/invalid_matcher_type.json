@@ -2,12 +2,12 @@
   "version": 1,
   "rules": [
     {
-      "id": "custom_regex_rule",
-      "title": "Unsupported regex matcher",
+      "id": "custom_glob_rule",
+      "title": "Unsupported glob matcher",
       "severity": "HIGH",
       "response": "block",
       "matcher": {
-        "type": "regex",
+        "type": "glob",
         "value": "deploy.*production"
       }
     }

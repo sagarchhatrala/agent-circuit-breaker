@@ -6,8 +6,17 @@ import argparse
 from typing import Dict, Any, List, Optional
 
 from agent_circuit_breaker.engine import Engine, Decision
+from agent_circuit_breaker.approvals import ApprovalStore
+from agent_circuit_breaker.audit import AuditLog, audit_event_from_result
+from agent_circuit_breaker.explain import explain_result, format_explanation
+from agent_circuit_breaker.hooks import hook_instructions, write_hook_scaffold
+from agent_circuit_breaker.plugins import discover_plugins, load_rule_plugins
+from agent_circuit_breaker.policy import load_policy
+from agent_circuit_breaker.profiles import apply_policy_mode, get_profile, profile_metadata
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
 from agent_circuit_breaker.rules.loader import RuleDefinitionBuilder, RuleFileLoader
+from agent_circuit_breaker.sarif import scan_to_sarif
+from agent_circuit_breaker.scan import format_scan_result, scan_paths
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 from agent_circuit_breaker.inspectors.command import CommandInspector
 from agent_circuit_breaker.inspectors.sql import SQLInspector
@@ -37,7 +46,14 @@ class CircuitBreakerCLI:
         self.command_inspector = CommandInspector()
         self.sql_inspector = SQLInspector()
 
-    def evaluate_command(self, command: str, extra_rules: Optional[List[Any]] = None) -> Dict[str, Any]:
+    def evaluate_command(
+        self,
+        command: str,
+        extra_rules: Optional[List[Any]] = None,
+        *,
+        profile_name: Optional[str] = None,
+        mode: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Evaluate a shell command for safety.
 
@@ -58,9 +74,11 @@ class CircuitBreakerCLI:
             "sql_analysis": None,
             "risk_score": 0,
             "error": None,
+            "policy": None,
         }
 
         try:
+            profile = get_profile(profile_name)
             if not isinstance(command, str):
                 result["verdict"] = "error"
                 result["decision"] = Decision.ERROR.name
@@ -96,7 +114,7 @@ class CircuitBreakerCLI:
                     "danger_reason": None,
                 }
                 result["error"] = "Command must be a string"
-                return result
+                return apply_policy_mode(result, mode=mode, profile=profile)
 
             # Analyze the filesystem operation
             operation_analysis = self.inspector.analyze_operation(command)
@@ -140,7 +158,7 @@ class CircuitBreakerCLI:
                 result["verdict"] = "error"
                 result["risk_score"] = 100
                 result["error"] = command_analysis["error"]
-                return result
+                return apply_policy_mode(result, mode=mode, profile=profile)
 
             # Evaluate against engine rules
             rules = BUILTIN_RULES + (extra_rules or [])
@@ -150,7 +168,7 @@ class CircuitBreakerCLI:
                 result["verdict"] = "error"
                 result["risk_score"] = 100
                 result["error"] = sql_analysis["error"]
-                return result
+                return apply_policy_mode(result, mode=mode, profile=profile)
 
             if decision == Decision.UNKNOWN and self._is_known_safe_operation(operation_analysis):
                 decision = Decision.ALLOW
@@ -172,6 +190,8 @@ class CircuitBreakerCLI:
                 result["verdict"] = "allow"
             elif decision == Decision.BLOCK:
                 result["verdict"] = "block"
+            elif decision == Decision.PENDING_APPROVAL:
+                result["verdict"] = "pending_approval"
             elif decision == Decision.ERROR:
                 result["verdict"] = "error"
             else:  # UNKNOWN
@@ -183,6 +203,7 @@ class CircuitBreakerCLI:
                 command_analysis,
                 sql_analysis,
             )
+            result = apply_policy_mode(result, mode=mode, profile=profile)
 
         except Exception as e:
             result["verdict"] = "error"
@@ -212,7 +233,7 @@ class CircuitBreakerCLI:
             int(sql_analysis.get("risk_score") or 0),
         ]
 
-        if decision == Decision.BLOCK and matched_rule:
+        if decision in {Decision.BLOCK, Decision.PENDING_APPROVAL} and matched_rule:
             scores.append(
                 {
                     "CRITICAL": 100,
@@ -239,6 +260,45 @@ class CircuitBreakerCLI:
             "chmod",
             "create_dir",
             "create_file",
+        }
+
+    def _load_runtime_options(
+        self,
+        rule_file_path: Optional[str],
+        profile_name: Optional[str],
+        mode: Optional[str],
+        policy_path: Optional[str],
+        include_plugins: bool,
+    ) -> Dict[str, Any]:
+        """Load optional policy, rules, and plugins for a command mode."""
+        policy = load_policy(policy_path) if policy_path else load_policy(start_dir=".")
+        resolved_rule_path = rule_file_path or policy.get("rules")
+        resolved_profile = profile_name or policy.get("profile")
+        resolved_mode = mode or policy.get("mode")
+
+        custom_rules = []
+        if resolved_rule_path:
+            custom_rule_result = self.load_custom_rules(resolved_rule_path)
+            if not custom_rule_result["is_valid"]:
+                return {
+                    "is_valid": False,
+                    "errors": custom_rule_result["errors"],
+                    "rule_path": resolved_rule_path,
+                    "rules": [],
+                }
+            custom_rules = custom_rule_result["rules"]
+
+        if include_plugins:
+            custom_rules.extend(load_rule_plugins())
+
+        return {
+            "is_valid": True,
+            "errors": [],
+            "rule_path": resolved_rule_path,
+            "rules": custom_rules,
+            "profile_name": resolved_profile,
+            "mode": resolved_mode,
+            "policy_source": policy.get("path"),
         }
 
     def format_output(self, result: Dict[str, Any]) -> str:
@@ -359,7 +419,17 @@ class CircuitBreakerCLI:
 
         return 0
 
-    def run_command_mode(self, command: str, rule_file_path: Optional[str] = None) -> int:
+    def run_command_mode(
+        self,
+        command: str,
+        rule_file_path: Optional[str] = None,
+        *,
+        profile_name: Optional[str] = None,
+        mode: Optional[str] = None,
+        policy_path: Optional[str] = None,
+        include_plugins: bool = False,
+        audit: bool = False,
+    ) -> int:
         """
         Run in command mode, evaluating a single command.
 
@@ -369,16 +439,32 @@ class CircuitBreakerCLI:
         Returns:
             Exit code (0 for allow, 1 for block/error, 2 for unknown)
         """
-        custom_rules = []
-        if rule_file_path:
-            custom_rule_result = self.load_custom_rules(rule_file_path)
-            if not custom_rule_result["is_valid"]:
-                output = self.format_rule_validation_output(rule_file_path, custom_rule_result)
-                print(output)
-                return 1
-            custom_rules = custom_rule_result["rules"]
+        runtime = self._load_runtime_options(rule_file_path, profile_name, mode, policy_path, include_plugins)
+        if not runtime["is_valid"]:
+            output = self.format_rule_validation_output(
+                runtime["rule_path"],
+                {"is_valid": False, "errors": runtime["errors"], "definition": None},
+            )
+            print(output)
+            return 1
 
-        result = self.evaluate_command(command, custom_rules)
+        result = self.evaluate_command(
+            command,
+            runtime["rules"],
+            profile_name=runtime["profile_name"],
+            mode=runtime["mode"],
+        )
+        if runtime.get("policy_source"):
+            result["policy_source"] = runtime["policy_source"]
+        if result["verdict"] == "pending_approval":
+            try:
+                approval = ApprovalStore().create(result)
+                result["approval"] = {"id": approval["id"], "status": approval["status"]}
+            except OSError as exc:
+                result["approval"] = {"id": None, "status": "not_stored", "error": str(exc)}
+        if audit:
+            entry = AuditLog().append(audit_event_from_result(result))
+            result["audit"] = {"path": str(AuditLog().path), "entry_hash": entry["entry_hash"]}
         output = self.format_output(result)
         print(output)
 
@@ -389,8 +475,186 @@ class CircuitBreakerCLI:
             return 1
         elif result["verdict"] == "error":
             return 1
+        elif result["verdict"] == "pending_approval":
+            return 3
         else:  # unknown
             return 2
+
+    def run_explain_mode(
+        self,
+        command: str,
+        rule_file_path: Optional[str] = None,
+        *,
+        profile_name: Optional[str] = None,
+        mode: Optional[str] = None,
+        policy_path: Optional[str] = None,
+        include_plugins: bool = False,
+    ) -> int:
+        """Run explanation mode for a single action."""
+        runtime = self._load_runtime_options(rule_file_path, profile_name, mode, policy_path, include_plugins)
+        if not runtime["is_valid"]:
+            print(
+                self.format_rule_validation_output(
+                    runtime["rule_path"],
+                    {"is_valid": False, "errors": runtime["errors"], "definition": None},
+                )
+            )
+            return 1
+
+        result = self.evaluate_command(
+            command,
+            runtime["rules"],
+            profile_name=runtime["profile_name"],
+            mode=runtime["mode"],
+        )
+        if runtime.get("policy_source"):
+            result["policy_source"] = runtime["policy_source"]
+        explanation = explain_result(result)
+        if self.output_format == "json":
+            result["explanation"] = explanation
+            print(json.dumps(result, indent=2))
+        else:
+            print(format_explanation(result, explanation))
+        return self._exit_code_for_verdict(result["verdict"])
+
+    def run_scan_mode(
+        self,
+        paths: List[str],
+        rule_file_path: Optional[str] = None,
+        *,
+        profile_name: Optional[str] = None,
+        mode: Optional[str] = None,
+        policy_path: Optional[str] = None,
+        include_plugins: bool = False,
+        audit: bool = False,
+        sarif: bool = False,
+    ) -> int:
+        """Run static scan mode over text files."""
+        runtime = self._load_runtime_options(rule_file_path, profile_name, mode, policy_path, include_plugins)
+        if not runtime["is_valid"]:
+            print(
+                self.format_rule_validation_output(
+                    runtime["rule_path"],
+                    {"is_valid": False, "errors": runtime["errors"], "definition": None},
+                )
+            )
+            return 1
+
+        def evaluator(action: str) -> Dict[str, Any]:
+            return self.evaluate_command(
+                action,
+                runtime["rules"],
+                profile_name=runtime["profile_name"],
+                mode=runtime["mode"],
+            )
+
+        scan_result = scan_paths(paths, evaluator)
+        if audit:
+            AuditLog().append({"source": "scan", "paths": paths, "summary": scan_result["summary"]})
+
+        if sarif:
+            print(json.dumps(scan_to_sarif(scan_result), indent=2))
+        elif self.output_format == "json":
+            print(json.dumps(scan_result, indent=2))
+        else:
+            print(format_scan_result(scan_result))
+
+        summary = scan_result["summary"]
+        if summary["blocked"] or summary["errors"]:
+            return 1
+        if summary["pending_approval"]:
+            return 3
+        return 0
+
+    def run_install_hooks_mode(self, agent: str, directory: str, write: bool) -> int:
+        """Print or write hook scaffold instructions."""
+        if write:
+            result = write_hook_scaffold(directory)
+            if self.output_format == "json":
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"Hook scaffold written: {result['path']}")
+            return 0
+
+        output = {"agent": agent, "instructions": hook_instructions(agent)}
+        if self.output_format == "json":
+            print(json.dumps(output, indent=2))
+        else:
+            print(output["instructions"])
+        return 0
+
+    def run_timeline_mode(self, limit: int = 20, verify: bool = False) -> int:
+        """Print recent audit log entries or verify the audit chain."""
+        audit_log = AuditLog()
+        if verify:
+            result = audit_log.verify()
+            if self.output_format == "json":
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"Audit Valid: {str(result['is_valid']).upper()}")
+                print(f"Entries: {result['entries']}")
+                if result["error"]:
+                    print(f"Error: {result['error']}")
+            return 0 if result["is_valid"] else 1
+
+        entries = audit_log.tail(limit)
+        if self.output_format == "json":
+            print(json.dumps({"path": str(audit_log.path), "entries": entries}, indent=2))
+        else:
+            print(f"Audit Log: {audit_log.path}")
+            for entry in entries:
+                event = entry.get("event") or {}
+                print(
+                    f"{entry.get('timestamp')} {event.get('verdict', '-')} "
+                    f"risk={event.get('risk_score', '-')} rule={event.get('matched_rule') or '-'}"
+                )
+        return 0
+
+    def run_approvals_mode(self, action: str, approval_id: Optional[str] = None) -> int:
+        """List, approve, or deny pending approval records."""
+        store = ApprovalStore()
+        try:
+            if action == "list":
+                records = store.list()
+                if self.output_format == "json":
+                    print(json.dumps({"approvals": records}, indent=2))
+                else:
+                    for record in records:
+                        result = record.get("result") or {}
+                        print(
+                            f"{record['id']} {record['status']} "
+                            f"risk={result.get('risk_score')} command={result.get('command')}"
+                        )
+                return 0
+
+            if action in {"approve", "deny"} and approval_id:
+                status = "approved" if action == "approve" else "denied"
+                record = store.decide(approval_id, status)
+                print(json.dumps(record, indent=2) if self.output_format == "json" else f"{approval_id}: {status}")
+                return 0
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print("Error: use approvals list|approve <id>|deny <id>", file=sys.stderr)
+        return 1
+
+    def run_plugins_mode(self) -> int:
+        """List installed plugin entry points."""
+        plugins = discover_plugins()
+        print(json.dumps(plugins, indent=2) if self.output_format == "json" else plugins)
+        return 0
+
+    @staticmethod
+    def _exit_code_for_verdict(verdict: str) -> int:
+        """Return CLI exit code for a verdict string."""
+        if verdict == "allow":
+            return 0
+        if verdict in {"block", "error"}:
+            return 1
+        if verdict == "pending_approval":
+            return 3
+        return 2
 
     @staticmethod
     def load_custom_rules(path: str) -> Dict[str, Any]:
@@ -459,6 +723,12 @@ Agent Circuit Breaker - Safety Evaluation Tool
 
 Usage:
   circuit-breaker check <ACTION> [OPTIONS]
+  circuit-breaker explain <ACTION> [OPTIONS]
+  circuit-breaker scan <PATH...> [OPTIONS]
+  circuit-breaker install-hooks [OPTIONS]
+  circuit-breaker timeline [OPTIONS]
+  circuit-breaker approvals list|approve <ID>|deny <ID>
+  circuit-breaker plugins [--format json]
   circuit-breaker validate-rules <PATH> [OPTIONS]
   circuit-breaker -c <ACTION> [OPTIONS]
   circuit-breaker -i [OPTIONS]
@@ -471,6 +741,12 @@ Options:
   -v, --verbose           Enable verbose output
   -c, --command CMD       Evaluate a single command
   --rules PATH            Append validated external rules for command checks
+  --profile NAME          Safety profile: solo, repo, team, prod
+  --mode MODE             Policy mode: strict, advisory, approval
+  --audit                 Append a tamper-evident audit entry
+  --policy PATH_OR_URL    Load central policy before local CLI overrides
+  --plugins               Load optional rule-provider plugins
+  --sarif                 Emit SARIF for scan mode
 
 Examples:
   circuit-breaker check 'rm -rf /'              # Evaluate an action
@@ -478,6 +754,12 @@ Examples:
   circuit-breaker check 'ls -la'                # Unknown action
   circuit-breaker check 'rm -rf /etc' --format json
   circuit-breaker check 'deploy production' --rules ./rules.json
+  circuit-breaker explain 'git push --force origin main'
+  circuit-breaker scan ./scripts ./README.md
+  circuit-breaker install-hooks --write
+  circuit-breaker timeline --verify
+  circuit-breaker approvals list
+  circuit-breaker plugins --format json
   circuit-breaker validate-rules ./rules.json
   circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
@@ -485,6 +767,7 @@ Exit Codes:
   0 - Command allowed
   1 - Command blocked or error
   2 - Command verdict unknown
+  3 - Command pending approval
 """
         print(help_text)
 
@@ -521,6 +804,17 @@ def main() -> int:
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_argument("-c", "--command", type=str, help="Command to evaluate")
     parser.add_argument("--rules", dest="rule_file_path", type=str, help="External JSON rule file")
+    parser.add_argument("--profile", dest="profile_name", type=str, help="Safety profile")
+    parser.add_argument("--mode", dest="mode", type=str, help="Policy mode")
+    parser.add_argument("--audit", action="store_true", help="Append an audit entry")
+    parser.add_argument("--policy", dest="policy_path", type=str, help="Central policy file or URL")
+    parser.add_argument("--plugins", action="store_true", help="Load installed rule plugins")
+    parser.add_argument("--sarif", action="store_true", help="Emit SARIF for scan mode")
+    parser.add_argument("--write", action="store_true", help="Write generated scaffolds where supported")
+    parser.add_argument("--agent", default="generic", help="Agent name for hook instructions")
+    parser.add_argument("--path", default=".", help="Output path for generated scaffolds")
+    parser.add_argument("--limit", type=int, default=20, help="Timeline entry limit")
+    parser.add_argument("--verify", action="store_true", help="Verify audit log hash chain")
     parser.add_argument(
         "command_parts",
         nargs="*",
@@ -529,6 +823,9 @@ def main() -> int:
 
     try:
         args = parser.parse_args()
+        if "--sarif" in args.command_parts:
+            args.sarif = True
+            args.command_parts = [part for part in args.command_parts if part != "--sarif"]
         output_format = "json" if args.json_output else args.output_format
 
         # Handle help
@@ -542,11 +839,66 @@ def main() -> int:
 
         # Handle command mode
         if args.command:
-            return cli.run_command_mode(args.command, args.rule_file_path)
+            return cli.run_command_mode(
+                args.command,
+                args.rule_file_path,
+                profile_name=args.profile_name,
+                mode=args.mode,
+                policy_path=args.policy_path,
+                include_plugins=args.plugins,
+                audit=args.audit,
+            )
 
         if args.command_parts:
             if args.command_parts[0] == "check" and len(args.command_parts) >= 2:
-                return cli.run_command_mode(" ".join(args.command_parts[1:]), args.rule_file_path)
+                return cli.run_command_mode(
+                    " ".join(args.command_parts[1:]),
+                    args.rule_file_path,
+                    profile_name=args.profile_name,
+                    mode=args.mode,
+                    policy_path=args.policy_path,
+                    include_plugins=args.plugins,
+                    audit=args.audit,
+                )
+
+            if args.command_parts[0] == "explain" and len(args.command_parts) >= 2:
+                return cli.run_explain_mode(
+                    " ".join(args.command_parts[1:]),
+                    args.rule_file_path,
+                    profile_name=args.profile_name,
+                    mode=args.mode,
+                    policy_path=args.policy_path,
+                    include_plugins=args.plugins,
+                )
+
+            if args.command_parts[0] == "scan" and len(args.command_parts) >= 2:
+                return cli.run_scan_mode(
+                    args.command_parts[1:],
+                    args.rule_file_path,
+                    profile_name=args.profile_name,
+                    mode=args.mode,
+                    policy_path=args.policy_path,
+                    include_plugins=args.plugins,
+                    audit=args.audit,
+                    sarif=args.sarif,
+                )
+
+            if args.command_parts[0] == "install-hooks":
+                return cli.run_install_hooks_mode(args.agent, args.path, args.write)
+
+            if args.command_parts[0] == "timeline":
+                return cli.run_timeline_mode(limit=args.limit, verify=args.verify)
+
+            if args.command_parts[0] == "approvals" and len(args.command_parts) >= 2:
+                approval_id = args.command_parts[2] if len(args.command_parts) >= 3 else None
+                return cli.run_approvals_mode(args.command_parts[1], approval_id)
+
+            if args.command_parts[0] == "plugins":
+                return cli.run_plugins_mode()
+
+            if args.command_parts[0] == "profiles":
+                print(json.dumps(profile_metadata(), indent=2) if output_format == "json" else profile_metadata())
+                return 0
 
             if args.command_parts[0] == "validate-rules" and len(args.command_parts) == 2:
                 return cli.run_validate_rules_mode(args.command_parts[1])

@@ -196,12 +196,12 @@ class TestAdversarialRules(unittest.TestCase):
             "version": 1,
             "rules": [
                 {
-                    "id": "regex_attempt",
-                    "title": "Attempt regex matcher",
+                    "id": "glob_attempt",
+                    "title": "Attempt unsupported matcher",
                     "severity": "HIGH",
                     "response": "block",
                     "matcher": {
-                        "type": "regex",
+                        "type": "glob",
                         "value": ".*",
                     },
                 }
@@ -216,7 +216,7 @@ class TestAdversarialRules(unittest.TestCase):
             build_result = RuleDefinitionBuilder.build_rules(definition)
 
         self.assertFalse(load_result["is_valid"])
-        self.assertIn("rules[0].matcher.type must be one of contains, equals, prefix", load_result["errors"])
+        self.assertIn("rules[0].matcher.type must be one of", load_result["errors"][0])
         self.assertFalse(build_result["is_valid"])
         self.assertEqual(build_result["rules"], [])
 

@@ -4,6 +4,34 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.3.0] - 2026-07-20
+
+### Added
+
+- Added safety profiles (`solo`, `repo`, `team`, `prod`) and policy modes (`strict`, `advisory`, `approval`).
+- Added additive `PENDING_APPROVAL` decision support for policy-driven human approval flows.
+- Added local approval queue commands: `approvals list`, `approvals approve <id>`, and `approvals deny <id>`.
+- Added `explain` mode with safer-alternative suggestions for risky actions.
+- Added `scan` mode for static inspection of scripts, docs, CI files, and SQL snippets.
+- Added SARIF output for scan findings and a GitHub Action scaffold for code scanning upload.
+- Added opt-in tamper-evident audit logging with hash-chained JSONL entries and `timeline --verify`.
+- Added central policy loading from local files or explicit URLs with CLI override precedence.
+- Added plugin discovery and optional rule-provider loading through Python entry points.
+- Added external rule matchers for `regex`, `all_of`, `any_of`, and `not`.
+- Added hook scaffold generation through `install-hooks`.
+- Added a minimal optional MCP-style JSON-lines proxy scaffold outside the core engine package.
+- Added `.pre-commit-hooks.yaml`.
+
+### Changed
+
+- Repositioned the package from a one-shot command checker toward a local-first safety runtime while keeping the core dependency-free.
+- Expanded the public rule schema metadata to include approval responses and composite matchers.
+
+### Compatibility
+
+- Existing `check`, `validate-rules`, JSON fields, and documented v1.2 decisions remain compatible by default.
+- `PENDING_APPROVAL` appears only when a rule or selected policy mode requests approval behavior.
+
 ## [1.2.0] - 2026-07-20
 
 ### Added
