@@ -56,10 +56,12 @@ The current stable package includes:
 - trajectory JSON evaluation for long-running agent run contracts.
 - optional stateful MCP trajectory enforcement across multiple tool calls.
 - contextual trajectory approvals and replayable local run ledger.
+- deterministic trajectory findings for secret/data egress flows.
 - trusted publishing workflow for TestPyPI and PyPI.
 
 ## Release Notes
 
+- [v1.4.6](releases/v1.4.6.md)
 - [v1.4.5](releases/v1.4.5.md)
 - [v1.4.4](releases/v1.4.4.md)
 - [v1.4.3](releases/v1.4.3.md)

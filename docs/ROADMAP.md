@@ -346,7 +346,17 @@ Implemented so far:
 - `circuit-breaker ledger`, `circuit-breaker ledger <RUN_ID>`, and `circuit-breaker ledger --verify`.
 - local hash-chained `RunLedger`.
 
+### v1.4.6: Broader Secret And Data Egress Flows
+
+Status: released as `v1.4.6`.
+
+Implemented so far:
+
+- direct secret-like material in egress action detection.
+- data export followed by external egress detection.
+- broader egress channel coverage.
+- broader sensitive-reference coverage.
+
 ### Planned Patch Slices
 
-- `v1.4.6`: broader data egress and secret-flow rules.
 - later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

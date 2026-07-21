@@ -150,7 +150,9 @@ Current trajectory finding IDs:
 - `traj_forbidden_target`
 - `traj_scope_violation`
 - `traj_output_channel_drift`
+- `traj_secret_in_egress_action`
 - `traj_secret_then_egress`
+- `traj_data_export_then_egress`
 
 ## MCP Trajectory Metadata
 

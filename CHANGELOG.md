@@ -4,6 +4,20 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.6] - 2026-07-21
+
+### Added
+
+- Added trajectory detection for direct secret-like material in egress actions.
+- Added trajectory detection for data exports followed by external egress.
+- Expanded deterministic egress channel coverage to include netcat-style sends, rclone, Azure/GCP storage uploads, GitHub gists, HTTPie-style commands, and paste/webhook patterns.
+- Expanded sensitive-reference coverage for common credential files such as `.npmrc`, `.pypirc`, kubeconfig, and private key material.
+
+### Compatibility
+
+- Single-action `check` behavior remains unchanged.
+- New egress findings apply only to trajectory evaluation and stateful MCP trajectory mode.
+
 ## [1.4.5] - 2026-07-21
 
 ### Added

@@ -105,7 +105,9 @@ def _find_trajectory_risks(evaluations: List[Evaluation], policy: TrajectoryPoli
     findings.extend(_forbidden_target_findings(evaluations, policy))
     findings.extend(_allowed_scope_findings(evaluations, policy))
     findings.extend(_output_channel_findings(evaluations, policy))
+    findings.extend(_direct_secret_egress_findings(evaluations))
     findings.extend(_secret_egress_findings(evaluations))
+    findings.extend(_data_export_egress_findings(evaluations))
     return findings
 
 
@@ -244,6 +246,46 @@ def _secret_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
     return findings
 
 
+def _direct_secret_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
+    findings: List[Finding] = []
+    for item in evaluations:
+        if _has_sensitive_reference(item) and _looks_like_egress(item):
+            findings.append(
+                {
+                    "id": "traj_secret_in_egress_action",
+                    "title": "Secret-like material referenced in egress action",
+                    "severity": "CRITICAL",
+                    "response": "block",
+                    "indices": [item["trajectory_index"]],
+                    "reason": "one action references secret-like material and an external egress channel",
+                }
+            )
+    return findings
+
+
+def _data_export_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
+    exports = [item for item in evaluations if _looks_like_data_export(item)]
+    if not exports:
+        return []
+
+    first_export = exports[0]
+    for item in evaluations:
+        if item["trajectory_index"] <= first_export["trajectory_index"]:
+            continue
+        if _looks_like_egress(item):
+            return [
+                {
+                    "id": "traj_data_export_then_egress",
+                    "title": "Data export followed by external egress",
+                    "severity": "HIGH",
+                    "response": "block",
+                    "indices": [first_export["trajectory_index"], item["trajectory_index"]],
+                    "reason": "trajectory exports data before a network, publish, or upload action",
+                }
+            ]
+    return []
+
+
 def _trajectory_verdict(evaluations: List[Evaluation], findings: List[Finding]) -> str:
     if any(item.get("verdict") == "error" for item in evaluations):
         return "error"
@@ -301,22 +343,8 @@ def _looks_like_secret_read(item: Evaluation) -> bool:
     if not command:
         return False
 
-    secret_terms = (
-        ".env",
-        "id_rsa",
-        "id_ed25519",
-        "aws_secret_access_key",
-        "github_token",
-        "gh_token",
-        "openai_api_key",
-        "api_key",
-        "secret",
-        "token",
-        "password",
-        "credential",
-    )
-    read_terms = ("cat ", "type ", "get-content", "grep ", "rg ", "printenv", " env", " set")
-    return any(term in command for term in secret_terms) and any(term in f" {command}" for term in read_terms)
+    read_terms = ("cat ", "type ", "get-content", " gc ", "grep ", "rg ", "printenv", " env", " set")
+    return _has_sensitive_reference(item) and any(term in f" {command}" for term in read_terms)
 
 
 def _looks_like_egress(item: Evaluation) -> bool:
@@ -327,18 +355,97 @@ def _looks_like_egress(item: Evaluation) -> bool:
     egress_patterns = (
         "curl ",
         "wget ",
+        "http ",
+        "httpie ",
         "scp ",
         "rsync ",
+        "nc ",
+        "ncat ",
+        "netcat ",
+        "ftp ",
+        "rclone copy",
+        "rclone sync",
         "aws s3 cp",
         "aws s3 sync",
+        "az storage blob upload",
+        "gcloud storage cp",
+        "gsutil cp",
         "gh pr create",
+        "gh gist create",
         "git push",
         "slack",
         "webhook",
+        "pastebin",
         "http://",
         "https://",
     )
     return any(pattern in command for pattern in egress_patterns)
+
+
+def _looks_like_data_export(item: Evaluation) -> bool:
+    command = _normalized_command(item)
+    if not command:
+        return False
+
+    export_patterns = (
+        "pg_dump",
+        "mysqldump",
+        "mongodump",
+        "mongoexport",
+        "sqlite3 ",
+        ".dump",
+        "redis-cli --rdb",
+        "bq extract",
+        "snowflake",
+        "expdp",
+        "tar ",
+        "zip ",
+        "7z ",
+    )
+    export_targets = (
+        ".sql",
+        ".dump",
+        ".bak",
+        ".backup",
+        ".csv",
+        ".parquet",
+        ".tar",
+        ".tar.gz",
+        ".tgz",
+        ".zip",
+        ".7z",
+    )
+    return any(pattern in command for pattern in export_patterns) and any(target in command for target in export_targets)
+
+
+def _has_sensitive_reference(item: Evaluation) -> bool:
+    command = _normalized_command(item)
+    if not command:
+        return False
+
+    sensitive_terms = (
+        ".env",
+        "id_rsa",
+        "id_ed25519",
+        "known_hosts",
+        "aws_secret_access_key",
+        "github_token",
+        "gh_token",
+        "openai_api_key",
+        "api_key",
+        "secret",
+        "secrets.json",
+        "token",
+        "password",
+        "passwd",
+        "credential",
+        "credentials",
+        ".npmrc",
+        ".pypirc",
+        "kubeconfig",
+        ".kube/config",
+    )
+    return any(term in command for term in sensitive_terms)
 
 
 def _output_channel(item: Evaluation) -> Optional[str]:
@@ -350,7 +457,8 @@ def _output_channel(item: Evaluation) -> Optional[str]:
         "github": ("gh pr create", "git push", "hub pull-request", "github"),
         "slack": ("slack", "chat.postmessage"),
         "s3": ("aws s3 cp", "aws s3 sync", "s3://"),
-        "http": ("curl ", "wget ", "http://", "https://", "webhook"),
+        "cloud-storage": ("az storage blob upload", "gcloud storage cp", "gsutil cp"),
+        "http": ("curl ", "wget ", "http ", "httpie ", "http://", "https://", "webhook"),
     }
     for channel, patterns in channels.items():
         if any(pattern in command for pattern in patterns):

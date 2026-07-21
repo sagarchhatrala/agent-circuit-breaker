@@ -42,6 +42,8 @@ The recommended integration policy is:
 
 Trajectory mode evaluates an ordered list of proposed actions and adds deterministic checks that require run history or an explicit run contract. It can detect patterns such as repeated blocked actions, write-like actions outside allowed scopes, forbidden target references, output-channel drift, unknown-action volume, and secret-like reads followed by egress.
 
+Trajectory egress checks are heuristic and deterministic. They look for concrete command text that combines sensitive references, data-export shapes, and external egress channels. They are not data-loss prevention, content inspection, or proof that a transfer happened.
+
 Trajectory mode is still pre-execution analysis. It does not observe live operating-system side effects, prove that a secret was actually read, or prove that network egress occurred. Callers must send proposed actions in order and honor the aggregate trajectory verdict.
 
 The MCP proxy can opt in to trajectory evaluation with `--trajectory` or `--trajectory-policy`. In that mode, the proxy keeps in-memory state for one proxy process and evaluates string-valued `tools/call` arguments as a run sequence. This state is not persisted across proxy restarts unless the caller separately records audit events.

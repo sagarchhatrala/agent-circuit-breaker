@@ -46,7 +46,7 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - dangerous permissions: recursive world-writable `chmod`, including symbolic modes such as `ugo+rwx`.
 - destructive SQL: `DROP TABLE`, `DROP DATABASE`, `TRUNCATE`, unqualified `DELETE`/`UPDATE`, and tautological `WHERE 1=1` variants.
 - MCP tool calls: stdio JSON-RPC proxy inspection for string-valued `tools/call` arguments, including arbitrary schema field names.
-- long-running agent trajectories: repeated blocked actions, forbidden target references, output-channel drift, write-like actions outside declared scopes, and secret-like reads followed by egress actions.
+- long-running agent trajectories: repeated blocked actions, forbidden target references, output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
