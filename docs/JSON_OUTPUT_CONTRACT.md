@@ -115,3 +115,38 @@ Invalid custom rule files fail closed with `verdict` set to `error`.
 - `summary`: counts for total findings, blocked findings, pending approvals, and errors.
 
 `circuit-breaker scan <path...> --sarif` emits SARIF 2.1.0 for GitHub code scanning integrations.
+
+## Trajectory Output
+
+`circuit-breaker trajectory <run.json> --format json` and `evaluate_trajectory(actions, contract=...)` return:
+
+- `schema_version`: trajectory output schema version.
+- `run_id`: deterministic short hash derived from the actions and contract.
+- `verdict`: aggregate run verdict: `allow`, `block`, `error`, `unknown`, or `pending_approval`.
+- `decision`: uppercase aggregate decision.
+- `summary`: counts for actions, allowed, blocked, unknown, pending approval, errors, and trajectory findings.
+- `contract`: normalized run contract.
+- `actions`: per-action evaluation results. Each action result preserves the normal check result fields and adds `trajectory_index`.
+- `trajectory_findings`: sequence-level findings.
+- `error`: present when trajectory parsing or validation fails.
+- `audit`: present when CLI audit logging is requested.
+- `policy_source`: present when a central policy file or URL was loaded.
+- `policy_signature`: present when a loaded policy contained a verified signature.
+
+Trajectory findings contain:
+
+- `id`: stable finding identifier.
+- `title`: human-readable title.
+- `severity`: `CRITICAL`, `HIGH`, or `MEDIUM`.
+- `response`: `block` or `approval`.
+- `indices`: action indices that contributed to the finding.
+- `reason`: deterministic explanation.
+
+Current trajectory finding IDs:
+
+- `traj_repeated_blocked_actions`
+- `traj_unknown_action_volume`
+- `traj_forbidden_target`
+- `traj_scope_violation`
+- `traj_output_channel_drift`
+- `traj_secret_then_egress`

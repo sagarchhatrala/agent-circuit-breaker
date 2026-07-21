@@ -1,6 +1,6 @@
 """Agent Circuit Breaker - Local-first safety runtime for AI agents."""
 
-__version__ = "1.4.2"
+__version__ = "1.4.3"
 __author__ = "Sagar Chhatrala"
 
 from .engine import Engine, Decision, Rule
@@ -10,6 +10,7 @@ __all__ = [
     "Decision",
     "Rule",
     "evaluate_action",
+    "evaluate_trajectory",
     "rule_schema_metadata",
     "validate_rule_file",
 ]
@@ -17,11 +18,12 @@ __all__ = [
 
 def __getattr__(name):
     """Lazily expose public API helpers without importing the CLI during package init."""
-    if name in {"evaluate_action", "rule_schema_metadata", "validate_rule_file"}:
-        from .api import evaluate_action, rule_schema_metadata, validate_rule_file
+    if name in {"evaluate_action", "evaluate_trajectory", "rule_schema_metadata", "validate_rule_file"}:
+        from .api import evaluate_action, evaluate_trajectory, rule_schema_metadata, validate_rule_file
 
         exports = {
             "evaluate_action": evaluate_action,
+            "evaluate_trajectory": evaluate_trajectory,
             "rule_schema_metadata": rule_schema_metadata,
             "validate_rule_file": validate_rule_file,
         }

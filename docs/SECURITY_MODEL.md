@@ -38,6 +38,12 @@ The recommended integration policy is:
 - stop on `ERROR`.
 - treat `UNKNOWN` as review-required unless the integration has a separate allowlist.
 
+## Trajectory Evaluation
+
+Trajectory mode evaluates an ordered list of proposed actions and adds deterministic checks that require run history or an explicit run contract. It can detect patterns such as repeated blocked actions, write-like actions outside allowed scopes, forbidden target references, output-channel drift, unknown-action volume, and secret-like reads followed by egress.
+
+Trajectory mode is still pre-execution analysis. It does not observe live operating-system side effects, prove that a secret was actually read, or prove that network egress occurred. Callers must send proposed actions in order and honor the aggregate trajectory verdict.
+
 ## Rule Ordering
 
 Built-in rules are evaluated before custom rules.

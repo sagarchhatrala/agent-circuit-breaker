@@ -17,6 +17,7 @@ from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
 from agent_circuit_breaker.rules.loader import RuleDefinitionBuilder, RuleFileLoader
 from agent_circuit_breaker.sarif import scan_to_sarif
 from agent_circuit_breaker.scan import format_scan_result, scan_paths
+from agent_circuit_breaker.trajectory import evaluate_trajectory
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 from agent_circuit_breaker.inspectors.command import CommandInspector
 from agent_circuit_breaker.inspectors.sql import SQLInspector
@@ -609,6 +610,140 @@ class CircuitBreakerCLI:
             return 3
         return 0
 
+    def run_trajectory_mode(
+        self,
+        path: str,
+        rule_file_path: Optional[str] = None,
+        *,
+        profile_name: Optional[str] = None,
+        mode: Optional[str] = None,
+        policy_path: Optional[str] = None,
+        include_plugins: bool = False,
+        audit: bool = False,
+        require_signature: bool = False,
+    ) -> int:
+        """Run trajectory mode over a JSON run file."""
+        runtime = self._load_runtime_options(
+            rule_file_path,
+            profile_name,
+            mode,
+            policy_path,
+            include_plugins,
+            require_signature=require_signature,
+        )
+        if not runtime["is_valid"]:
+            print(
+                self.format_rule_validation_output(
+                    runtime["rule_path"],
+                    {"is_valid": False, "errors": runtime["errors"], "definition": None},
+                )
+            )
+            return 1
+
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            actions, contract = self._parse_trajectory_payload(payload)
+            result = evaluate_trajectory(
+                actions,
+                lambda action: self.evaluate_command(
+                    action,
+                    runtime["rules"],
+                    profile_name=runtime["profile_name"],
+                    mode=runtime["mode"],
+                ),
+                contract=contract,
+            )
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            result = {
+                "schema_version": 1,
+                "run_id": None,
+                "verdict": "error",
+                "decision": Decision.ERROR.name,
+                "summary": {
+                    "actions": 0,
+                    "allowed": 0,
+                    "blocked": 0,
+                    "unknown": 0,
+                    "pending_approval": 0,
+                    "errors": 1,
+                    "trajectory_findings": 0,
+                },
+                "contract": None,
+                "actions": [],
+                "trajectory_findings": [],
+                "error": str(exc),
+            }
+
+        if runtime.get("policy_source"):
+            result["policy_source"] = runtime["policy_source"]
+        if runtime.get("policy_signature"):
+            result["policy_signature"] = runtime["policy_signature"]
+        if audit:
+            entry = AuditLog().append(
+                {
+                    "source": "trajectory",
+                    "run_id": result.get("run_id"),
+                    "verdict": result.get("verdict"),
+                    "summary": result.get("summary"),
+                    "policy_source": result.get("policy_source"),
+                }
+            )
+            result["audit"] = {"path": str(AuditLog().path), "entry_hash": entry["entry_hash"]}
+
+        print(self.format_trajectory_output(result))
+        return self._exit_code_for_verdict(result["verdict"])
+
+    @staticmethod
+    def _parse_trajectory_payload(payload: Any) -> tuple[List[str], Optional[Dict[str, Any]]]:
+        """Return actions and optional contract from a JSON trajectory payload."""
+        if isinstance(payload, list):
+            actions = payload
+            contract = None
+        elif isinstance(payload, dict):
+            actions = payload.get("actions")
+            contract = {key: value for key, value in payload.items() if key != "actions"}
+        else:
+            raise ValueError("trajectory file must contain a list or object")
+
+        if not isinstance(actions, list) or not all(isinstance(item, str) for item in actions):
+            raise ValueError("trajectory actions must be a list of strings")
+        return actions, contract
+
+    def format_trajectory_output(self, result: Dict[str, Any]) -> str:
+        """Format a trajectory result for text or JSON output."""
+        if self.output_format == "json":
+            return json.dumps(result, indent=2)
+
+        lines = [
+            f"Run: {result.get('run_id') or '-'}",
+            f"Verdict: {str(result.get('verdict')).upper()}",
+        ]
+        if result.get("decision"):
+            lines.append(f"Decision: {result['decision']}")
+
+        summary = result.get("summary") or {}
+        lines.append(
+            "Summary: "
+            f"actions={summary.get('actions', 0)} "
+            f"blocked={summary.get('blocked', 0)} "
+            f"unknown={summary.get('unknown', 0)} "
+            f"pending={summary.get('pending_approval', 0)} "
+            f"errors={summary.get('errors', 0)} "
+            f"trajectory_findings={summary.get('trajectory_findings', 0)}"
+        )
+
+        if result.get("error"):
+            lines.append(f"Error: {result['error']}")
+
+        findings = result.get("trajectory_findings") or []
+        for finding in findings:
+            lines.append(f"Finding: {finding['id']} ({finding['severity']})")
+            lines.append(f"  Reason: {finding['reason']}")
+            lines.append(f"  Indices: {', '.join(str(index) for index in finding['indices'])}")
+
+        return "\n".join(lines)
+
     def run_install_hooks_mode(self, agent: str, directory: str, write: bool) -> int:
         """Print or write hook scaffold instructions."""
         if write:
@@ -779,6 +914,7 @@ Usage:
   circuit-breaker check <ACTION> [OPTIONS]
   circuit-breaker explain <ACTION> [OPTIONS]
   circuit-breaker scan <PATH...> [OPTIONS]
+  circuit-breaker trajectory <RUN.json> [OPTIONS]
   circuit-breaker install-hooks [OPTIONS]
   circuit-breaker timeline [OPTIONS]
   circuit-breaker approvals list|approve <ID>|deny <ID>
@@ -811,6 +947,7 @@ Examples:
   circuit-breaker check 'deploy production' --rules ./rules.json
   circuit-breaker explain 'git push --force origin main'
   circuit-breaker scan ./scripts ./README.md
+  circuit-breaker trajectory ./agent-run.json --format json
   circuit-breaker install-hooks --write
   circuit-breaker timeline --verify
   circuit-breaker approvals list
@@ -940,6 +1077,18 @@ def main() -> int:
                     include_plugins=args.plugins,
                     audit=args.audit,
                     sarif=args.sarif,
+                    require_signature=args.require_signature,
+                )
+
+            if args.command_parts[0] == "trajectory" and len(args.command_parts) == 2:
+                return cli.run_trajectory_mode(
+                    args.command_parts[1],
+                    args.rule_file_path,
+                    profile_name=args.profile_name,
+                    mode=args.mode,
+                    policy_path=args.policy_path,
+                    include_plugins=args.plugins,
+                    audit=args.audit,
                     require_signature=args.require_signature,
                 )
 

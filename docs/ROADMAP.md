@@ -308,3 +308,25 @@ Deferred until the core is proven:
 - sandboxing
 - machine learning detection
 - performance benchmarking
+
+## v1.4.x: Long-Horizon Agent Safety Series
+
+Goal: evolve the v1.4 runtime/MCP hardening line into deterministic controls for longer-running agent work without breaking v1.x compatibility.
+
+### v1.4.3: Trajectory Safety Foundation
+
+Status: released as `v1.4.3`.
+
+Implemented so far:
+
+- `evaluate_trajectory(...)` public API.
+- `circuit-breaker trajectory <run.json>` CLI mode.
+- optional run contracts for goals, allowed scopes, forbidden targets, allowed outputs, blocked-attempt limits, and unknown-action limits.
+- trajectory findings for repeated blocked actions, output-channel drift, forbidden targets, scope violations, unknown-action volume, and secret-like reads followed by egress.
+
+### Planned Patch Slices
+
+- `v1.4.4`: stateful MCP run enforcement using trajectory context.
+- `v1.4.5`: contextual approvals and replayable run ledger.
+- `v1.4.6`: broader data egress and secret-flow rules.
+- later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

@@ -4,6 +4,23 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.3] - 2026-07-21
+
+### Added
+
+- Added trajectory-level analysis for long-running agent runs through `evaluate_trajectory(...)`.
+- Added `circuit-breaker trajectory <run.json>` for evaluating JSON action sequences and optional run contracts.
+- Added deterministic trajectory findings for repeated blocked actions, forbidden targets, write-like actions outside allowed scopes, output-channel drift, unknown-action volume, and secret-like reads followed by egress.
+
+### Changed
+
+- Package exports now include `evaluate_trajectory` as an additive public API.
+- JSON/API documentation now describes trajectory output fields and finding IDs.
+
+### Compatibility
+
+- Existing `check`, `scan`, MCP proxy, policy, approval, and audit behavior is unchanged.
+
 ## [1.4.2] - 2026-07-21
 
 ### Fixed
