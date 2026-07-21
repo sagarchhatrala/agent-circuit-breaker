@@ -335,8 +335,18 @@ Implemented so far:
 - programmatic `MCPRunGuard`.
 - MCP JSON-RPC block metadata for trajectory verdicts and findings.
 
+### v1.4.5: Contextual Approvals And Run Ledger
+
+Status: released as `v1.4.5`.
+
+Implemented so far:
+
+- contextual approval summaries for trajectory runs.
+- `circuit-breaker trajectory <run.json> --ledger`.
+- `circuit-breaker ledger`, `circuit-breaker ledger <RUN_ID>`, and `circuit-breaker ledger --verify`.
+- local hash-chained `RunLedger`.
+
 ### Planned Patch Slices
 
-- `v1.4.5`: contextual approvals and replayable run ledger.
 - `v1.4.6`: broader data egress and secret-flow rules.
 - later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

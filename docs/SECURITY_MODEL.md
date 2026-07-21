@@ -46,6 +46,10 @@ Trajectory mode is still pre-execution analysis. It does not observe live operat
 
 The MCP proxy can opt in to trajectory evaluation with `--trajectory` or `--trajectory-policy`. In that mode, the proxy keeps in-memory state for one proxy process and evaluates string-valued `tools/call` arguments as a run sequence. This state is not persisted across proxy restarts unless the caller separately records audit events.
 
+## Run Ledger
+
+`circuit-breaker trajectory --ledger` writes full trajectory results to a local hash-chained JSONL ledger. The ledger is replayable and tamper-evident in the same local-integrity sense as the audit timeline: hash-chain verification can detect after-the-fact edits to the ledger file, but it does not prevent deletion, rollback, or tampering by a user or process with write access to the file.
+
 ## Rule Ordering
 
 Built-in rules are evaluated before custom rules.

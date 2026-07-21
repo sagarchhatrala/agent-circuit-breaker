@@ -166,6 +166,14 @@ circuit-breaker trajectory ./agent-run.json --format json
 # Verdict: BLOCK
 ```
 
+Write a replayable local run ledger entry:
+
+```bash
+circuit-breaker trajectory ./agent-run.json --ledger
+circuit-breaker ledger
+circuit-breaker ledger --verify
+```
+
 ## Python API
 
 ```python
@@ -256,6 +264,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 
 - local approval queue with `PENDING_APPROVAL`.
 - tamper-evident hash-chained audit timeline.
+- replayable local run ledger for trajectory results.
 - central policy loading from local files or explicit caller-selected URLs.
 - optional signed policy/rule-pack verification.
 - plugin discovery through Python entry points.
@@ -264,6 +273,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - SARIF output for code scanning.
 - trajectory JSON evaluation for long-running agent runs and run-contract drift checks.
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
+- contextual approval records for trajectory runs.
 
 Security references:
 

@@ -55,10 +55,12 @@ The current stable package includes:
 - HMAC-backed policy/rule-pack signatures for authenticity checks.
 - trajectory JSON evaluation for long-running agent run contracts.
 - optional stateful MCP trajectory enforcement across multiple tool calls.
+- contextual trajectory approvals and replayable local run ledger.
 - trusted publishing workflow for TestPyPI and PyPI.
 
 ## Release Notes
 
+- [v1.4.5](releases/v1.4.5.md)
 - [v1.4.4](releases/v1.4.4.md)
 - [v1.4.3](releases/v1.4.3.md)
 - [v1.4.2](releases/v1.4.2.md)

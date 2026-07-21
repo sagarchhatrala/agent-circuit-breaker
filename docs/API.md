@@ -93,6 +93,21 @@ Trajectory results include:
 
 Invalid action lists, invalid contracts, and invalid custom rule files fail closed with `verdict` set to `error`.
 
+## `RunLedger(path=None)`
+
+Stores full trajectory results in a local hash-chained JSONL ledger.
+
+```python
+from agent_circuit_breaker.ledger import RunLedger
+
+ledger = RunLedger()
+entry = ledger.append(result)
+replay = ledger.replay(result["run_id"])
+verification = ledger.verify()
+```
+
+The ledger is local-only. Set `ACB_RUN_LEDGER` or pass an explicit path to control where entries are written.
+
 ## Stability
 
 The public API became stable at v1.0. Compatible v1.x releases may add result fields, built-in rules, docs, and examples without changing the meaning of existing fields or the external rule schema version.

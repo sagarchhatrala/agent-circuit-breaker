@@ -21,7 +21,7 @@ class ApprovalStore:
     def __init__(self, directory: Optional[str] = None):
         self.directory = Path(directory) if directory else default_approval_dir()
 
-    def create(self, result: Dict[str, Any]) -> Dict[str, Any]:
+    def create(self, result: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Create a pending approval record for a result."""
         self.directory.mkdir(parents=True, exist_ok=True)
         approval_id = self._approval_id(result)
@@ -30,6 +30,7 @@ class ApprovalStore:
             "status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "decided_at": None,
+            "context": context if context is not None else approval_context(result),
             "result": result,
         }
         self._path(approval_id).write_text(json.dumps(record, indent=2), encoding="utf-8")
@@ -64,9 +65,53 @@ class ApprovalStore:
     def _approval_id(result: Dict[str, Any]) -> str:
         material = {
             "command": result.get("command"),
+            "run_id": result.get("run_id"),
             "risk_score": result.get("risk_score"),
             "matched_rule": result.get("matched_rule"),
             "policy": result.get("policy"),
+            "trajectory_findings": [
+                finding.get("id")
+                for finding in result.get("trajectory_findings", [])
+            ],
         }
         digest = hashlib.sha256(json.dumps(material, sort_keys=True).encode("utf-8")).hexdigest()
         return digest[:16]
+
+
+def approval_context(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Return compact human-review context for an approval result."""
+    if "trajectory_findings" in result:
+        return {
+            "type": "trajectory",
+            "run_id": result.get("run_id"),
+            "verdict": result.get("verdict"),
+            "summary": result.get("summary"),
+            "findings": [
+                {
+                    "id": finding.get("id"),
+                    "severity": finding.get("severity"),
+                    "indices": finding.get("indices"),
+                    "reason": finding.get("reason"),
+                }
+                for finding in result.get("trajectory_findings", [])
+            ],
+            "recent_actions": [
+                {
+                    "trajectory_index": action.get("trajectory_index"),
+                    "command": action.get("command"),
+                    "verdict": action.get("verdict"),
+                    "matched_rule": action.get("matched_rule"),
+                }
+                for action in result.get("actions", [])[-5:]
+            ],
+        }
+
+    return {
+        "type": "action",
+        "command": result.get("command"),
+        "verdict": result.get("verdict"),
+        "decision": result.get("decision"),
+        "risk_score": result.get("risk_score"),
+        "matched_rule": result.get("matched_rule"),
+        "policy": result.get("policy"),
+    }

@@ -130,6 +130,7 @@ Invalid custom rule files fail closed with `verdict` set to `error`.
 - `trajectory_findings`: sequence-level findings.
 - `error`: present when trajectory parsing or validation fails.
 - `audit`: present when CLI audit logging is requested.
+- `ledger`: present when trajectory ledger logging is requested.
 - `policy_source`: present when a central policy file or URL was loaded.
 - `policy_signature`: present when a loaded policy contained a verified signature.
 
@@ -159,3 +160,41 @@ When `circuit-breaker-mcp-proxy` is run with `--trajectory` or `--trajectory-pol
 - `trajectory_finding`: first trajectory finding ID that contributed to the block.
 
 When trajectory mode is not enabled, MCP proxy responses remain stateless and these fields are `null` or absent depending on the response path.
+
+## Approval Context
+
+Approval records include an additive `context` object.
+
+For single-action approvals, `context` contains:
+
+- `type`: `action`.
+- `command`, `verdict`, `decision`, `risk_score`, `matched_rule`, and `policy`.
+
+For trajectory approvals, `context` contains:
+
+- `type`: `trajectory`.
+- `run_id`: trajectory run ID.
+- `verdict`: aggregate trajectory verdict.
+- `summary`: trajectory summary counts.
+- `findings`: compact finding IDs, severities, indices, and reasons.
+- `recent_actions`: the last five action summaries.
+
+## Run Ledger
+
+`circuit-breaker trajectory <run.json> --ledger` appends the full trajectory result to a local hash-chained JSONL ledger.
+
+`circuit-breaker ledger --format json` returns:
+
+- `path`: ledger path.
+- `entries`: recent ledger entries.
+
+Each ledger entry contains:
+
+- `schema_version`
+- `timestamp`
+- `previous_hash`
+- `run_id`
+- `result`
+- `entry_hash`
+
+`circuit-breaker ledger <RUN_ID> --format json` returns replayable run data with command, verdict, decision, matched rule, risk score, contract, summary, and trajectory findings.

@@ -6,10 +6,11 @@ import argparse
 from typing import Dict, Any, List, Optional
 
 from agent_circuit_breaker.engine import Engine, Decision
-from agent_circuit_breaker.approvals import ApprovalStore
+from agent_circuit_breaker.approvals import ApprovalStore, approval_context
 from agent_circuit_breaker.audit import AuditLog, audit_event_from_result
 from agent_circuit_breaker.explain import explain_result, format_explanation
 from agent_circuit_breaker.hooks import hook_instructions, write_hook_scaffold
+from agent_circuit_breaker.ledger import RunLedger
 from agent_circuit_breaker.plugins import discover_plugins, load_rule_plugins
 from agent_circuit_breaker.policy import load_policy
 from agent_circuit_breaker.profiles import apply_policy_mode, get_profile, profile_metadata
@@ -620,6 +621,7 @@ class CircuitBreakerCLI:
         policy_path: Optional[str] = None,
         include_plugins: bool = False,
         audit: bool = False,
+        ledger: bool = False,
         require_signature: bool = False,
     ) -> int:
         """Run trajectory mode over a JSON run file."""
@@ -679,6 +681,17 @@ class CircuitBreakerCLI:
             result["policy_source"] = runtime["policy_source"]
         if runtime.get("policy_signature"):
             result["policy_signature"] = runtime["policy_signature"]
+        if result["verdict"] == "pending_approval":
+            try:
+                context = approval_context(result)
+                approval = ApprovalStore().create(result, context=context)
+                result["approval"] = {
+                    "id": approval["id"],
+                    "status": approval["status"],
+                    "context": context,
+                }
+            except OSError as exc:
+                result["approval"] = {"id": None, "status": "not_stored", "error": str(exc)}
         if audit:
             entry = AuditLog().append(
                 {
@@ -690,6 +703,9 @@ class CircuitBreakerCLI:
                 }
             )
             result["audit"] = {"path": str(AuditLog().path), "entry_hash": entry["entry_hash"]}
+        if ledger:
+            entry = RunLedger().append(result)
+            result["ledger"] = {"path": str(RunLedger().path), "entry_hash": entry["entry_hash"]}
 
         print(self.format_trajectory_output(result))
         return self._exit_code_for_verdict(result["verdict"])
@@ -787,6 +803,61 @@ class CircuitBreakerCLI:
                     f"risk={event.get('risk_score', '-')} rule={event.get('matched_rule') or '-'}"
                 )
         return 0
+
+    def run_ledger_mode(self, run_id: Optional[str] = None, limit: int = 20, verify: bool = False) -> int:
+        """Print recent run ledger entries, replay one run, or verify the ledger."""
+        ledger = RunLedger()
+        if verify:
+            result = ledger.verify()
+            if self.output_format == "json":
+                print(json.dumps(result, indent=2))
+            else:
+                print(f"Ledger Valid: {str(result['is_valid']).upper()}")
+                print(f"Entries: {result['entries']}")
+                if result["error"]:
+                    print(f"Error: {result['error']}")
+            return 0 if result["is_valid"] else 1
+
+        if run_id:
+            try:
+                replay = ledger.replay(run_id)
+            except FileNotFoundError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                return 1
+            print(json.dumps(replay, indent=2) if self.output_format == "json" else self.format_ledger_replay(replay))
+            return 0
+
+        entries = ledger.tail(limit)
+        if self.output_format == "json":
+            print(json.dumps({"path": str(ledger.path), "entries": entries}, indent=2))
+        else:
+            print(f"Run Ledger: {ledger.path}")
+            for entry in entries:
+                result = entry.get("result") or {}
+                summary = result.get("summary") or {}
+                print(
+                    f"{entry.get('timestamp')} run={entry.get('run_id') or '-'} "
+                    f"verdict={result.get('verdict', '-')} actions={summary.get('actions', '-')}"
+                )
+        return 0
+
+    @staticmethod
+    def format_ledger_replay(replay: Dict[str, Any]) -> str:
+        """Format replayed ledger actions for text output."""
+        lines = [
+            f"Run: {replay.get('run_id')}",
+            f"Verdict: {str(replay.get('verdict')).upper()}",
+        ]
+        summary = replay.get("summary") or {}
+        lines.append(f"Actions: {summary.get('actions', len(replay.get('actions', [])))}")
+        for finding in replay.get("trajectory_findings", []):
+            lines.append(f"Finding: {finding.get('id')} ({finding.get('severity')})")
+        for action in replay.get("actions", []):
+            lines.append(
+                f"{action.get('trajectory_index')}: {action.get('verdict')} "
+                f"rule={action.get('matched_rule') or '-'} command={action.get('command')}"
+            )
+        return "\n".join(lines)
 
     def run_approvals_mode(self, action: str, approval_id: Optional[str] = None) -> int:
         """List, approve, or deny pending approval records."""
@@ -917,6 +988,7 @@ Usage:
   circuit-breaker trajectory <RUN.json> [OPTIONS]
   circuit-breaker install-hooks [OPTIONS]
   circuit-breaker timeline [OPTIONS]
+  circuit-breaker ledger [RUN_ID] [OPTIONS]
   circuit-breaker approvals list|approve <ID>|deny <ID>
   circuit-breaker plugins [--format json]
   circuit-breaker validate-rules <PATH> [OPTIONS]
@@ -934,6 +1006,7 @@ Options:
   --profile NAME          Safety profile: solo, repo, team, prod
   --mode MODE             Policy mode: strict, advisory, approval
   --audit                 Append a tamper-evident audit entry
+  --ledger                Append full trajectory results to the run ledger
   --policy PATH_OR_URL    Load central policy before local CLI overrides
   --require-signature     Require policy/rule JSON signatures before loading
   --plugins               Load optional rule-provider plugins
@@ -950,6 +1023,7 @@ Examples:
   circuit-breaker trajectory ./agent-run.json --format json
   circuit-breaker install-hooks --write
   circuit-breaker timeline --verify
+  circuit-breaker ledger --verify
   circuit-breaker approvals list
   circuit-breaker plugins --format json
   circuit-breaker validate-rules ./rules.json
@@ -999,6 +1073,7 @@ def main() -> int:
     parser.add_argument("--profile", dest="profile_name", type=str, help="Safety profile")
     parser.add_argument("--mode", dest="mode", type=str, help="Policy mode")
     parser.add_argument("--audit", action="store_true", help="Append an audit entry")
+    parser.add_argument("--ledger", action="store_true", help="Append full trajectory results to the run ledger")
     parser.add_argument("--policy", dest="policy_path", type=str, help="Central policy file or URL")
     parser.add_argument("--require-signature", action="store_true", help="Require signed policy/rule JSON")
     parser.add_argument("--plugins", action="store_true", help="Load installed rule plugins")
@@ -1089,6 +1164,7 @@ def main() -> int:
                     policy_path=args.policy_path,
                     include_plugins=args.plugins,
                     audit=args.audit,
+                    ledger=args.ledger,
                     require_signature=args.require_signature,
                 )
 
@@ -1097,6 +1173,10 @@ def main() -> int:
 
             if args.command_parts[0] == "timeline":
                 return cli.run_timeline_mode(limit=args.limit, verify=args.verify)
+
+            if args.command_parts[0] == "ledger":
+                run_id = args.command_parts[1] if len(args.command_parts) >= 2 else None
+                return cli.run_ledger_mode(run_id=run_id, limit=args.limit, verify=args.verify)
 
             if args.command_parts[0] == "approvals" and len(args.command_parts) >= 2:
                 approval_id = args.command_parts[2] if len(args.command_parts) >= 3 else None

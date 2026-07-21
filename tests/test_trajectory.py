@@ -1,6 +1,7 @@
 """Tests for trajectory-level long-horizon safety analysis."""
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -9,7 +10,9 @@ from pathlib import Path
 
 import agent_circuit_breaker
 from agent_circuit_breaker import evaluate_trajectory
+from agent_circuit_breaker.approvals import ApprovalStore, approval_context
 from agent_circuit_breaker.cli import CircuitBreakerCLI, main
+from agent_circuit_breaker.ledger import RunLedger
 
 
 class TestTrajectoryAPI(unittest.TestCase):
@@ -154,6 +157,82 @@ class TestTrajectoryCLI(unittest.TestCase):
         parsed = json.loads(output)
         self.assertEqual(exit_code, 1)
         self.assertEqual(parsed["verdict"], "block")
+
+
+class TestTrajectoryApprovalsAndLedger(unittest.TestCase):
+    """Test contextual approvals and replayable run ledger support."""
+
+    def test_approval_context_summarizes_trajectory(self):
+        result = evaluate_trajectory(
+            ["git status", "ls /home"],
+            contract={"max_unknown_actions": 0},
+        )
+
+        context = approval_context(result)
+
+        self.assertEqual(result["verdict"], "pending_approval")
+        self.assertEqual(context["type"], "trajectory")
+        self.assertEqual(context["run_id"], result["run_id"])
+        self.assertEqual(context["findings"][0]["id"], "traj_unknown_action_volume")
+        self.assertEqual(len(context["recent_actions"]), 2)
+
+    def test_approval_store_persists_context(self):
+        result = evaluate_trajectory(
+            ["git status"],
+            contract={"max_unknown_actions": 0},
+        )
+        context = approval_context(result)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = ApprovalStore(temp_dir)
+            record = store.create(result, context=context)
+            listed = store.list()
+
+        self.assertEqual(record["context"], context)
+        self.assertEqual(listed[0]["context"]["type"], "trajectory")
+
+    def test_run_ledger_replays_and_verifies(self):
+        result = evaluate_trajectory(["mkdir /tmp/acb-ledger"])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "ledger.jsonl"
+            ledger = RunLedger(str(path))
+            entry = ledger.append(result)
+            replay = ledger.replay(result["run_id"])
+            verification = ledger.verify()
+
+        self.assertEqual(entry["run_id"], result["run_id"])
+        self.assertEqual(replay["run_id"], result["run_id"])
+        self.assertEqual(replay["actions"][0]["command"], "mkdir /tmp/acb-ledger")
+        self.assertTrue(verification["is_valid"])
+
+    def test_cli_trajectory_ledger_writes_entry(self):
+        cli = CircuitBreakerCLI(output_format="json")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_path = Path(temp_dir) / "run.json"
+            ledger_path = Path(temp_dir) / "ledger.jsonl"
+            run_path.write_text(json.dumps(["mkdir /tmp/acb-ledger"]), encoding="utf-8")
+            old_ledger = os.environ.get("ACB_RUN_LEDGER")
+            os.environ["ACB_RUN_LEDGER"] = str(ledger_path)
+            old_stdout = sys.stdout
+            try:
+                sys.stdout = StringIO()
+                exit_code = cli.run_trajectory_mode(str(run_path), ledger=True)
+                output = sys.stdout.getvalue()
+            finally:
+                sys.stdout = old_stdout
+                if old_ledger is None:
+                    os.environ.pop("ACB_RUN_LEDGER", None)
+                else:
+                    os.environ["ACB_RUN_LEDGER"] = old_ledger
+
+            parsed = json.loads(output)
+            ledger = RunLedger(str(ledger_path))
+            replay = ledger.replay(parsed["run_id"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(parsed["ledger"]["path"], str(ledger_path))
+        self.assertEqual(replay["run_id"], parsed["run_id"])
 
 
 if __name__ == "__main__":

@@ -4,6 +4,20 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.5] - 2026-07-21
+
+### Added
+
+- Added contextual approval summaries for trajectory results.
+- Added `--ledger` for `circuit-breaker trajectory` to persist full trajectory results in a local hash-chained run ledger.
+- Added `circuit-breaker ledger`, `circuit-breaker ledger <RUN_ID>`, and `circuit-breaker ledger --verify`.
+- Added `RunLedger` for local replay of stored trajectory runs.
+
+### Compatibility
+
+- Existing approval records remain readable. New records include an additive `context` object.
+- The run ledger is opt-in and local-only.
+
 ## [1.4.4] - 2026-07-21
 
 ### Added
