@@ -513,17 +513,114 @@ def _output_channel(item: Evaluation) -> Optional[str]:
     if not command:
         return None
 
-    channels = {
-        "github": ("gh pr create", "git push", "hub pull-request", "github"),
-        "slack": ("slack", "chat.postmessage"),
-        "s3": ("aws s3 cp", "aws s3 sync", "s3://"),
-        "cloud-storage": ("az storage blob upload", "gcloud storage cp", "gsutil cp"),
-        "http": ("curl ", "wget ", "http ", "httpie ", "http://", "https://", "webhook"),
-    }
-    for channel, patterns in channels.items():
-        if any(pattern in command for pattern in patterns):
-            return channel
+    tokens = _simple_tokens(command)
+    lowered = [token.lower() for token in tokens]
+
+    if _is_github_output(command):
+        return "github"
+    if _is_slack_output(command):
+        return "slack"
+    if _is_s3_output(command, lowered):
+        return "s3"
+    if _is_cloud_storage_output(command):
+        return "cloud-storage"
+    if _is_http_output(command, lowered):
+        return "http"
     return None
+
+
+def _is_github_output(command: str) -> bool:
+    return any(
+        pattern in f" {command}"
+        for pattern in (
+            " gh pr create",
+            " hub pull-request",
+            " git push",
+            " gh gist create",
+            " gh release create",
+        )
+    )
+
+
+def _is_slack_output(command: str) -> bool:
+    return any(pattern in command for pattern in ("chat.postmessage", "slack"))
+
+
+def _is_s3_output(command: str, tokens: List[str]) -> bool:
+    if "aws s3 sync" in command:
+        return len(tokens) >= 4 and tokens[-1].startswith("s3://")
+    if "aws s3 cp" in command:
+        return len(tokens) >= 4 and tokens[-1].startswith("s3://")
+    return False
+
+
+def _is_cloud_storage_output(command: str) -> bool:
+    return any(
+        pattern in command
+        for pattern in (
+            "az storage blob upload",
+            "gcloud storage cp",
+            "gsutil cp",
+        )
+    )
+
+
+def _is_http_output(command: str, tokens: List[str]) -> bool:
+    if "webhook" in command:
+        return True
+    if not tokens:
+        return False
+
+    command_name = tokens[0]
+    if command_name in {"http", "https", "httpie"}:
+        return any(token in {"post", "put", "patch", "delete"} for token in tokens[1:3])
+
+    if command_name == "curl":
+        return _has_any_option(tokens, _curl_output_options()) or _has_http_method(tokens, {"post", "put", "patch", "delete"})
+
+    if command_name == "wget":
+        return _has_any_option(tokens, _wget_output_options()) or _has_http_method(tokens, {"post", "put", "patch", "delete"})
+
+    return False
+
+
+def _curl_output_options() -> tuple[str, ...]:
+    return (
+        "-d",
+        "--data",
+        "--data-raw",
+        "--data-binary",
+        "--data-urlencode",
+        "--form",
+        "--json",
+        "--upload-file",
+    )
+
+
+def _wget_output_options() -> tuple[str, ...]:
+    return (
+        "--post-data",
+        "--post-file",
+        "--body-data",
+        "--body-file",
+    )
+
+
+def _has_any_option(tokens: List[str], options: tuple[str, ...]) -> bool:
+    for token in tokens[1:]:
+        if token in options or any(token.startswith(f"{option}=") for option in options):
+            return True
+    return False
+
+
+def _has_http_method(tokens: List[str], methods: set[str]) -> bool:
+    for index, token in enumerate(tokens):
+        if token in {"-x", "--request", "--method"} and index + 1 < len(tokens):
+            return tokens[index + 1] in methods
+        for option in ("--request=", "--method="):
+            if token.startswith(option) and token.split("=", 1)[1] in methods:
+                return True
+    return False
 
 
 def _is_write_like(command: str) -> bool:

@@ -62,7 +62,7 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - dangerous permissions: recursive world-writable `chmod`, including symbolic modes such as `ugo+rwx`.
 - destructive SQL: `DROP TABLE`, `DROP DATABASE`, `TRUNCATE`, unqualified `DELETE`/`UPDATE`, and tautological `WHERE 1=1` variants.
 - MCP tool calls: stdio JSON-RPC proxy inspection for string-valued `tools/call` arguments, including arbitrary schema field names.
-- long-running agent trajectories: repeated blocked actions, forbidden target references, output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
+- long-running agent trajectories: repeated blocked actions, forbidden target references, outbound output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
@@ -272,7 +272,7 @@ The repo includes:
 - GitHub Actions workflow for unit tests.
 - GitHub Actions workflow for SARIF upload.
 - pre-commit hook manifest.
-- release workflow for trusted publishing to TestPyPI and PyPI.
+- release workflow that publishes GitHub Releases to TestPyPI before PyPI.
 
 Integration docs:
 
@@ -298,6 +298,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
+- approval records include warning metadata when no local approval token is configured.
 
 ## Common Use Cases
 
@@ -324,8 +325,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.4.7`
-- Test suite: 413 tests
+- Current version: `1.4.8`
+- Test suite: 420 tests
 - Runtime dependencies: none
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -349,6 +350,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.4.8 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.8.md)
 - [v1.4.7 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.7.md)
 - [v1.4.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.6.md)
 - [v1.4.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.5.md)

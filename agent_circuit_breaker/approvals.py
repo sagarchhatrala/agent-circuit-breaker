@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -30,6 +31,7 @@ class ApprovalStore:
             "status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "decided_at": None,
+            "approval_security": approval_security_context(),
             "context": context if context is not None else approval_context(result),
             "result": result,
         }
@@ -114,4 +116,19 @@ def approval_context(result: Dict[str, Any]) -> Dict[str, Any]:
         "risk_score": result.get("risk_score"),
         "matched_rule": result.get("matched_rule"),
         "policy": result.get("policy"),
+    }
+
+
+def approval_security_context() -> Dict[str, Any]:
+    """Return local approval security metadata for review records."""
+    token_required = bool(os.environ.get("ACB_APPROVAL_TOKEN"))
+    warning = None
+    if not token_required:
+        warning = (
+            "ACB_APPROVAL_TOKEN is not configured; any local actor with shell access "
+            "can approve or deny this record."
+        )
+    return {
+        "token_required": token_required,
+        "warning": warning,
     }

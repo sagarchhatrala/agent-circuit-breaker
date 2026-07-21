@@ -183,6 +183,11 @@ For trajectory approvals, `context` contains:
 
 When `ACB_APPROVAL_TOKEN` is configured, CLI approve/deny operations require `--approval-token`. The token is not stored in approval records.
 
+Approval records also include an additive `approval_security` object:
+
+- `token_required`: whether `ACB_APPROVAL_TOKEN` was configured when the record was created.
+- `warning`: a local trust-boundary warning when approval decisions are not token-gated.
+
 ## Run Ledger
 
 `circuit-breaker trajectory <run.json> --ledger` appends the full trajectory result to a local hash-chained JSONL ledger.

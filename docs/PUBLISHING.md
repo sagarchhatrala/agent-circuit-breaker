@@ -34,16 +34,17 @@ Configure trusted publishers in TestPyPI and PyPI for this repository:
 
 The workflow is defined in `.github/workflows/publish.yml`.
 
-Manual TestPyPI publishing:
+Release publishing:
+
+1. Publish a GitHub Release.
+2. The `Publish` workflow builds once, publishes to TestPyPI, then publishes the same artifacts to PyPI.
+3. Verify install from PyPI.
+
+Manual publishing:
 
 1. Open the `Publish` workflow in GitHub Actions.
-2. Run workflow with `repository` set to `testpypi`.
-3. Verify install from TestPyPI.
-
-PyPI publishing:
-
-1. Publish a GitHub Release, or run the workflow manually with `repository` set to `pypi`.
-2. Verify install from PyPI.
+2. Run workflow with `repository` set to `testpypi` for TestPyPI-only validation.
+3. Run workflow with `repository` set to `pypi` to publish through TestPyPI first, then PyPI.
 
 Recommended local install:
 
@@ -74,7 +75,7 @@ python -m twine upload --repository testpypi dist/*
 Install verification:
 
 ```bash
-python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==1.4.2
+python -m pip install --index-url https://test.pypi.org/simple/ --no-deps agent-circuit-breaker==<version>
 python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_action('rm -rf /')['verdict'])"
 ```
 
@@ -89,7 +90,7 @@ python -m twine upload dist/*
 Install verification:
 
 ```bash
-python -m pip install --no-deps agent-circuit-breaker==1.4.2
+python -m pip install --no-deps agent-circuit-breaker==<version>
 python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_action('rm -rf /')['verdict'])"
 ```
 

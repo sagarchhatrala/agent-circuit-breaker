@@ -4,6 +4,22 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.8] - 2026-07-21
+
+### Fixed
+
+- Fixed `allowed_outputs` false positives for inbound network reads such as `curl` health checks, `wget` downloads, `git clone`, and S3 downloads.
+- Output-channel drift now focuses on outbound publication actions such as GitHub PRs/pushes, HTTP POST/upload-style commands, Slack posts, and cloud-storage uploads.
+
+### Added
+
+- Added approval-record security metadata that warns when `ACB_APPROVAL_TOKEN` is not configured.
+- Added regression coverage for inbound network reads, outbound output drift, S3 upload/download direction, and approval-token warning metadata.
+
+### Changed
+
+- Release publishing now sends GitHub Release workflows through TestPyPI before PyPI.
+
 ## [1.4.7] - 2026-07-21
 
 ### Fixed

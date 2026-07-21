@@ -50,7 +50,7 @@ jobs:
   publish-testpypi:
     name: publish-testpypi
     needs: build
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.repository == 'testpypi'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.repository == 'testpypi' || github.event.inputs.repository == 'pypi'))
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -71,12 +71,13 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          repository_url: https://test.pypi.org/legacy/
           skip-existing: true
 
   publish-pypi:
     name: publish-pypi
-    needs: build
+    needs:
+      - build
+      - publish-testpypi
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.repository == 'pypi')
     runs-on: ubuntu-latest
     environment:

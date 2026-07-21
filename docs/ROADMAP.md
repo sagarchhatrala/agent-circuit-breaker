@@ -369,6 +369,17 @@ Implemented so far:
 - optional approval-token gate for local approve/deny decisions.
 - documentation clarifying local approval trust boundaries.
 
+### v1.4.8: Output-Channel Drift Precision
+
+Status: released as `v1.4.8`.
+
+Implemented so far:
+
+- outbound-only output-channel drift checks for trajectory contracts.
+- no output-channel false positives for `curl` health checks, `wget` downloads, `git clone`, or S3 downloads.
+- approval record warning metadata when no approval token is configured.
+- release workflow sequencing through TestPyPI before PyPI.
+
 ### Planned Patch Slices
 
 - later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

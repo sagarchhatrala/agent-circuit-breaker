@@ -79,9 +79,8 @@ Expected:
 
 - Build artifacts with `python -m build`.
 - Validate artifacts with `python -m twine check dist/*`.
-- Upload to TestPyPI first.
-- Install from TestPyPI in a clean environment.
-- Upload to PyPI after TestPyPI verification.
+- Confirm the GitHub Release `Publish` workflow publishes to TestPyPI first.
+- Confirm the same workflow publishes to PyPI after TestPyPI succeeds.
 - Verify `pip install agent-circuit-breaker==<version>` works.
 
 ## Release Notes

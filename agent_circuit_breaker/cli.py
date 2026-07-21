@@ -489,7 +489,11 @@ class CircuitBreakerCLI:
         if result["verdict"] == "pending_approval":
             try:
                 approval = ApprovalStore().create(result)
-                result["approval"] = {"id": approval["id"], "status": approval["status"]}
+                result["approval"] = {
+                    "id": approval["id"],
+                    "status": approval["status"],
+                    "security": approval.get("approval_security"),
+                }
             except OSError as exc:
                 result["approval"] = {"id": None, "status": "not_stored", "error": str(exc)}
         if audit:
@@ -689,6 +693,7 @@ class CircuitBreakerCLI:
                 result["approval"] = {
                     "id": approval["id"],
                     "status": approval["status"],
+                    "security": approval.get("approval_security"),
                     "context": context,
                 }
             except OSError as exc:

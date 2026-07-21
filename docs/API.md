@@ -76,7 +76,7 @@ Supported optional contract fields:
 - `goal`: descriptive run goal.
 - `allowed_scopes`: relative path prefixes that write-like actions may target.
 - `forbidden_targets`: strings that must not appear in actions.
-- `allowed_outputs`: allowed output channels such as `slack`, `github`, `s3`, or `http`.
+- `allowed_outputs`: allowed outbound publication channels such as `slack`, `github`, `s3`, or `http`. Inbound reads such as `git clone`, `curl` health checks, and `wget` downloads are not treated as output-channel drift.
 - `max_blocked_attempts`: number of blocked actions tolerated before a trajectory finding is added. Default: `1`.
 - `max_unknown_actions`: optional number of unknown actions tolerated before approval is required.
 

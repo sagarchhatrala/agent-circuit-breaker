@@ -45,6 +45,59 @@ class TestTrajectoryAPI(unittest.TestCase):
         finding_ids = {finding["id"] for finding in result["trajectory_findings"]}
         self.assertIn("traj_output_channel_drift", finding_ids)
 
+    def test_allowed_output_channel_ignores_inbound_network_reads(self):
+        result = evaluate_trajectory(
+            [
+                "curl api.example.com/health",
+                "curl -f https://api.example.com/health",
+                "git clone github.com/foo/bar.git",
+                "wget example.com/file.tar.gz",
+            ],
+            contract={"allowed_outputs": ["slack"]},
+        )
+
+        finding_ids = {finding["id"] for finding in result["trajectory_findings"]}
+        self.assertNotIn("traj_output_channel_drift", finding_ids)
+
+    def test_allowed_output_channel_blocks_http_post_drift(self):
+        result = evaluate_trajectory(
+            ["curl https://example.com/upload --data-binary @results.json"],
+            contract={"allowed_outputs": ["slack"]},
+        )
+
+        self.assertEqual(result["verdict"], "block")
+        findings = {finding["id"]: finding for finding in result["trajectory_findings"]}
+        self.assertEqual(findings["traj_output_channel_drift"]["channel"], "http")
+
+    def test_allowed_output_channel_blocks_git_push_drift(self):
+        result = evaluate_trajectory(
+            ["git push origin feature/results"],
+            contract={"allowed_outputs": ["slack"]},
+        )
+
+        self.assertEqual(result["verdict"], "block")
+        findings = {finding["id"]: finding for finding in result["trajectory_findings"]}
+        self.assertEqual(findings["traj_output_channel_drift"]["channel"], "github")
+
+    def test_allowed_output_channel_ignores_s3_download(self):
+        result = evaluate_trajectory(
+            ["aws s3 cp s3://internal-bucket/input.csv data/input.csv"],
+            contract={"allowed_outputs": ["slack"]},
+        )
+
+        finding_ids = {finding["id"] for finding in result["trajectory_findings"]}
+        self.assertNotIn("traj_output_channel_drift", finding_ids)
+
+    def test_allowed_output_channel_blocks_s3_upload_drift(self):
+        result = evaluate_trajectory(
+            ["aws s3 cp results.json s3://public-bucket/results.json"],
+            contract={"allowed_outputs": ["slack"]},
+        )
+
+        self.assertEqual(result["verdict"], "block")
+        findings = {finding["id"]: finding for finding in result["trajectory_findings"]}
+        self.assertEqual(findings["traj_output_channel_drift"]["channel"], "s3")
+
     def test_repeated_blocked_actions_create_trajectory_finding(self):
         result = evaluate_trajectory(["rm -rf /", "rm -rf /etc"])
 
@@ -290,6 +343,44 @@ class TestTrajectoryApprovalsAndLedger(unittest.TestCase):
 
         self.assertEqual(record["context"], context)
         self.assertEqual(listed[0]["context"]["type"], "trajectory")
+
+    def test_approval_store_warns_when_token_not_configured(self):
+        result = evaluate_trajectory(
+            ["git status"],
+            contract={"max_unknown_actions": 0},
+        )
+        old_token = os.environ.get("ACB_APPROVAL_TOKEN")
+        try:
+            os.environ.pop("ACB_APPROVAL_TOKEN", None)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                store = ApprovalStore(temp_dir)
+                record = store.create(result)
+        finally:
+            if old_token is not None:
+                os.environ["ACB_APPROVAL_TOKEN"] = old_token
+
+        self.assertFalse(record["approval_security"]["token_required"])
+        self.assertIn("ACB_APPROVAL_TOKEN is not configured", record["approval_security"]["warning"])
+
+    def test_approval_store_marks_token_required_when_configured(self):
+        result = evaluate_trajectory(
+            ["git status"],
+            contract={"max_unknown_actions": 0},
+        )
+        old_token = os.environ.get("ACB_APPROVAL_TOKEN")
+        os.environ["ACB_APPROVAL_TOKEN"] = "expected-token"
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                store = ApprovalStore(temp_dir)
+                record = store.create(result)
+        finally:
+            if old_token is None:
+                os.environ.pop("ACB_APPROVAL_TOKEN", None)
+            else:
+                os.environ["ACB_APPROVAL_TOKEN"] = old_token
+
+        self.assertTrue(record["approval_security"]["token_required"])
+        self.assertIsNone(record["approval_security"]["warning"])
 
     def test_run_ledger_replays_and_verifies(self):
         result = evaluate_trajectory(["mkdir /tmp/acb-ledger"])
