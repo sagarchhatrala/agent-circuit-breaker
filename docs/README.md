@@ -8,6 +8,7 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
 - [SECURITY_MODEL.md](SECURITY_MODEL.md)
 - [THREAT_MODEL.md](THREAT_MODEL.md)
+- [LONG_HORIZON_AGENT_SAFETY.md](LONG_HORIZON_AGENT_SAFETY.md)
 - [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md)
 - [API.md](API.md)
 

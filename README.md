@@ -5,11 +5,11 @@
 [![License](https://img.shields.io/github/license/sagarchhatrala/agent-circuit-breaker)](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/LICENSE)
 [![CI](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml/badge.svg)](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml)
 
-**A local-first safety gate for AI coding agents.**
+**A local-first runtime safety gate for AI agents, MCP tools, and long-horizon coding workflows.**
 
-Agent Circuit Breaker checks shell commands, filesystem operations, SQL text, and MCP tool-call arguments before an agent executes them. It gives agent workflows a deterministic stop point: `ALLOW`, `BLOCK`, `UNKNOWN`, `ERROR`, or `PENDING_APPROVAL`.
+Agent Circuit Breaker checks shell commands, filesystem operations, SQL text, MCP tool-call arguments, and long-running agent trajectories before an agent executes or continues risky work. It gives agent workflows a deterministic stop point: `ALLOW`, `BLOCK`, `UNKNOWN`, `ERROR`, or `PENDING_APPROVAL`.
 
-It is built for the moment when an AI agent is about to run something powerful and you want a fast, auditable answer from rules you can inspect.
+It is built for the moment when an AI agent is about to do something powerful and you want a fast, auditable answer from rules you can inspect. It is especially relevant for teams building with coding agents, MCP servers, tool-using AI systems, autonomous development workflows, and long-horizon model runs where risk can emerge across a sequence of actions rather than one command.
 
 ```bash
 pip install agent-circuit-breaker
@@ -26,15 +26,31 @@ circuit-breaker check "ls /home"
 
 ## Why It Exists
 
-AI coding agents are becoming operating-system clients. They can run shell commands, edit source trees, invoke package managers, call MCP tools, and touch databases. That is useful, but it also means a bad plan, hallucinated command, prompt injection, or careless automation path can become a real destructive action.
+AI coding agents are becoming operating-system clients. They can run shell commands, edit source trees, invoke package managers, call MCP tools, and touch databases. That is useful, but it also means a bad plan, hallucinated command, prompt injection, conflicting instruction, or careless automation path can become a real destructive action.
 
 Agent Circuit Breaker adds a small deterministic control point before execution:
 
 - individuals get a daily safety check for local agent workflows.
 - teams get consistent policy for risky commands in repos and CI.
-- enterprises get approval routing, audit logs, signed policy packs, and a path to MCP interception.
+- enterprises get approval routing, audit logs, signed policy packs, run ledgers, and a path to MCP interception.
 
 This is not another chatbot wrapper. It is a pre-execution safety layer that your existing tools can call.
+
+## Long-Horizon Agent Safety
+
+Modern agent failures are not always visible in a single command. A long-running agent may follow a reasonable first step, drift from the user-approved goal, retry blocked actions, read sensitive files and later post data elsewhere, or choose an output channel that conflicts with the run instructions.
+
+Agent Circuit Breaker addresses that class of risk with trajectory evaluation:
+
+- declare a run contract with `goal`, `allowed_scopes`, `forbidden_targets`, and `allowed_outputs`.
+- evaluate an ordered action sequence with `circuit-breaker trajectory`.
+- enable stateful trajectory checks across MCP `tools/call` messages.
+- preserve review context through approvals and a local run ledger.
+- detect sequence-level risks such as secret read then egress, data export then upload, repeated blocked actions, and output-channel drift.
+
+This maps naturally to the safety questions raised by long-horizon model and agent deployments: not only "is this action dangerous?", but "is this run still inside the boundary the user or organization intended?"
+
+For readers evaluating tooling after OpenAI's discussion of [safety and alignment in an era of long-horizon models](https://openai.com/index/safety-alignment-long-horizon-models/), Agent Circuit Breaker is a practical local runtime control for the action layer: commands, MCP calls, SQL, filesystem operations, approvals, and run-level trajectory checks.
 
 ## What It Catches
 
@@ -275,6 +291,19 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
 
+## Common Use Cases
+
+- Add a deterministic guard before a coding agent runs shell commands.
+- Guard MCP servers by inspecting `tools/call` arguments before forwarding requests.
+- Route unknown or high-risk actions to human approval.
+- Keep local, tamper-evident audit and run-ledger records for agent actions.
+- Enforce repository, production, and data-handling boundaries with policy files.
+- Evaluate long-horizon agent runs for goal drift, output-channel drift, secret egress, and risky action sequences.
+
+## Related Topics
+
+Agent Circuit Breaker is relevant to searches and evaluations around AI agent safety, long-horizon model safety, agentic AI security, MCP security, runtime guardrails, AI coding agent safety, tool-use policy enforcement, deterministic agent controls, human-in-the-loop approvals, and local-first AI governance.
+
 Security references:
 
 - [Security model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/SECURITY_MODEL.md)
@@ -287,8 +316,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.4.2`
-- Test suite: 383 tests
+- Current version: `1.4.6`
+- Test suite: 404 tests
 - Runtime dependencies: none
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -312,7 +341,10 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
-- [v1.4.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.2.md)
+- [v1.4.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.6.md)
+- [v1.4.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.5.md)
+- [v1.4.4 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.4.md)
+- [v1.4.3 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.3.md)
 
 ## License
 
