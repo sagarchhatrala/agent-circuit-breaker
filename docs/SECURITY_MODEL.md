@@ -44,6 +44,8 @@ Trajectory mode evaluates an ordered list of proposed actions and adds determini
 
 Trajectory mode is still pre-execution analysis. It does not observe live operating-system side effects, prove that a secret was actually read, or prove that network egress occurred. Callers must send proposed actions in order and honor the aggregate trajectory verdict.
 
+The MCP proxy can opt in to trajectory evaluation with `--trajectory` or `--trajectory-policy`. In that mode, the proxy keeps in-memory state for one proxy process and evaluates string-valued `tools/call` arguments as a run sequence. This state is not persisted across proxy restarts unless the caller separately records audit events.
+
 ## Rule Ordering
 
 Built-in rules are evaluated before custom rules.

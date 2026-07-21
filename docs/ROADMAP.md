@@ -324,9 +324,19 @@ Implemented so far:
 - optional run contracts for goals, allowed scopes, forbidden targets, allowed outputs, blocked-attempt limits, and unknown-action limits.
 - trajectory findings for repeated blocked actions, output-channel drift, forbidden targets, scope violations, unknown-action volume, and secret-like reads followed by egress.
 
+### v1.4.4: Stateful MCP Trajectory Enforcement
+
+Status: released as `v1.4.4`.
+
+Implemented so far:
+
+- `circuit-breaker-mcp-proxy --trajectory`.
+- `circuit-breaker-mcp-proxy --trajectory-policy <path>`.
+- programmatic `MCPRunGuard`.
+- MCP JSON-RPC block metadata for trajectory verdicts and findings.
+
 ### Planned Patch Slices
 
-- `v1.4.4`: stateful MCP run enforcement using trajectory context.
 - `v1.4.5`: contextual approvals and replayable run ledger.
 - `v1.4.6`: broader data egress and secret-flow rules.
 - later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

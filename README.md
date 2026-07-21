@@ -134,6 +134,18 @@ Guard an MCP server over stdio:
 circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
 ```
 
+Enable stateful MCP trajectory checks across tool calls:
+
+```bash
+circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
+```
+
+Use a run-contract JSON file with the MCP proxy:
+
+```bash
+circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
+```
+
 Evaluate a long-running agent run from a JSON file:
 
 ```json
@@ -251,6 +263,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - HMAC-backed policy/rule-pack signatures for authenticity checks.
 - SARIF output for code scanning.
 - trajectory JSON evaluation for long-running agent runs and run-contract drift checks.
+- optional stateful MCP trajectory checks across multiple `tools/call` messages.
 
 Security references:
 

@@ -54,10 +54,12 @@ The current stable package includes:
 - stdio JSON-RPC MCP proxy that inspects all string-valued tool-call arguments.
 - HMAC-backed policy/rule-pack signatures for authenticity checks.
 - trajectory JSON evaluation for long-running agent run contracts.
+- optional stateful MCP trajectory enforcement across multiple tool calls.
 - trusted publishing workflow for TestPyPI and PyPI.
 
 ## Release Notes
 
+- [v1.4.4](releases/v1.4.4.md)
 - [v1.4.3](releases/v1.4.3.md)
 - [v1.4.2](releases/v1.4.2.md)
 - [v1.4.1](releases/v1.4.1.md)

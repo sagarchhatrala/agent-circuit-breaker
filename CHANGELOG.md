@@ -4,6 +4,19 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.4] - 2026-07-21
+
+### Added
+
+- Added optional stateful MCP trajectory enforcement through `circuit-breaker-mcp-proxy --trajectory`.
+- Added `--trajectory-policy <path>` for supplying an MCP run contract with trajectory fields such as `allowed_outputs`, `allowed_scopes`, and `forbidden_targets`.
+- Added programmatic `MCPRunGuard` support for integrations that want to keep trajectory state outside the stdio proxy.
+- Added MCP JSON-RPC error metadata for trajectory verdicts and trajectory finding IDs.
+
+### Compatibility
+
+- MCP proxy behavior remains stateless by default unless `--trajectory`, `--trajectory-policy`, or an explicit `MCPRunGuard` is used.
+
 ## [1.4.3] - 2026-07-21
 
 ### Added

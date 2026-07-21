@@ -150,3 +150,12 @@ Current trajectory finding IDs:
 - `traj_scope_violation`
 - `traj_output_channel_drift`
 - `traj_secret_then_egress`
+
+## MCP Trajectory Metadata
+
+When `circuit-breaker-mcp-proxy` is run with `--trajectory` or `--trajectory-policy`, blocked JSON-RPC error responses may include these extra `error.data` fields:
+
+- `trajectory_verdict`: aggregate trajectory verdict that contributed to the block.
+- `trajectory_finding`: first trajectory finding ID that contributed to the block.
+
+When trajectory mode is not enabled, MCP proxy responses remain stateless and these fields are `null` or absent depending on the response path.
