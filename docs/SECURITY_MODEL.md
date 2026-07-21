@@ -70,6 +70,8 @@ Policy files and external rule packs can include an embedded `signature` object.
 
 Default `check` behavior preserves `UNKNOWN` for unclassified actions. `--mode strict` converts `UNKNOWN` to `BLOCK` for fail-secure environments. `team` and `prod` profiles route `UNKNOWN` to `PENDING_APPROVAL`, making ambiguity visible to a human instead of silently passing through.
 
+Local approval records are an audit and review workflow by default. They are not a complete separation-of-duties control if the same agent process can run `circuit-breaker approvals approve <ID>`. To require a human-held token for approve/deny decisions, set `ACB_APPROVAL_TOKEN` outside the agent runtime and pass `--approval-token` when deciding an approval. In high-stakes environments, keep the approval decision path outside the agent's shell and tool authority.
+
 ## Fail-Closed Behavior
 
 The project intentionally treats these conditions as stop conditions:

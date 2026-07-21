@@ -3,6 +3,7 @@
 import sys
 import json
 import argparse
+import os
 from typing import Dict, Any, List, Optional
 
 from agent_circuit_breaker.engine import Engine, Decision
@@ -859,7 +860,12 @@ class CircuitBreakerCLI:
             )
         return "\n".join(lines)
 
-    def run_approvals_mode(self, action: str, approval_id: Optional[str] = None) -> int:
+    def run_approvals_mode(
+        self,
+        action: str,
+        approval_id: Optional[str] = None,
+        approval_token: Optional[str] = None,
+    ) -> int:
         """List, approve, or deny pending approval records."""
         store = ApprovalStore()
         try:
@@ -877,6 +883,10 @@ class CircuitBreakerCLI:
                 return 0
 
             if action in {"approve", "deny"} and approval_id:
+                expected_token = os.environ.get("ACB_APPROVAL_TOKEN")
+                if expected_token and approval_token != expected_token:
+                    print("Error: approval token required", file=sys.stderr)
+                    return 1
                 status = "approved" if action == "approve" else "denied"
                 record = store.decide(approval_id, status)
                 print(json.dumps(record, indent=2) if self.output_format == "json" else f"{approval_id}: {status}")
@@ -1007,6 +1017,7 @@ Options:
   --mode MODE             Policy mode: strict, advisory, approval
   --audit                 Append a tamper-evident audit entry
   --ledger                Append full trajectory results to the run ledger
+  --approval-token TOKEN  Token required when ACB_APPROVAL_TOKEN is configured
   --policy PATH_OR_URL    Load central policy before local CLI overrides
   --require-signature     Require policy/rule JSON signatures before loading
   --plugins               Load optional rule-provider plugins
@@ -1074,6 +1085,7 @@ def main() -> int:
     parser.add_argument("--mode", dest="mode", type=str, help="Policy mode")
     parser.add_argument("--audit", action="store_true", help="Append an audit entry")
     parser.add_argument("--ledger", action="store_true", help="Append full trajectory results to the run ledger")
+    parser.add_argument("--approval-token", help="Approval token required when ACB_APPROVAL_TOKEN is configured")
     parser.add_argument("--policy", dest="policy_path", type=str, help="Central policy file or URL")
     parser.add_argument("--require-signature", action="store_true", help="Require signed policy/rule JSON")
     parser.add_argument("--plugins", action="store_true", help="Load installed rule plugins")
@@ -1180,7 +1192,7 @@ def main() -> int:
 
             if args.command_parts[0] == "approvals" and len(args.command_parts) >= 2:
                 approval_id = args.command_parts[2] if len(args.command_parts) >= 3 else None
-                return cli.run_approvals_mode(args.command_parts[1], approval_id)
+                return cli.run_approvals_mode(args.command_parts[1], approval_id, approval_token=args.approval_token)
 
             if args.command_parts[0] == "plugins":
                 return cli.run_plugins_mode()

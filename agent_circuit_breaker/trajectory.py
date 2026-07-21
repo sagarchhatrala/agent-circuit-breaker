@@ -153,7 +153,7 @@ def _forbidden_target_findings(evaluations: List[Evaluation], policy: Trajectory
     for item in evaluations:
         normalized = _normalized_command(item)
         for target in policy.forbidden_targets:
-            if normalize_for_matching(target) in normalized:
+            if _matches_forbidden_target(normalized, target):
                 findings.append(
                     {
                         "id": "traj_forbidden_target",
@@ -179,10 +179,8 @@ def _allowed_scope_findings(evaluations: List[Evaluation], policy: TrajectoryPol
         if not isinstance(command, str) or not _is_write_like(command):
             continue
 
-        for path in _path_tokens(command):
+        for path in _write_target_tokens(command):
             normalized = _normalize_scope(path)
-            if _is_external_or_absolute(normalized):
-                continue
             if not any(normalized == scope.rstrip("/") or normalized.startswith(scope) for scope in allowed):
                 findings.append(
                     {
@@ -219,6 +217,19 @@ def _output_channel_findings(evaluations: List[Evaluation], policy: TrajectoryPo
                 }
             )
     return findings
+
+
+def _matches_forbidden_target(normalized_command: str, target: str) -> bool:
+    """Match forbidden targets on token/path boundaries, not arbitrary substrings."""
+    normalized_target = normalize_for_matching(target).strip()
+    if not normalized_target:
+        return False
+
+    if re.fullmatch(r"[a-z0-9_-]+", normalized_target):
+        pattern = rf"(?<![a-z0-9_-]){re.escape(normalized_target)}(?![a-z0-9_-])"
+        return re.search(pattern, normalized_command) is not None
+
+    return normalized_target in normalized_command
 
 
 def _secret_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
@@ -358,10 +369,14 @@ def _looks_like_egress(item: Evaluation) -> bool:
         "http ",
         "httpie ",
         "scp ",
+        "sftp ",
+        "ssh ",
         "rsync ",
         "nc ",
         "ncat ",
         "netcat ",
+        "socat ",
+        "telnet ",
         "ftp ",
         "rclone copy",
         "rclone sync",
@@ -379,7 +394,52 @@ def _looks_like_egress(item: Evaluation) -> bool:
         "http://",
         "https://",
     )
-    return any(pattern in command for pattern in egress_patterns)
+    searchable = f" {command}"
+    return any(pattern in searchable for pattern in egress_patterns) or _looks_like_custom_egress(command)
+
+
+def _looks_like_custom_egress(command: str) -> bool:
+    """Detect common custom-script egress shapes without treating all scripts as egress."""
+    tokens = _simple_tokens(command)
+    if not tokens:
+        return False
+
+    command_name = tokens[0]
+    args = tokens[1:]
+    runtimes = {
+        "python",
+        "python3",
+        "py",
+        "node",
+        "npm",
+        "npx",
+        "ruby",
+        "perl",
+        "php",
+        "go",
+        "java",
+        "bash",
+        "sh",
+        "pwsh",
+        "powershell",
+    }
+    egress_words = (
+        "upload",
+        "exfil",
+        "egress",
+        "send",
+        "post",
+        "webhook",
+        "callback",
+        "socket",
+        "http",
+        "client",
+    )
+    if command_name in runtimes and any(any(word in arg for word in egress_words) for arg in args):
+        return True
+
+    executable = command_name.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    return any(word in executable for word in egress_words)
 
 
 def _looks_like_data_export(item: Evaluation) -> bool:
@@ -484,14 +544,56 @@ def _is_write_like(command: str) -> bool:
         "edit ",
         "patch ",
         "git add",
+        "tee ",
+        "curl -o",
+        "curl --output",
+        "wget -o",
+        "wget --output-document",
+        "out-file",
+        "set-content",
+        "add-content",
     )
     return any(pattern in f" {normalized}" for pattern in write_patterns) or ">" in normalized
 
 
 def _path_tokens(command: str) -> List[str]:
     candidates = re.findall(r"(?<![\w:])([A-Za-z0-9_.\-/\\]+(?:\.[A-Za-z0-9_]+|/[A-Za-z0-9_.\-/\\]*|\\[A-Za-z0-9_.\-/\\]*))", command)
+    return _clean_path_tokens(candidates)
+
+
+def _write_target_tokens(command: str) -> List[str]:
+    """Return likely write destinations from a command."""
+    tokens = _simple_tokens(command)
+    lowered = [token.lower() for token in tokens]
+    targets: List[str] = []
+
+    for option in ("-o", "--output", "-output", "--output-document"):
+        for index, token in enumerate(lowered):
+            if token == option and index + 1 < len(tokens):
+                targets.append(tokens[index + 1])
+            elif token.startswith(f"{option}="):
+                targets.append(tokens[index].split("=", 1)[1])
+
+    if "tee" in lowered:
+        tee_index = lowered.index("tee")
+        for token in tokens[tee_index + 1 :]:
+            if not token.startswith("-"):
+                targets.append(token)
+
+    for index, token in enumerate(tokens):
+        if token in {">", ">>", "1>", "1>>", "2>", "2>>"} and index + 1 < len(tokens):
+            targets.append(tokens[index + 1])
+        elif token.startswith((">", ">>")) and len(token) > 1:
+            targets.append(token.lstrip(">"))
+
+    if targets:
+        return _clean_path_tokens(targets)
+    return _path_tokens(command)
+
+
+def _clean_path_tokens(candidates: List[str]) -> List[str]:
     ignored_prefixes = ("http://", "https://", "s3://")
-    paths = []
+    paths: List[str] = []
     for candidate in candidates:
         cleaned = candidate.strip("'\"")
         if not cleaned or cleaned.startswith("-") or cleaned.lower().startswith(ignored_prefixes):
@@ -500,6 +602,16 @@ def _path_tokens(command: str) -> List[str]:
             continue
         paths.append(cleaned)
     return paths
+
+
+def _simple_tokens(command: str) -> List[str]:
+    """Return shell-like tokens for lightweight trajectory heuristics."""
+    try:
+        import shlex
+
+        return shlex.split(command, posix=True)
+    except ValueError:
+        return command.split()
 
 
 def _normalize_scope(value: str) -> str:

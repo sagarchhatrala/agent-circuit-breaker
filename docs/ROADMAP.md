@@ -357,6 +357,18 @@ Implemented so far:
 - broader egress channel coverage.
 - broader sensitive-reference coverage.
 
+### v1.4.7: Trajectory Bypass Hardening
+
+Status: released as `v1.4.7`.
+
+Implemented so far:
+
+- custom-script and SSH-style egress detection after secret reads.
+- boundary-aware forbidden target matching.
+- `tee`, `curl -o`, and `wget -O` scope-violation detection.
+- optional approval-token gate for local approve/deny decisions.
+- documentation clarifying local approval trust boundaries.
+
 ### Planned Patch Slices
 
 - later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

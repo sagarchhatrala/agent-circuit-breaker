@@ -137,6 +137,13 @@ circuit-breaker check "rm -rf /" --profile team
 circuit-breaker approvals list
 ```
 
+Optionally require a human-held approval token for approve/deny decisions:
+
+```bash
+set ACB_APPROVAL_TOKEN=<human-held-token>
+circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+```
+
 Write a tamper-evident local audit trail:
 
 ```bash
@@ -290,6 +297,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - trajectory JSON evaluation for long-running agent runs and run-contract drift checks.
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
+- optional approval-token gate for local approval decisions.
 
 ## Common Use Cases
 
@@ -316,8 +324,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.4.6`
-- Test suite: 404 tests
+- Current version: `1.4.7`
+- Test suite: 410 tests
 - Runtime dependencies: none
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -341,6 +349,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.4.7 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.7.md)
 - [v1.4.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.6.md)
 - [v1.4.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.5.md)
 - [v1.4.4 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.4.md)

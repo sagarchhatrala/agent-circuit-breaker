@@ -181,6 +181,8 @@ For trajectory approvals, `context` contains:
 - `findings`: compact finding IDs, severities, indices, and reasons.
 - `recent_actions`: the last five action summaries.
 
+When `ACB_APPROVAL_TOKEN` is configured, CLI approve/deny operations require `--approval-token`. The token is not stored in approval records.
+
 ## Run Ledger
 
 `circuit-breaker trajectory <run.json> --ledger` appends the full trajectory result to a local hash-chained JSONL ledger.

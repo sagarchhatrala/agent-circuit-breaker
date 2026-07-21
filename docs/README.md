@@ -58,10 +58,12 @@ The current stable package includes:
 - optional stateful MCP trajectory enforcement across multiple tool calls.
 - contextual trajectory approvals and replayable local run ledger.
 - deterministic trajectory findings for secret/data egress flows.
+- trajectory bypass hardening for egress, scope, and forbidden-target matching.
 - trusted publishing workflow for TestPyPI and PyPI.
 
 ## Release Notes
 
+- [v1.4.7](releases/v1.4.7.md)
 - [v1.4.6](releases/v1.4.6.md)
 - [v1.4.5](releases/v1.4.5.md)
 - [v1.4.4](releases/v1.4.4.md)

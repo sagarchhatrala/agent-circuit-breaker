@@ -97,6 +97,19 @@ circuit-breaker ledger --verify
 
 The run ledger is a local hash-chained JSONL file. It is useful for debugging, review, and lightweight governance. It is not a remote telemetry system.
 
+## Approval Boundary
+
+Local approvals are useful for review queues and audit trails. They are not a complete separation-of-duties mechanism if the same agent process can run the approval command.
+
+For a stronger local gate, configure an approval token outside the agent runtime:
+
+```bash
+set ACB_APPROVAL_TOKEN=<human-held-token>
+circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+```
+
+For high-stakes environments, keep the approval decision path outside the agent's shell/tool authority.
+
 ## Design Boundaries
 
 Agent Circuit Breaker is deterministic and local-first.

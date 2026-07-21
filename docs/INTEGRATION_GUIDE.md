@@ -84,6 +84,15 @@ circuit-breaker trajectory ./agent-run.json --ledger
 circuit-breaker ledger <RUN_ID>
 ```
 
+When approvals are used in an agent-accessible shell, configure the approval decision path separately. A local token gate can be enabled with `ACB_APPROVAL_TOKEN`:
+
+```bash
+set ACB_APPROVAL_TOKEN=<human-held-token>
+circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+```
+
+For stronger separation of duties, run approval decisions outside the agent runtime entirely.
+
 Python integrations can call:
 
 ```python

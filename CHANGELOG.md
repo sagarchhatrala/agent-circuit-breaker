@@ -4,6 +4,24 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.7] - 2026-07-21
+
+### Fixed
+
+- Fixed trajectory secret-egress bypasses for unlisted but common egress shapes such as `ssh` and custom upload/exfil scripts.
+- Fixed `forbidden_targets` false positives caused by unanchored substring matching, such as `main` matching `domain` or `maintenance`.
+- Fixed trajectory scope enforcement misses for common write patterns such as `tee`, `curl -o`, and `wget -O`.
+- Fixed scope checking blind spot where absolute paths were skipped instead of treated as outside relative allowed scopes.
+
+### Added
+
+- Added optional `ACB_APPROVAL_TOKEN` / `--approval-token` gate for local approval decisions.
+- Added adversarial regressions for the reported long-horizon bypass cases.
+
+### Changed
+
+- Documentation now clarifies that local approvals are an audit/review workflow unless the approval decision path is separated from the agent runtime.
+
 ## [1.4.6] - 2026-07-21
 
 ### Added
