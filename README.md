@@ -325,7 +325,7 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 ## Current Status
 
 - Current version: `1.4.7`
-- Test suite: 410 tests
+- Test suite: 413 tests
 - Runtime dependencies: none
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
