@@ -1,6 +1,6 @@
 # Pipeline Architecture
 
-`v1.4.9` adds a dependency-free async pipeline for integrations that want to evaluate full tool-call contexts instead of only command strings.
+`v1.4.9` added a dependency-free async pipeline for integrations that want to evaluate full tool-call contexts instead of only command strings. `v1.5.0` adds optional enterprise integrations around that core while keeping the default install dependency-free.
 
 The existing CLI, `evaluate_action(...)`, and `evaluate_trajectory(...)` APIs remain supported. The pipeline is additive.
 
@@ -10,9 +10,9 @@ The existing CLI, `evaluate_action(...)`, and `evaluate_trajectory(...)` APIs re
 agent_circuit_breaker/
   core/              # AgentContext, GuardResult, PipelineEngine, SDK facade
   interfaces/        # Guard, state store, hook, and exporter Protocol contracts
-  state/             # InMemoryStore, SQLiteStore, StateManager
+  state/             # InMemoryStore, SQLiteStore, optional RedisStore, StateManager
   guards/            # Shell, filesystem, network, package, and loop guards
-  observability/     # dependency-free event bus and logging exporter
+  observability/     # event bus, logging exporter, optional OTel/Prometheus exporters
 ```
 
 ## Context And Results
@@ -66,13 +66,25 @@ result = await breaker.evaluate_tool_call(
 - `ContextWindowBreaker`: performs a fast dependency-free token estimate before LLM payload submission.
 - `HaltingHeuristicGuard`: denies excessive tool-call volume without a progress signal.
 
-`PackageInstallGuard` evaluates the command that the agent is about to run. Full transitive dependency enforcement requires a lockfile, package-manager dry run, or integration-supplied dependency list because core intentionally does not contact package registries.
+`PackageInstallGuard` evaluates the command that the agent is about to run. Full transitive dependency enforcement requires a lockfile, package-manager dry run, or integration-supplied dependency list because core intentionally does not contact package registries. In `v1.5.0`, callers can provide `resolved_dependencies`, `dependencies`, or a lockfile path so the guard can enforce transitive allowlists deterministically.
 
 ## State Stores
 
 `InMemoryStore` is intended for tests and single-process local use.
 
-`SQLiteStore` persists state locally and uses SQLite transactions for atomic transitions. Redis is intentionally not included in core because this package keeps runtime dependencies at zero.
+`SQLiteStore` persists state locally and uses SQLite transactions for atomic transitions.
+
+`RedisStore` is available through the optional `redis` extra and uses a Lua script for atomic transitions:
+
+```bash
+python -m pip install "agent-circuit-breaker[redis]"
+```
+
+```python
+from agent_circuit_breaker.state import RedisStore, StateManager
+
+state_manager = StateManager(RedisStore("redis://localhost:6379/0"))
+```
 
 ## File Writes
 
@@ -95,4 +107,28 @@ The pipeline emits dependency-free events:
 - `GuardDenied`
 - `PipelineCompleted`
 
-`LoggingExporter` is included. OTel and Prometheus exporters are intentionally not included in this patch to preserve zero runtime dependencies.
+`LoggingExporter` is included in the default install. `OTelExporter` and `PrometheusExporter` are optional extras:
+
+```bash
+python -m pip install "agent-circuit-breaker[otel]"
+python -m pip install "agent-circuit-breaker[prometheus]"
+```
+
+```python
+from agent_circuit_breaker.observability import EventBus, PrometheusExporter
+
+event_bus = EventBus((PrometheusExporter(),))
+```
+
+## Benchmarking
+
+`benchmark_pipeline(...)` measures caller-owned workloads without hard-coding a universal latency claim:
+
+```python
+from agent_circuit_breaker import AgentContext, PipelineEngine, benchmark_pipeline
+
+summary = await benchmark_pipeline(
+    PipelineEngine([]),
+    lambda index: AgentContext(f"req-{index}", "agent", "shell", {"command": "git status"}),
+)
+```

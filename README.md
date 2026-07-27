@@ -82,10 +82,19 @@ Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask 
 python -m pip install agent-circuit-breaker
 ```
 
+Optional enterprise integrations:
+
+```bash
+python -m pip install "agent-circuit-breaker[redis]"
+python -m pip install "agent-circuit-breaker[otel]"
+python -m pip install "agent-circuit-breaker[prometheus]"
+python -m pip install "agent-circuit-breaker[enterprise]"
+```
+
 Requirements:
 
 - Python 3.11+
-- No runtime dependencies
+- No runtime dependencies for the default install
 
 Package pages:
 
@@ -234,6 +243,19 @@ result = breaker.evaluate_tool_call_sync(
 assert not result.allowed
 ```
 
+Optional distributed state and exporters:
+
+```python
+from agent_circuit_breaker import AgentCircuitBreaker
+from agent_circuit_breaker.observability import EventBus, PrometheusExporter
+from agent_circuit_breaker.state import RedisStore, StateManager
+
+breaker = AgentCircuitBreaker(
+    state_manager=StateManager(RedisStore("redis://localhost:6379/0")),
+    event_bus=EventBus((PrometheusExporter(),)),
+)
+```
+
 The stable API and JSON fields are documented in:
 
 - [Public API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/API.md)
@@ -313,6 +335,10 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - trajectory JSON evaluation for long-running agent runs and run-contract drift checks.
 - async pipeline SDK with protocol-based guards.
 - in-memory and SQLite circuit state stores.
+- optional Redis circuit state store for distributed agent fleets.
+- optional OpenTelemetry and Prometheus pipeline event exporters.
+- pipeline benchmark helper for measuring integration overhead.
+- package-install policy for caller-supplied resolved dependency metadata and lockfiles.
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
@@ -343,9 +369,9 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.4.9`
-- Test suite: 435 tests
-- Runtime dependencies: none
+- Current version: `1.5.0`
+- Test suite: 442 tests
+- Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
 - Source: [github.com/sagarchhatrala/agent-circuit-breaker](https://github.com/sagarchhatrala/agent-circuit-breaker)
@@ -368,6 +394,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.5.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.0.md)
 - [v1.4.9 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.9.md)
 - [v1.4.8 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.8.md)
 - [v1.4.7 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.7.md)

@@ -4,6 +4,26 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.5.0] - 2026-07-28
+
+### Added
+
+- Added optional Redis-backed circuit state with atomic Lua-script transitions for distributed agent fleets.
+- Added optional OpenTelemetry and Prometheus exporters while keeping the default install dependency-free.
+- Added a `PipelineBenchmark` helper for measuring pipeline overhead in caller-owned workloads.
+- Added package-install policy support for resolved dependency metadata and lockfile inputs.
+
+### Changed
+
+- Pipeline guard scheduling now uses `asyncio.TaskGroup` with fail-fast cancellation when a guard denies.
+- Package metadata now exposes optional extras: `redis`, `otel`, `prometheus`, and `enterprise`.
+- Documentation now separates the dependency-free core from optional enterprise integrations.
+
+### Compatibility
+
+- The default install still has no runtime dependencies.
+- Pydantic DTOs, AST write blocking, and editor/filesystem write interception remain out of scope for this release.
+
 ## [1.4.9] - 2026-07-27
 
 ### Added

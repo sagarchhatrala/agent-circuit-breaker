@@ -393,6 +393,19 @@ Implemented so far:
 - deterministic guards for shell, filesystem, network egress, package install, loop breaking, and context-window checks.
 - dependency-free pipeline events and logging exporter.
 
+### v1.5.0: Optional Enterprise Pipeline Integrations
+
+Status: released as `v1.5.0`.
+
+Implemented so far:
+
+- `asyncio.TaskGroup` guard scheduling with fail-fast cancellation.
+- optional Redis-backed state store for distributed circuit state.
+- optional OpenTelemetry and Prometheus exporters.
+- benchmark helper for caller-owned pipeline overhead measurement.
+- package-install policy inputs for lockfiles and resolved dependency metadata.
+- optional extras that preserve a dependency-free default install.
+
 ### Planned Patch Slices
 
-- later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.
+- later `v1.5.x`: OWASP/NIST posture reporting and curated policy packs.

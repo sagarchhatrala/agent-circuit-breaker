@@ -8,7 +8,7 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.4.9",
+    version="1.5.0",
     description="Deterministic safety gate for AI coding agents",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -27,6 +27,12 @@ setup(
     packages=find_packages(exclude=("tests", "tests.*")),
     python_requires=">=3.11",
     install_requires=[],
+    extras_require={
+        "redis": ["redis>=5"],
+        "otel": ["opentelemetry-api>=1.25"],
+        "prometheus": ["prometheus-client>=0.20"],
+        "enterprise": ["redis>=5", "opentelemetry-api>=1.25", "prometheus-client>=0.20"],
+    },
     entry_points={
         "console_scripts": [
             "circuit-breaker=agent_circuit_breaker.cli:main",

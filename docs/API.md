@@ -137,6 +137,43 @@ result = await breaker.evaluate_tool_call(
 
 The SDK uses the dependency-free pipeline documented in [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md). Existing package-level APIs remain stable.
 
+## Optional Pipeline Integrations
+
+The default install has no runtime dependencies. Optional enterprise integrations are available through extras:
+
+```bash
+python -m pip install "agent-circuit-breaker[redis]"
+python -m pip install "agent-circuit-breaker[otel]"
+python -m pip install "agent-circuit-breaker[prometheus]"
+```
+
+Redis-backed state:
+
+```python
+from agent_circuit_breaker.state import RedisStore, StateManager
+
+state_manager = StateManager(RedisStore("redis://localhost:6379/0"))
+```
+
+Pipeline event exporters:
+
+```python
+from agent_circuit_breaker.observability import EventBus, OTelExporter
+
+event_bus = EventBus((OTelExporter(),))
+```
+
+Benchmark helper:
+
+```python
+from agent_circuit_breaker import AgentContext, PipelineEngine, benchmark_pipeline
+
+summary = await benchmark_pipeline(
+    PipelineEngine([]),
+    lambda index: AgentContext(f"req-{index}", "agent", "shell", {"command": "git status"}),
+)
+```
+
 ## Stability
 
 The public API became stable at v1.0. Compatible v1.x releases may add result fields, built-in rules, docs, and examples without changing the meaning of existing fields or the external rule schema version.

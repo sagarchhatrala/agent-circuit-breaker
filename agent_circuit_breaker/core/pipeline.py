@@ -48,38 +48,36 @@ class PipelineEngine:
         if not self.guards:
             return PipelineResult(UNKNOWN, context.request_id, ())
 
-        tasks = {asyncio.create_task(self._run_guard(guard, context)): guard for guard in self.guards}
+        queue: asyncio.Queue[tuple[GuardProtocol, GuardResult]] = asyncio.Queue()
+        tasks: List[asyncio.Task[None]] = []
         results: List[GuardResult] = []
-        try:
-            while tasks:
-                done, pending = await asyncio.wait(tasks.keys(), return_when=asyncio.FIRST_COMPLETED)
-                for task in done:
-                    guard = tasks.pop(task)
-                    try:
-                        result = task.result()
-                    except Exception as exc:
-                        result = GuardResult.deny(
-                            getattr(guard, "guard_id", guard.__class__.__name__),
-                            f"guard raised {exc.__class__.__name__}",
-                            severity="CRITICAL",
-                        )
-                    results.append(result)
-                    if result.verdict == DENY:
-                        for pending_task in pending:
-                            pending_task.cancel()
-                        await asyncio.gather(*pending, return_exceptions=True)
-                        self._emit(
-                            "GuardDenied",
-                            context,
-                            {"guard_id": result.guard_id, "reason": result.reason},
-                        )
-                        return PipelineResult(DENY, context.request_id, tuple(results), result.guard_id, result.reason)
-            verdict = ALLOW if any(result.verdict == ALLOW for result in results) else UNKNOWN
-            return PipelineResult(verdict, context.request_id, tuple(results))
-        finally:
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
+
+        async def run_and_report(guard: GuardProtocol) -> None:
+            result = await self._run_guard(guard, context)
+            await queue.put((guard, result))
+
+        async with asyncio.TaskGroup() as task_group:
+            for guard in self.guards:
+                tasks.append(task_group.create_task(run_and_report(guard)))
+
+            remaining = len(tasks)
+            while remaining:
+                _guard, result = await queue.get()
+                remaining -= 1
+                results.append(result)
+                if result.verdict == DENY:
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    self._emit(
+                        "GuardDenied",
+                        context,
+                        {"guard_id": result.guard_id, "reason": result.reason},
+                    )
+                    return PipelineResult(DENY, context.request_id, tuple(results), result.guard_id, result.reason)
+
+        verdict = ALLOW if any(result.verdict == ALLOW for result in results) else UNKNOWN
+        return PipelineResult(verdict, context.request_id, tuple(results))
 
     @staticmethod
     async def _run_guard(guard: GuardProtocol, context: AgentContext) -> GuardResult:
