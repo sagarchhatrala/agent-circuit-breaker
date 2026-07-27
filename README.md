@@ -45,6 +45,7 @@ Agent Circuit Breaker addresses that class of risk with trajectory evaluation:
 - declare a run contract with `goal`, `allowed_scopes`, `forbidden_targets`, and `allowed_outputs`.
 - evaluate an ordered action sequence with `circuit-breaker trajectory`.
 - enable stateful trajectory checks across MCP `tools/call` messages.
+- route full tool-call contexts through the async `AgentCircuitBreaker` pipeline SDK.
 - preserve review context through approvals and a local run ledger.
 - detect sequence-level risks such as secret read then egress, data export then upload, repeated blocked actions, and output-channel drift.
 
@@ -63,6 +64,7 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - destructive SQL: `DROP TABLE`, `DROP DATABASE`, `TRUNCATE`, unqualified `DELETE`/`UPDATE`, and tautological `WHERE 1=1` variants.
 - MCP tool calls: stdio JSON-RPC proxy inspection for string-valued `tools/call` arguments, including arbitrary schema field names.
 - long-running agent trajectories: repeated blocked actions, forbidden target references, outbound output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
+- pipeline SDK guardrails: shell operators, filesystem path policy, private-network egress, package install policy, repeated tool-call sequences, context-window limits, and tool-call volume.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
@@ -218,6 +220,20 @@ result = evaluate_trajectory(
 assert result["verdict"] == "block"
 ```
 
+Pipeline SDK:
+
+```python
+from agent_circuit_breaker import AgentCircuitBreaker
+
+breaker = AgentCircuitBreaker(max_context_tokens=120000)
+result = breaker.evaluate_tool_call_sync(
+    tool_name="shell",
+    tool_args={"command": "rm -rf /"},
+)
+
+assert not result.allowed
+```
+
 The stable API and JSON fields are documented in:
 
 - [Public API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/API.md)
@@ -295,6 +311,8 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - HMAC-backed policy/rule-pack signatures for authenticity checks.
 - SARIF output for code scanning.
 - trajectory JSON evaluation for long-running agent runs and run-contract drift checks.
+- async pipeline SDK with protocol-based guards.
+- in-memory and SQLite circuit state stores.
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
@@ -325,8 +343,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.4.8`
-- Test suite: 420 tests
+- Current version: `1.4.9`
+- Test suite: 435 tests
 - Runtime dependencies: none
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -350,6 +368,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.4.9 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.9.md)
 - [v1.4.8 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.8.md)
 - [v1.4.7 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.7.md)
 - [v1.4.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.6.md)

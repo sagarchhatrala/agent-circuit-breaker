@@ -1,14 +1,20 @@
 """Agent Circuit Breaker - Local-first safety runtime for AI agents."""
 
-__version__ = "1.4.8"
+__version__ = "1.4.9"
 __author__ = "Sagar Chhatrala"
 
 from .engine import Engine, Decision, Rule
+from .core import AgentCircuitBreaker, AgentContext, GuardResult, PipelineEngine, PipelineResult
 
 __all__ = [
     "Engine",
     "Decision",
     "Rule",
+    "AgentCircuitBreaker",
+    "AgentContext",
+    "GuardResult",
+    "PipelineEngine",
+    "PipelineResult",
     "evaluate_action",
     "evaluate_trajectory",
     "rule_schema_metadata",

@@ -11,6 +11,7 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 - [LONG_HORIZON_AGENT_SAFETY.md](LONG_HORIZON_AGENT_SAFETY.md)
 - [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md)
 - [API.md](API.md)
+- [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md)
 
 ## Policy And Rules
 
@@ -60,9 +61,11 @@ The current stable package includes:
 - deterministic trajectory findings for secret/data egress flows.
 - trajectory bypass hardening for egress, scope, and forbidden-target matching.
 - trusted publishing workflow that runs TestPyPI before PyPI on releases.
+- dependency-free async pipeline SDK with protocol-based guards and local state stores.
 
 ## Release Notes
 
+- [v1.4.9](releases/v1.4.9.md)
 - [v1.4.8](releases/v1.4.8.md)
 - [v1.4.7](releases/v1.4.7.md)
 - [v1.4.6](releases/v1.4.6.md)

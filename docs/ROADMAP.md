@@ -380,6 +380,19 @@ Implemented so far:
 - approval record warning metadata when no approval token is configured.
 - release workflow sequencing through TestPyPI before PyPI.
 
+### v1.4.9: Dependency-Free Pipeline Architecture
+
+Status: released as `v1.4.9`.
+
+Implemented so far:
+
+- async `PipelineEngine` and immutable tool-call context DTOs.
+- guard/state/hook/exporter protocol contracts.
+- `AgentCircuitBreaker` SDK facade.
+- in-memory and SQLite state stores.
+- deterministic guards for shell, filesystem, network egress, package install, loop breaking, and context-window checks.
+- dependency-free pipeline events and logging exporter.
+
 ### Planned Patch Slices
 
 - later `v1.4.x`: OWASP/NIST posture reporting and curated policy packs.

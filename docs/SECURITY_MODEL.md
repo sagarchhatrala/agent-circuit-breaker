@@ -98,6 +98,10 @@ Agent Circuit Breaker does not by default:
 
 It fetches a remote policy only when the caller explicitly supplies an `http://` or `https://` policy URL.
 
+## Pipeline SDK Boundary
+
+The pipeline SDK can validate proposed file writes when integrations route those writes through `AgentCircuitBreaker`, for example as a `filesystem` tool call with a `path` and `operation`. It does not intercept arbitrary editor, shell, or operating-system writes by itself. Blocking writes before they reach disk requires an editor integration, MCP/filesystem proxy, or OS sandbox.
+
 ## Explicit Non-Goals
 
 Agent Circuit Breaker is not:

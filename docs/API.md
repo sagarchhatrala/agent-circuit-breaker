@@ -108,6 +108,35 @@ verification = ledger.verify()
 
 The ledger is local-only. Set `ACB_RUN_LEDGER` or pass an explicit path to control where entries are written.
 
+## `AgentCircuitBreaker(...)`
+
+Creates the async pipeline SDK facade for tool-call-level checks.
+
+```python
+from agent_circuit_breaker import AgentCircuitBreaker
+
+breaker = AgentCircuitBreaker(max_context_tokens=120000)
+
+result = breaker.evaluate_tool_call_sync(
+    tool_name="shell",
+    tool_args={"command": "rm -rf /"},
+    agent_id="local-agent",
+)
+
+assert not result.allowed
+```
+
+Async integrations should call:
+
+```python
+result = await breaker.evaluate_tool_call(
+    tool_name="filesystem",
+    tool_args={"path": "scripts/install.sh", "operation": "write"},
+)
+```
+
+The SDK uses the dependency-free pipeline documented in [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md). Existing package-level APIs remain stable.
+
 ## Stability
 
 The public API became stable at v1.0. Compatible v1.x releases may add result fields, built-in rules, docs, and examples without changing the meaning of existing fields or the external rule schema version.

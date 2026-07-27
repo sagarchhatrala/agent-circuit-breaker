@@ -4,6 +4,29 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.4.9] - 2026-07-27
+
+### Added
+
+- Added a dependency-free async `PipelineEngine` for concurrent guard evaluation with fail-closed aggregation.
+- Added immutable `AgentContext`, `GuardResult`, and `PipelineResult` DTOs using stdlib dataclasses.
+- Added protocol contracts for guards, state stores, hooks, and exporters.
+- Added `AgentCircuitBreaker` SDK facade with async and outer-layer sync APIs.
+- Added `StateManager`, `InMemoryStore`, and SQLite-backed persistent circuit state.
+- Added deterministic pipeline guards for shell commands, filesystem path policy, network egress/SSRF, package installs, sequence repetition, context-window limits, and tool-call volume.
+- Added a legacy guard that bridges the existing battle-tested evaluator into the new pipeline.
+- Added dependency-free pipeline events and a logging exporter.
+
+### Changed
+
+- Package exports now include the pipeline SDK primitives while preserving existing `evaluate_action` and `evaluate_trajectory` behavior.
+- Documentation now separates SDK-routed file-write validation from OS-level write interception, which remains out of scope without sandboxing or a filesystem proxy.
+
+### Compatibility
+
+- No runtime dependencies were added.
+- Redis, OTel, Prometheus, and AST write blocking were intentionally not added to this patch.
+
 ## [1.4.8] - 2026-07-21
 
 ### Fixed
