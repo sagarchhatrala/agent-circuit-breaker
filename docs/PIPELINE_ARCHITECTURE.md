@@ -26,6 +26,8 @@ agent_circuit_breaker/
 - `span_links`
 - optional `circuit_id`
 
+Tool schemas are caller-defined, so the pipeline does not depend on fixed argument names. `AgentContext.string_values()` recursively exposes every nested string-valued argument, and `action_text()` combines those strings for guards that evaluate action text.
+
 `GuardResult` returns `allow`, `deny`, or `unknown`. A guard should return `unknown` when the context is outside its domain. The pipeline denies immediately when any guard denies, allows when at least one guard allows and no guard denies, and returns `unknown` when no guard applies.
 
 If a guard raises an exception, the pipeline converts it to `deny`.
@@ -67,6 +69,8 @@ result = await breaker.evaluate_tool_call(
 - `HaltingHeuristicGuard`: denies excessive tool-call volume without a progress signal.
 
 `PackageInstallGuard` evaluates the command that the agent is about to run. Full transitive dependency enforcement requires a lockfile, package-manager dry run, or integration-supplied dependency list because core intentionally does not contact package registries. In `v1.5.0`, callers can provide `resolved_dependencies`, `dependencies`, or a lockfile path so the guard can enforce transitive allowlists deterministically.
+
+`NetworkEgressGuard` does not perform live DNS resolution. It blocks literal private/internal IP targets and configured metadata hosts without creating outbound DNS side effects during evaluation.
 
 ## State Stores
 

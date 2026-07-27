@@ -4,6 +4,21 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.5.1] - 2026-07-28
+
+### Fixed
+
+- Fixed a pipeline SDK bypass where guards only inspected conventional argument keys such as `command`, `path`, or `url`.
+- `AgentContext.action_text()` now includes all nested string-valued tool arguments, regardless of schema field name.
+- Filesystem and network guards now inspect arbitrary string-valued arguments for path and endpoint shapes.
+- `NetworkEgressGuard` no longer performs live DNS resolution during evaluation.
+- Approval records no longer reset a prior `approved` or `denied` decision back to `pending` when the same action is evaluated again.
+
+### Compatibility
+
+- The default install remains dependency-free and local-first.
+- Hostname-based private-network detection is intentionally DNS-free; literal private IPs, loopback, link-local, reserved, multicast, unspecified, and configured metadata hosts remain blocked.
+
 ## [1.5.0] - 2026-07-28
 
 ### Added

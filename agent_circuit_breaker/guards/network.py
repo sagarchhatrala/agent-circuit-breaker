@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ipaddress
-import socket
 from typing import Iterable
 from urllib.parse import urlparse
 
@@ -45,6 +44,9 @@ def _urls_from_context(context: AgentContext) -> list[str]:
     urls = context.tool_args.get("urls")
     if isinstance(urls, list):
         return [str(url) for url in urls]
+    shaped_urls = [value for value in context.string_values() if _looks_like_url_or_host(value)]
+    if shaped_urls:
+        return shaped_urls
     command = context.action_text()
     if not command:
         return []
@@ -59,10 +61,7 @@ def _host_is_private(host: str) -> bool:
     try:
         addresses = [ipaddress.ip_address(host)]
     except ValueError:
-        try:
-            addresses = [ipaddress.ip_address(item[4][0]) for item in socket.getaddrinfo(host, None)]
-        except (OSError, ValueError):
-            return False
+        return False
     return any(
         address.is_private
         or address.is_loopback
@@ -72,3 +71,13 @@ def _host_is_private(host: str) -> bool:
         or address.is_unspecified
         for address in addresses
     )
+
+
+def _looks_like_url_or_host(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped or any(char.isspace() for char in stripped):
+        return False
+    if "://" in stripped:
+        return True
+    candidate = stripped.split("/", 1)[0].split(":", 1)[0]
+    return "." in candidate

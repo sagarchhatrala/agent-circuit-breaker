@@ -406,6 +406,17 @@ Implemented so far:
 - package-install policy inputs for lockfiles and resolved dependency metadata.
 - optional extras that preserve a dependency-free default install.
 
+### v1.5.1: Pipeline SDK Bypass And DNS Side-Channel Fixes
+
+Status: released as `v1.5.1`.
+
+Implemented so far:
+
+- recursive SDK inspection of all nested string-valued tool arguments.
+- arbitrary-key coverage for shell command, filesystem path, and network endpoint shapes.
+- DNS-free network egress evaluation to preserve local-first behavior.
+- approval records preserve prior approve/deny decisions on duplicate approval creation.
+
 ### Planned Patch Slices
 
 - later `v1.5.x`: OWASP/NIST posture reporting and curated policy packs.

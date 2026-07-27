@@ -158,6 +158,18 @@ class TestV13ApprovalsAndMCP(unittest.TestCase):
 
         self.assertEqual(decided["status"], "approved")
 
+    def test_approval_store_preserves_decision_on_duplicate_create(self):
+        cli = CircuitBreakerCLI()
+        result = cli.evaluate_command("rm -rf /var/lib/data", profile_name="team")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = ApprovalStore(temp_dir)
+            record = store.create(result)
+            denied = store.decide(record["id"], "denied")
+            recreated = store.create(result)
+
+        self.assertEqual(recreated["status"], "denied")
+        self.assertEqual(recreated["decided_at"], denied["decided_at"])
+
     def test_mcp_proxy_scaffold_blocks_command_field(self):
         result = inspect_payload({"command": "rm -rf /"})
 

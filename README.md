@@ -65,6 +65,7 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - MCP tool calls: stdio JSON-RPC proxy inspection for string-valued `tools/call` arguments, including arbitrary schema field names.
 - long-running agent trajectories: repeated blocked actions, forbidden target references, outbound output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
 - pipeline SDK guardrails: shell operators, filesystem path policy, private-network egress, package install policy, repeated tool-call sequences, context-window limits, and tool-call volume.
+- pipeline SDK recursive argument inspection across arbitrary tool schema field names.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
@@ -369,8 +370,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.5.0`
-- Test suite: 442 tests
+- Current version: `1.5.1`
+- Test suite: 447 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -394,6 +395,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.5.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.1.md)
 - [v1.5.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.0.md)
 - [v1.4.9 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.9.md)
 - [v1.4.8 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.8.md)

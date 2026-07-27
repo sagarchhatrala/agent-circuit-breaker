@@ -22,6 +22,7 @@ class FilesystemGuard:
         *,
         allowed_extensions: Iterable[str] | None = None,
         blocked_extensions: Iterable[str] | None = None,
+        protected_write_roots: Iterable[str] | None = None,
     ) -> None:
         self.permissions = {
             os.path.realpath(path): {perm.lower() for perm in perms}
@@ -29,6 +30,10 @@ class FilesystemGuard:
         }
         self.allowed_extensions = _normalize_extensions(allowed_extensions)
         self.blocked_extensions = _normalize_extensions(blocked_extensions or {".sh", ".ps1", ".bat", ".cmd"})
+        self.protected_write_roots = tuple(
+            os.path.realpath(path)
+            for path in (protected_write_roots or {"/bin", "/boot", "/dev", "/etc", "/proc", "/root", "/sbin", "/sys", "/usr", "/var"})
+        )
 
     async def evaluate(self, context: AgentContext) -> GuardResult:
         paths = _paths_from_context(context)
@@ -43,6 +48,13 @@ class FilesystemGuard:
                 return GuardResult.deny(self.guard_id, f"file extension {extension} is quarantined", "HIGH")
             if self.allowed_extensions and extension and extension not in self.allowed_extensions:
                 return GuardResult.deny(self.guard_id, f"file extension {extension} is not allowlisted", "MEDIUM")
+            if operation == "write" and _is_protected_path(canonical, self.protected_write_roots):
+                return GuardResult.deny(
+                    self.guard_id,
+                    f"write is not permitted for protected path {canonical}",
+                    "CRITICAL",
+                    {"path": canonical, "operation": operation},
+                )
             if self.permissions and not self._is_permitted(canonical, operation):
                 return GuardResult.deny(
                     self.guard_id,
@@ -68,6 +80,10 @@ def _paths_from_context(context: AgentContext) -> list[str]:
     if isinstance(raw_path, str):
         return [raw_path]
 
+    shaped_paths = [value for value in context.string_values() if _looks_like_path(value)]
+    if shaped_paths:
+        return shaped_paths
+
     command = context.action_text()
     if not command:
         return []
@@ -79,6 +95,9 @@ def _operation_from_context(context: AgentContext) -> str:
     value = context.tool_args.get("operation")
     if isinstance(value, str):
         return value.lower()
+    tool_name = context.tool_name.lower()
+    if any(token in tool_name for token in ("write", "save", "create", "upload", "delete", "remove", "patch")):
+        return "write"
     command = context.action_text()
     if command:
         operation = FilesystemInspector.analyze_operation(command).get("operation")
@@ -89,3 +108,19 @@ def _operation_from_context(context: AgentContext) -> str:
 
 def _normalize_extensions(values: Iterable[str] | None) -> set[str]:
     return {value.lower() if value.startswith(".") else f".{value.lower()}" for value in values or ()}
+
+
+def _looks_like_path(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped or any(char.isspace() for char in stripped):
+        return False
+    return (
+        stripped.startswith(("/", "\\", "~", "./", "../"))
+        or ":\\" in stripped
+        or "/" in stripped
+        or "\\" in stripped
+    )
+
+
+def _is_protected_path(canonical: str, roots: tuple[str, ...]) -> bool:
+    return any(canonical == root or canonical.startswith(root + os.sep) for root in roots)

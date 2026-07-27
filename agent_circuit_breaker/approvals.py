@@ -26,6 +26,9 @@ class ApprovalStore:
         """Create a pending approval record for a result."""
         self.directory.mkdir(parents=True, exist_ok=True)
         approval_id = self._approval_id(result)
+        path = self._path(approval_id)
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
         record = {
             "id": approval_id,
             "status": "pending",
@@ -35,7 +38,7 @@ class ApprovalStore:
             "context": context if context is not None else approval_context(result),
             "result": result,
         }
-        self._path(approval_id).write_text(json.dumps(record, indent=2), encoding="utf-8")
+        path.write_text(json.dumps(record, indent=2), encoding="utf-8")
         return record
 
     def list(self) -> List[Dict[str, Any]]:

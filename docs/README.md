@@ -64,9 +64,11 @@ The current stable package includes:
 - dependency-free async pipeline SDK with protocol-based guards and local state stores.
 - optional Redis, OpenTelemetry, and Prometheus integrations for enterprise deployments.
 - pipeline benchmark helper and lockfile/resolved-dependency package policy inputs.
+- recursive pipeline SDK inspection for arbitrary tool schema string fields.
 
 ## Release Notes
 
+- [v1.5.1](releases/v1.5.1.md)
 - [v1.5.0](releases/v1.5.0.md)
 - [v1.4.9](releases/v1.4.9.md)
 - [v1.4.8](releases/v1.4.8.md)

@@ -20,12 +20,26 @@ class AgentContext:
     circuit_id: Optional[str] = None
 
     def action_text(self) -> str:
-        """Return the most likely action string from tool arguments."""
+        """Return all inspectable string argument values.
+
+        Tool schemas are caller-defined, so safety checks must not depend on a
+        small set of conventional argument names such as ``command`` or
+        ``url``. Prefer common action keys first for backwards-compatible
+        display behavior, then include every other nested string value.
+        """
+        values: list[str] = []
         for key in ("command", "cmd", "input", "query", "script", "path", "url", "payload"):
             value = self.tool_args.get(key)
             if isinstance(value, str):
-                return value
-        return ""
+                values.append(value)
+        for value in self.string_values():
+            if value not in values:
+                values.append(value)
+        return "\n".join(values)
+
+    def string_values(self) -> Tuple[str, ...]:
+        """Return all nested string values from tool arguments."""
+        return tuple(_string_values(self.tool_args))
 
     def state_key(self) -> str:
         """Return the state circuit key for this context."""
@@ -51,3 +65,14 @@ def context_scope(context: AgentContext) -> Iterator[None]:
         yield
     finally:
         _CURRENT_CONTEXT.reset(token)
+
+
+def _string_values(value: Any) -> Iterator[str]:
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, Mapping):
+        for item in value.values():
+            yield from _string_values(item)
+    elif isinstance(value, (list, tuple, set)):
+        for item in value:
+            yield from _string_values(item)
