@@ -5,6 +5,10 @@
 [![License](https://img.shields.io/github/license/sagarchhatrala/agent-circuit-breaker)](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/LICENSE)
 [![CI](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml/badge.svg)](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml)
 
+<p align="center">
+  <img src="docs/assets/agent-circuit-breaker-readme-hero.svg" alt="Agent Circuit Breaker deterministic safety gate for AI coding agents" width="100%">
+</p>
+
 **A local-first runtime safety gate for AI agents, MCP tools, and long-horizon coding workflows.**
 
 Agent Circuit Breaker checks shell commands, filesystem operations, SQL text, MCP tool-call arguments, and long-running agent trajectories before an agent executes or continues risky work. It gives agent workflows a deterministic stop point: `ALLOW`, `BLOCK`, `UNKNOWN`, `ERROR`, or `PENDING_APPROVAL`.

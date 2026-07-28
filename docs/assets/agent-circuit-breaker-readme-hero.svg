@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Agent Circuit Breaker README hero</title>
+  <desc id="desc">A deterministic safety gate for AI coding agents that checks shell, files, network, packages, MCP calls, and trajectories before execution.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.48" stop-color="#172554"/>
+      <stop offset="1" stop-color="#06281f"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#f8fafc" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="circuit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22c55e"/>
+      <stop offset="0.5" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#020617" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      .small { font: 500 24px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; fill: #cbd5e1; }
+      .tiny { font: 600 19px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; fill: #dbeafe; letter-spacing: 0; }
+      .label { font: 800 22px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; fill: #f8fafc; letter-spacing: 0; }
+      .title { font: 900 70px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; fill: #ffffff; letter-spacing: 0; }
+      .subtitle { font: 600 31px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; fill: #dbeafe; letter-spacing: 0; }
+      .mono { font: 700 26px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #e2e8f0; }
+      .mono-small { font: 700 18px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #cbd5e1; }
+      .pill { font: 800 18px Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif; fill: #f8fafc; letter-spacing: 0; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <path d="M0 732 C210 650 318 824 520 744 C760 648 850 842 1074 735 C1268 642 1392 694 1600 622 L1600 900 L0 900 Z" fill="#0f766e" opacity="0.22"/>
+  <path d="M0 166 C224 92 360 224 534 145 C753 45 898 204 1110 114 C1306 31 1433 79 1600 20 L1600 0 L0 0 Z" fill="#38bdf8" opacity="0.10"/>
+
+  <text x="90" y="96" class="pill">AGENT CIRCUIT BREAKER</text>
+  <text x="90" y="175" class="title">Stop risky agent actions</text>
+  <text x="90" y="225" class="subtitle">before they touch your shell, files, network, packages, or MCP tools.</text>
+
+  <g transform="translate(92 292)" filter="url(#shadow)">
+    <rect x="0" y="0" width="388" height="292" rx="18" fill="url(#panel)" stroke="#64748b" stroke-opacity="0.45"/>
+    <text x="32" y="50" class="label">AI coding agent</text>
+    <text x="32" y="94" class="small">Proposes a tool call</text>
+    <rect x="32" y="126" width="324" height="48" rx="10" fill="#020617" stroke="#334155"/>
+    <text x="54" y="158" class="mono-small">shell_line: rm -rf /</text>
+    <rect x="32" y="190" width="324" height="48" rx="10" fill="#020617" stroke="#334155"/>
+    <text x="54" y="222" class="mono-small">endpoint: 169.254...</text>
+    <text x="32" y="269" class="tiny">Schema names can vary. Risk cannot.</text>
+  </g>
+
+  <g transform="translate(604 252)" filter="url(#shadow)">
+    <rect x="0" y="0" width="392" height="372" rx="26" fill="#0f172a" stroke="url(#circuit)" stroke-width="3"/>
+    <text x="48" y="60" class="label">Deterministic pipeline</text>
+    <text x="48" y="100" class="small">No LLM judge. No guesswork.</text>
+    <g transform="translate(48 136)">
+      <rect x="0" y="0" width="132" height="46" rx="12" fill="#14532d"/>
+      <text x="24" y="31" class="pill">Shell</text>
+      <rect x="164" y="0" width="132" height="46" rx="12" fill="#075985"/>
+      <text x="186" y="31" class="pill">Files</text>
+      <rect x="0" y="66" width="132" height="46" rx="12" fill="#7c2d12"/>
+      <text x="20" y="97" class="pill">Network</text>
+      <rect x="164" y="66" width="132" height="46" rx="12" fill="#581c87"/>
+      <text x="190" y="97" class="pill">MCP</text>
+      <rect x="0" y="132" width="132" height="46" rx="12" fill="#854d0e"/>
+      <text x="18" y="163" class="pill">Packages</text>
+      <rect x="164" y="132" width="132" height="46" rx="12" fill="#164e63"/>
+      <text x="179" y="163" class="pill">Trajectory</text>
+    </g>
+    <path d="M58 314 H334" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="58" cy="314" r="9" fill="#22c55e"/>
+    <circle cx="150" cy="314" r="9" fill="#38bdf8"/>
+    <circle cx="242" cy="314" r="9" fill="#f59e0b"/>
+    <circle cx="334" cy="314" r="9" fill="#ef4444"/>
+  </g>
+
+  <path d="M496 438 H574" stroke="#93c5fd" stroke-width="7" stroke-linecap="round"/>
+  <path d="M558 414 L590 438 L558 462 Z" fill="#93c5fd"/>
+  <path d="M1018 438 H1096" stroke="#93c5fd" stroke-width="7" stroke-linecap="round"/>
+  <path d="M1080 414 L1112 438 L1080 462 Z" fill="#93c5fd"/>
+
+  <g transform="translate(1120 292)" filter="url(#shadow)">
+    <rect x="0" y="0" width="388" height="292" rx="18" fill="url(#panel)" stroke="#64748b" stroke-opacity="0.45"/>
+    <text x="32" y="50" class="label">Decision before execution</text>
+    <g transform="translate(32 86)">
+      <rect x="0" y="0" width="144" height="58" rx="14" fill="#166534"/>
+      <text x="33" y="38" class="label">ALLOW</text>
+      <rect x="180" y="0" width="144" height="58" rx="14" fill="#991b1b"/>
+      <text x="222" y="38" class="label">BLOCK</text>
+    </g>
+    <g transform="translate(32 168)">
+      <rect x="0" y="0" width="324" height="48" rx="10" fill="#020617" stroke="#334155"/>
+      <text x="24" y="31" class="mono-small">UNKNOWN -> strict/approval</text>
+      <rect x="0" y="64" width="324" height="48" rx="10" fill="#020617" stroke="#334155"/>
+      <text x="24" y="95" class="mono-small">Audit + ledger + policies</text>
+    </g>
+  </g>
+
+  <g transform="translate(92 684)">
+    <rect x="0" y="0" width="1416" height="96" rx="22" fill="#020617" fill-opacity="0.48" stroke="#334155"/>
+    <text x="40" y="41" class="mono">pip install agent-circuit-breaker</text>
+    <text x="40" y="74" class="small">Local-first runtime safety for AI agents: recursive argument inspection, fail-closed guards, approvals, and trajectory checks.</text>
+  </g>
+
+  <g transform="translate(92 814)">
+    <text x="0" y="0" class="tiny">DETERMINISTIC</text>
+    <circle cx="176" cy="-7" r="5" fill="#38bdf8"/>
+    <text x="204" y="0" class="tiny">LOCAL-FIRST</text>
+    <circle cx="352" cy="-7" r="5" fill="#22c55e"/>
+    <text x="380" y="0" class="tiny">FAIL-CLOSED</text>
+    <circle cx="528" cy="-7" r="5" fill="#f59e0b"/>
+    <text x="556" y="0" class="tiny">AUDITABLE</text>
+    <circle cx="690" cy="-7" r="5" fill="#ef4444"/>
+    <text x="718" y="0" class="tiny">MCP READY</text>
+  </g>
+</svg>
