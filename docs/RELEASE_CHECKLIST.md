@@ -43,6 +43,8 @@ python -m agent_circuit_breaker.cli check "DROP TABLE users"
 python -m agent_circuit_breaker.cli check "mkdir /tmp/example"
 python -m agent_circuit_breaker.cli validate-rules docs/examples/rules/custom_deploy_guard.json
 python -m agent_circuit_breaker.cli validate-rules docs/examples/rules/multi_rule_guard.json
+python -m agent_circuit_breaker.cli schemas rule-file
+python -m agent_circuit_breaker.cli catalog --format json
 ```
 
 Expected:
@@ -50,6 +52,7 @@ Expected:
 - destructive examples return `BLOCK`.
 - `mkdir /tmp/example` returns `ALLOW`.
 - valid rule files return `Valid: TRUE`.
+- schema and catalog commands return JSON.
 
 ## Python API Smokes
 

@@ -4,6 +4,23 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.5.2] - 2026-07-31
+
+### Added
+
+- Added versioned JSON schema artifacts and `circuit-breaker schemas [NAME]`.
+- Added fixture-based custom rule tests with `circuit-breaker rules test <PATH>`.
+- Added generated built-in rule catalog output with `circuit-breaker catalog`.
+- Added architecture boundary tests for core package isolation.
+- Added explicit resource limits for command text, rule files, policy files, trajectory inputs, approval payloads, and MCP traversal.
+- Added default redaction for common secret-like values in audit, approval, and ledger persistence.
+
+### Compatibility
+
+- Existing public CLI and API fields remain additive.
+- The default install remains dependency-free.
+- Raw persisted record retention is still possible with explicit `ACB_RETAIN_RAW_RECORDS=1`.
+
 ## [1.5.1] - 2026-07-28
 
 ### Fixed

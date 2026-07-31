@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from agent_circuit_breaker.api import evaluate_action
 from agent_circuit_breaker.cli import CircuitBreakerCLI
+from agent_circuit_breaker.limits import MAX_MCP_MESSAGE_BYTES, MAX_MCP_RECURSION_DEPTH, ensure_text_within_limit
 from agent_circuit_breaker.trajectory import evaluate_trajectory
 
 
@@ -187,6 +188,7 @@ def proxy_stdio(
     assert process.stdin is not None
     try:
         for line in sys.stdin:
+            ensure_text_within_limit(line, MAX_MCP_MESSAGE_BYTES, "MCP message")
             if not line.strip():
                 continue
             try:
@@ -254,6 +256,7 @@ def inspect_stdin(
 ) -> int:
     """Read JSON payloads from stdin and write inspection results to stdout."""
     for line in sys.stdin:
+        ensure_text_within_limit(line, MAX_MCP_MESSAGE_BYTES, "MCP message")
         line = line.strip()
         if not line:
             continue
@@ -274,7 +277,9 @@ def inspect_stdin(
     return 0
 
 
-def _command_candidates(value: Any, path: str = "") -> Iterable[tuple[str, str]]:
+def _command_candidates(value: Any, path: str = "", depth: int = 0) -> Iterable[tuple[str, str]]:
+    if depth > MAX_MCP_RECURSION_DEPTH:
+        raise ValueError(f"MCP arguments exceed recursion depth {MAX_MCP_RECURSION_DEPTH}")
     if isinstance(value, str):
         yield path or "$", value
         return
@@ -285,14 +290,14 @@ def _command_candidates(value: Any, path: str = "") -> Iterable[tuple[str, str]]
             if isinstance(child, str):
                 yield child_path, child
             elif isinstance(child, (dict, list)):
-                yield from _command_candidates(child, child_path)
+                yield from _command_candidates(child, child_path, depth + 1)
     elif isinstance(value, list):
         for index, child in enumerate(value):
             child_path = f"{path}[{index}]"
             if isinstance(child, str):
                 yield child_path, child
             elif isinstance(child, (dict, list)):
-                yield from _command_candidates(child, child_path)
+                yield from _command_candidates(child, child_path, depth + 1)
 
 
 def _relay_server_stdout(process: subprocess.Popen[str]) -> None:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from agent_circuit_breaker.api import evaluate_action
 from agent_circuit_breaker.core.context import AgentContext
 from agent_circuit_breaker.core.results import GuardResult
 
@@ -13,6 +12,8 @@ class LegacyActionGuard:
     guard_id = "legacy_action_guard"
 
     async def evaluate(self, context: AgentContext) -> GuardResult:
+        from agent_circuit_breaker.api import evaluate_action
+
         action = context.action_text()
         if not action:
             return GuardResult.unknown(self.guard_id, "no action text")

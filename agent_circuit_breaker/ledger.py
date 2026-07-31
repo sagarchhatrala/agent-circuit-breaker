@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from agent_circuit_breaker.redaction import redact_record, redaction_metadata
+
 
 DEFAULT_LEDGER_DIR = ".agent-circuit-breaker"
 DEFAULT_LEDGER_FILE = "run-ledger.jsonl"
@@ -35,7 +37,8 @@ class RunLedger:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "previous_hash": previous_hash,
             "run_id": result.get("run_id"),
-            "result": result,
+            "redaction": redaction_metadata(),
+            "result": redact_record(result),
         }
         entry["entry_hash"] = self._hash_entry(entry)
         with self.path.open("a", encoding="utf-8") as handle:

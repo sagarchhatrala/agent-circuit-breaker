@@ -5,13 +5,22 @@ import json
 import argparse
 import os
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 
 from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.approvals import ApprovalStore, approval_context
 from agent_circuit_breaker.audit import AuditLog, audit_event_from_result
+from agent_circuit_breaker.catalog import built_in_rule_catalog, format_catalog_markdown
 from agent_circuit_breaker.explain import explain_result, format_explanation
 from agent_circuit_breaker.hooks import hook_instructions, write_hook_scaffold
 from agent_circuit_breaker.ledger import RunLedger
+from agent_circuit_breaker.limits import (
+    MAX_COMMAND_BYTES,
+    MAX_TRAJECTORY_ACTIONS,
+    MAX_TRAJECTORY_FILE_BYTES,
+    ensure_file_within_limit,
+    ensure_text_within_limit,
+)
 from agent_circuit_breaker.plugins import discover_plugins, load_rule_plugins
 from agent_circuit_breaker.policy import load_policy
 from agent_circuit_breaker.profiles import apply_policy_mode, get_profile, profile_metadata
@@ -118,6 +127,8 @@ class CircuitBreakerCLI:
                 }
                 result["error"] = "Command must be a string"
                 return apply_policy_mode(result, mode=mode, profile=profile)
+
+            ensure_text_within_limit(command, MAX_COMMAND_BYTES, "command")
 
             # Analyze the filesystem operation
             operation_analysis = self.inspector.analyze_operation(command)
@@ -648,7 +659,9 @@ class CircuitBreakerCLI:
             return 1
 
         try:
-            with open(path, "r", encoding="utf-8") as handle:
+            run_path = Path(path)
+            ensure_file_within_limit(run_path, MAX_TRAJECTORY_FILE_BYTES, "trajectory file")
+            with run_path.open("r", encoding="utf-8") as handle:
                 payload = json.load(handle)
             actions, contract = self._parse_trajectory_payload(payload)
             result = evaluate_trajectory(
@@ -730,7 +743,51 @@ class CircuitBreakerCLI:
 
         if not isinstance(actions, list) or not all(isinstance(item, str) for item in actions):
             raise ValueError("trajectory actions must be a list of strings")
+        if len(actions) > MAX_TRAJECTORY_ACTIONS:
+            raise ValueError(f"trajectory actions exceed {MAX_TRAJECTORY_ACTIONS}")
         return actions, contract
+
+    def run_rules_test_mode(self, path: str) -> int:
+        """Run fixture-based tests for custom rule files."""
+        from agent_circuit_breaker.rule_testing import run_rule_tests
+
+        result = run_rule_tests(path)
+        if self.output_format == "json":
+            print(json.dumps(result, indent=2))
+        else:
+            summary = result["summary"]
+            print(f"Rule Tests: {path}")
+            print(
+                f"Passed: {summary['passed']}/{summary['total']} "
+                f"across {summary['files']} file(s)"
+            )
+            for file_result in result["files"]:
+                for error in file_result["errors"]:
+                    print(f"Error: {file_result['path']}: {error}")
+                for case in file_result["cases"]:
+                    if not case["passed"]:
+                        print(f"Failed: {case['name']}: {case['failure']}")
+        return 0 if result["is_valid"] else 1
+
+    def run_schema_mode(self, name: Optional[str] = None) -> int:
+        """Emit versioned public JSON schema artifacts."""
+        from agent_circuit_breaker.schemas import all_schemas, get_schema
+
+        try:
+            payload = get_schema(name) if name else all_schemas()
+        except KeyError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    def run_catalog_mode(self) -> int:
+        """Emit the built-in rule catalog."""
+        if self.output_format == "json":
+            print(json.dumps({"rules": built_in_rule_catalog()}, indent=2))
+        else:
+            print(format_catalog_markdown(), end="")
+        return 0
 
     def format_trajectory_output(self, result: Dict[str, Any]) -> str:
         """Format a trajectory result for text or JSON output."""
@@ -1007,6 +1064,9 @@ Usage:
   circuit-breaker approvals list|approve <ID>|deny <ID>
   circuit-breaker plugins [--format json]
   circuit-breaker validate-rules <PATH> [OPTIONS]
+  circuit-breaker rules test <PATH> [OPTIONS]
+  circuit-breaker schemas [NAME]
+  circuit-breaker catalog [--format json]
   circuit-breaker -c <ACTION> [OPTIONS]
   circuit-breaker -i [OPTIONS]
 
@@ -1043,6 +1103,9 @@ Examples:
   circuit-breaker approvals list
   circuit-breaker plugins --format json
   circuit-breaker validate-rules ./rules.json
+  circuit-breaker rules test ./policy-tests
+  circuit-breaker schemas rule-file
+  circuit-breaker catalog --format json
   circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
 Exit Codes:
@@ -1208,6 +1271,16 @@ def main() -> int:
 
             if args.command_parts[0] == "validate-rules" and len(args.command_parts) == 2:
                 return cli.run_validate_rules_mode(args.command_parts[1], require_signature=args.require_signature)
+
+            if args.command_parts[0] == "rules" and len(args.command_parts) == 3 and args.command_parts[1] == "test":
+                return cli.run_rules_test_mode(args.command_parts[2])
+
+            if args.command_parts[0] == "schemas":
+                name = args.command_parts[1] if len(args.command_parts) >= 2 else None
+                return cli.run_schema_mode(name)
+
+            if args.command_parts[0] == "catalog":
+                return cli.run_catalog_mode()
 
             print(
                 "Error: expected 'circuit-breaker check <action>' or "

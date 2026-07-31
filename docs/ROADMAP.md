@@ -410,6 +410,19 @@ Implemented so far:
 
 Status: released as `v1.5.1`.
 
+### v1.5.2: Policy Assurance And Enterprise Hardening
+
+Status: released as `v1.5.2`.
+
+Scope:
+
+- Versioned JSON schema export for rule, policy, decision, trajectory, and audit contracts.
+- Fixture-based custom rule tests.
+- Generated built-in rule catalog output.
+- Architecture boundary tests.
+- Explicit resource limits for policy inputs and MCP traversal.
+- Redaction of secret-like values in persisted audit, approval, and ledger records.
+
 Implemented so far:
 
 - recursive SDK inspection of all nested string-valued tool arguments.

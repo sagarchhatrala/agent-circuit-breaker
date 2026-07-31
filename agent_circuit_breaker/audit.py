@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from agent_circuit_breaker.redaction import redact_record, redaction_metadata
+
 
 DEFAULT_AUDIT_DIR = ".agent-circuit-breaker"
 DEFAULT_AUDIT_FILE = "audit.jsonl"
@@ -94,7 +96,7 @@ def read_entries(path: Path) -> Iterable[Dict[str, Any]]:
 
 def audit_event_from_result(result: Dict[str, Any], source: str = "cli") -> Dict[str, Any]:
     """Build a compact audit event from an evaluation result."""
-    return {
+    event = {
         "source": source,
         "command": result.get("command"),
         "verdict": result.get("verdict"),
@@ -102,4 +104,6 @@ def audit_event_from_result(result: Dict[str, Any], source: str = "cli") -> Dict
         "risk_score": result.get("risk_score"),
         "matched_rule": result.get("matched_rule"),
         "policy": result.get("policy"),
+        "redaction": redaction_metadata(),
     }
+    return redact_record(event)

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Set
 
 from agent_circuit_breaker.engine import Rule
+from agent_circuit_breaker.limits import MAX_RULE_FILE_BYTES, ensure_file_within_limit
 from agent_circuit_breaker.normalization import normalize_for_matching
 from agent_circuit_breaker.signing import strip_signature, verify_signed_document
 
@@ -232,10 +233,14 @@ class RuleFileLoader:
             return result
 
         try:
+            ensure_file_within_limit(rule_path, MAX_RULE_FILE_BYTES, "rule file")
             with rule_path.open("r", encoding="utf-8") as rule_file:
                 definition = json.load(rule_file)
         except JSONDecodeError as exc:
             result["errors"] = [f"Invalid JSON: {exc.msg} at line {exc.lineno}, column {exc.colno}"]
+            return result
+        except ValueError as exc:
+            result["errors"] = [str(exc)]
             return result
         except OSError as exc:
             result["errors"] = [f"Could not read rule file: {exc}"]

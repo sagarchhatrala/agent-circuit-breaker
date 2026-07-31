@@ -1,3 +1,9 @@
+# Agent Circuit Breaker Plan
+
+Current release target: `v1.5.2` policy assurance and enterprise hardening.
+
+The historical v1.0 stable plan remains below for project context.
+
 # Agent Circuit Breaker v1.0 Stable Plan
 
 Project goal: build a deterministic safety layer between AI coding agents and the operating system.

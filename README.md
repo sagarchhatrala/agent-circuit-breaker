@@ -292,8 +292,17 @@ circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy
 Rule schema and examples:
 
 - [Rule schema](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/RULE_SCHEMA.md)
+- [Policy assurance](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/POLICY_ASSURANCE.md)
 - [Custom deploy guard example](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/examples/rules/custom_deploy_guard.json)
 - [Allowlist pattern](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/ALLOWLIST_PATTERN.md)
+
+Validate custom policy behavior before rollout:
+
+```bash
+circuit-breaker rules test ./policy-tests
+circuit-breaker schemas rule-file
+circuit-breaker catalog --format json
+```
 
 ## Safety Profiles
 
@@ -348,6 +357,11 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
 - approval records include warning metadata when no local approval token is configured.
+- versioned JSON schema export for policy and result contracts.
+- fixture-based custom rule tests.
+- generated built-in rule catalog output.
+- resource limits for policy inputs and MCP traversal.
+- default redaction for persisted audit, approval, and ledger records.
 
 ## Common Use Cases
 
@@ -374,8 +388,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.5.1`
-- Test suite: 447 tests
+- Current version: `1.5.2`
+- Test suite: 458 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -399,6 +413,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.5.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.2.md)
 - [v1.5.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.1.md)
 - [v1.5.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.0.md)
 - [v1.4.9 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.4.9.md)

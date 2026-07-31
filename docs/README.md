@@ -10,12 +10,14 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 - [THREAT_MODEL.md](THREAT_MODEL.md)
 - [LONG_HORIZON_AGENT_SAFETY.md](LONG_HORIZON_AGENT_SAFETY.md)
 - [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md)
+- [POLICY_ASSURANCE.md](POLICY_ASSURANCE.md)
 - [API.md](API.md)
 - [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md)
 
 ## Policy And Rules
 
 - [Rule schema](RULE_SCHEMA.md)
+- [Policy assurance](POLICY_ASSURANCE.md)
 - [ALLOWLIST_PATTERN.md](ALLOWLIST_PATTERN.md)
 - [Example rule packs](examples/rules/)
 - [COMPATIBILITY.md](COMPATIBILITY.md)
@@ -65,9 +67,15 @@ The current stable package includes:
 - optional Redis, OpenTelemetry, and Prometheus integrations for enterprise deployments.
 - pipeline benchmark helper and lockfile/resolved-dependency package policy inputs.
 - recursive pipeline SDK inspection for arbitrary tool schema string fields.
+- versioned JSON schema export.
+- fixture-based custom rule tests.
+- generated built-in rule catalog output.
+- explicit resource limits for policy inputs and MCP traversal.
+- default redaction for persisted audit, approval, and ledger records.
 
 ## Release Notes
 
+- [v1.5.2](releases/v1.5.2.md)
 - [v1.5.1](releases/v1.5.1.md)
 - [v1.5.0](releases/v1.5.0.md)
 - [v1.4.9](releases/v1.4.9.md)

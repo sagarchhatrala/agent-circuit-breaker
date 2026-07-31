@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 from urllib.request import urlopen
 
+from agent_circuit_breaker.limits import MAX_POLICY_FILE_BYTES, ensure_file_within_limit
 from agent_circuit_breaker.signing import strip_signature, verify_signed_document
 
 
@@ -30,6 +31,7 @@ def load_policy(
     candidates = _policy_candidates(path, start_dir)
     for candidate in candidates:
         if candidate.exists() and candidate.is_file():
+            ensure_file_within_limit(candidate, MAX_POLICY_FILE_BYTES, "policy file")
             return _validate_policy(
                 json.loads(candidate.read_text(encoding="utf-8")),
                 str(candidate),

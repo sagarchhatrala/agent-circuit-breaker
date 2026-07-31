@@ -2,7 +2,7 @@
 
 This policy describes the intended stability contract for Agent Circuit Breaker.
 
-The project is currently at release-candidate maturity. The v1.0 release is intended to stabilize the public API, CLI contract, rule schema version, and decision contract described here.
+The project is stable at v1.x. The public API, CLI contract, rule schema version, and decision contract described here are additive compatibility contracts.
 
 ## Versioning
 
@@ -12,18 +12,20 @@ After v1.0, the project intends to use semantic versioning:
 - Minor releases add compatible features.
 - Major releases may include breaking changes.
 
-Before v1.0, release candidates may still receive compatibility fixes, but breaking changes should be avoided unless they correct a safety issue.
+Security hardening can add fail-closed validation in any compatible release when needed to preserve the safety contract.
 
 ## Public Python API
 
 The public Python API is:
 
 - `evaluate_action(action, rule_file_path=None)`
+- `evaluate_trajectory(actions, contract=None, rule_file_path=None)`
 - `validate_rule_file(path)`
 - `rule_schema_metadata()`
 - `Decision`
 - `Rule`
 - `Engine`
+- pipeline SDK DTOs and `AgentCircuitBreaker`
 
 The stable result shape for `evaluate_action` includes:
 
@@ -35,6 +37,7 @@ The stable result shape for `evaluate_action` includes:
 - `operation_analysis`
 - `command_analysis`
 - `sql_analysis`
+- `risk_score`
 - `error`
 
 When a custom rule file is provided, results may also include:
@@ -50,6 +53,12 @@ The stable CLI commands are:
 - `circuit-breaker check <action>`
 - `circuit-breaker validate-rules <path>`
 - `circuit-breaker -c <action>`
+- `circuit-breaker explain <action>`
+- `circuit-breaker scan <path...>`
+- `circuit-breaker trajectory <run.json>`
+- `circuit-breaker rules test <path>`
+- `circuit-breaker schemas [name]`
+- `circuit-breaker catalog`
 
 The stable output modes are:
 
@@ -62,6 +71,7 @@ The stable exit codes are:
 - `0`: allowed.
 - `1`: blocked or error.
 - `2`: unknown.
+- `3`: pending approval.
 
 ## Decision Contract
 
@@ -71,6 +81,7 @@ The stable decision values are:
 - `BLOCK`
 - `ERROR`
 - `UNKNOWN`
+- `PENDING_APPROVAL`
 
 The stable verdict values are:
 
@@ -78,6 +89,7 @@ The stable verdict values are:
 - `block`
 - `error`
 - `unknown`
+- `pending_approval`
 
 `UNKNOWN` does not mean safe. Integrations should treat it as review-required unless they have a separate allowlist.
 
@@ -89,22 +101,28 @@ Stable schema version 1 includes:
 
 - top-level `version`.
 - top-level `rules`.
+- optional top-level `signature`.
 - rule fields `id`, `title`, `severity`, `response`, `matcher`, and optional `metadata`.
-- matcher fields `type` and `value`.
-- matcher types `contains`, `equals`, and `prefix`.
+- responses `allow`, `block`, and `approval`.
+- matcher fields `type`, `value`, `matchers`, and `matcher`.
+- matcher types `contains`, `equals`, `prefix`, `regex`, `all_of`, `any_of`, and `not`.
 
 Unsupported features remain unsupported unless a future schema version adds them:
 
 - YAML.
-- regex matchers.
 - remote rule fetching.
-- rule signing.
 - arbitrary Python matchers.
+
+Signed rule and policy JSON support currently requires authenticity when `--require-signature` is used. `hmac-sha256` signatures are accepted; checksum-only `sha256` documents are not accepted as required signatures.
+
+## Resource Limits
+
+Policy, rule, trajectory, approval, and MCP inputs are subject to explicit resource limits. Oversized inputs fail closed with validation errors or error verdicts. Limit values may become stricter in compatible v1.x releases when required for security.
 
 ## Behavior Compatibility
 
-Built-in rule coverage may expand in minor releases. That means an action that was previously `UNKNOWN` may become `BLOCK`.
+Built-in rule coverage may expand in compatible releases. That means an action that was previously `UNKNOWN` may become `BLOCK`.
 
 An action that is currently `BLOCK` for a built-in catastrophic pattern should not become `ALLOW` without a major release and explicit migration guidance.
 
-Fail-closed behavior for malformed input, invalid rule files, and evaluator errors is part of the compatibility contract.
+Fail-closed behavior for malformed input, invalid rule files, oversized inputs, signature failures, and evaluator errors is part of the compatibility contract.

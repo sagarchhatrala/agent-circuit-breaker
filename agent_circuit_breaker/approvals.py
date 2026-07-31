@@ -7,6 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from agent_circuit_breaker.limits import MAX_APPROVAL_PAYLOAD_BYTES
+from agent_circuit_breaker.redaction import redact_record, redaction_metadata
+
 
 APPROVAL_DIR = ".agent-circuit-breaker/approvals"
 
@@ -35,10 +38,14 @@ class ApprovalStore:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "decided_at": None,
             "approval_security": approval_security_context(),
-            "context": context if context is not None else approval_context(result),
-            "result": result,
+            "redaction": redaction_metadata(),
+            "context": redact_record(context if context is not None else approval_context(result)),
+            "result": redact_record(result),
         }
-        path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+        encoded = json.dumps(record, indent=2)
+        if len(encoded.encode("utf-8")) > MAX_APPROVAL_PAYLOAD_BYTES:
+            raise OSError(f"approval payload exceeds {MAX_APPROVAL_PAYLOAD_BYTES} bytes")
+        path.write_text(encoded, encoding="utf-8")
         return record
 
     def list(self) -> List[Dict[str, Any]]:
