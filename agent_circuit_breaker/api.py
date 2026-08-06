@@ -3,6 +3,7 @@
 from typing import Any, Dict, Optional
 
 from agent_circuit_breaker.cli import CircuitBreakerCLI
+from agent_circuit_breaker.core.results import DecisionResult, EvaluationRequest
 from agent_circuit_breaker.engine import Decision
 from agent_circuit_breaker.rules.loader import RuleFileLoader, RuleSchema
 from agent_circuit_breaker.trajectory import evaluate_trajectory as _evaluate_trajectory
@@ -35,14 +36,23 @@ def evaluate_action(action: str, rule_file_path: Optional[str] = None) -> Dict[s
         if not custom_rule_result["is_valid"]:
             result = _error_result(action, "Invalid rule file")
             result["custom_rules"] = custom_rule_summary
-            return result
+            typed_result = DecisionResult.from_legacy_result(
+                result,
+                request=EvaluationRequest.from_action(action),
+            )
+            return typed_result.to_legacy_dict()
 
         custom_rules = custom_rule_result["rules"]
 
     result = cli.evaluate_command(action, custom_rules)
     if custom_rule_summary is not None:
         result["custom_rules"] = custom_rule_summary
-    return result
+
+    typed_result = DecisionResult.from_legacy_result(
+        result,
+        request=EvaluationRequest.from_action(action),
+    )
+    return typed_result.to_legacy_dict()
 
 
 def evaluate_trajectory(

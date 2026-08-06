@@ -4,6 +4,23 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.0] - 2026-08-06
+
+### Added
+
+- Added dependency-free `EvaluationRequest`, `DecisionResult`, and `Finding` dataclasses.
+- Added deterministic conversion from stable v1.x public result dictionaries into typed decision results.
+- Added stable typed findings for matched rules and fail-secure evaluation errors.
+- Added deterministic short evaluation IDs for typed decisions.
+- Added regression coverage for typed block, unknown, error, and legacy round-trip behavior.
+
+### Compatibility
+
+- Existing CLI output remains unchanged.
+- `evaluate_action(...)` continues to return the same v1.x dictionary shape.
+- Typed results are additive and can round-trip back to legacy dictionaries.
+- The default install remains dependency-free.
+
 ## [1.5.2] - 2026-07-31
 
 ### Added

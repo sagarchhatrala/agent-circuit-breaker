@@ -248,6 +248,21 @@ result = breaker.evaluate_tool_call_sync(
 assert not result.allowed
 ```
 
+Typed decision primitives:
+
+```python
+from agent_circuit_breaker import DecisionResult, EvaluationRequest, evaluate_action
+
+legacy = evaluate_action("rm -rf /")
+typed = DecisionResult.from_legacy_result(
+    legacy,
+    request=EvaluationRequest.from_action("rm -rf /"),
+)
+
+assert typed.findings[0].rule_id == "fs_recursive_delete"
+assert typed.to_legacy_dict() == legacy
+```
+
 Optional distributed state and exporters:
 
 ```python
@@ -358,6 +373,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - optional approval-token gate for local approval decisions.
 - approval records include warning metadata when no local approval token is configured.
 - versioned JSON schema export for policy and result contracts.
+- typed decision and finding primitives for future policy-pack and adapter work.
 - fixture-based custom rule tests.
 - generated built-in rule catalog output.
 - resource limits for policy inputs and MCP traversal.
@@ -388,8 +404,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.5.2`
-- Test suite: 458 tests
+- Current version: `1.6.0`
+- Test suite: 466 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -413,6 +429,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.0.md)
 - [v1.5.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.2.md)
 - [v1.5.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.1.md)
 - [v1.5.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.0.md)

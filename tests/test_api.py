@@ -4,7 +4,14 @@ import unittest
 from pathlib import Path
 
 import agent_circuit_breaker
-from agent_circuit_breaker import evaluate_action, rule_schema_metadata, validate_rule_file
+from agent_circuit_breaker import (
+    DecisionResult,
+    EvaluationRequest,
+    Finding,
+    evaluate_action,
+    rule_schema_metadata,
+    validate_rule_file,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +26,9 @@ class TestPublicAPI(unittest.TestCase):
         self.assertIs(agent_circuit_breaker.evaluate_action, evaluate_action)
         self.assertIs(agent_circuit_breaker.validate_rule_file, validate_rule_file)
         self.assertIs(agent_circuit_breaker.rule_schema_metadata, rule_schema_metadata)
+        self.assertIs(agent_circuit_breaker.DecisionResult, DecisionResult)
+        self.assertIs(agent_circuit_breaker.EvaluationRequest, EvaluationRequest)
+        self.assertIs(agent_circuit_breaker.Finding, Finding)
 
     def test_evaluate_action_blocks_builtin_risk(self):
         """Built-in rules should block known catastrophic actions."""

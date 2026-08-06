@@ -99,4 +99,6 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is `v1.0.1`: stable filesystem, command, SQL, external JSON rule safety, public Python API support, adversarial regression coverage, security documentation, compatibility docs, and publishing metadata.
+The current target is the v1.6 architecture line: typed decision evidence, policy
+source trust boundaries, and first-party domain policy packs while preserving the
+stable v1.x CLI and API contracts.

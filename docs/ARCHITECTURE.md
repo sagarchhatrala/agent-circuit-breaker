@@ -3,7 +3,7 @@
 Agent Circuit Breaker is organized around a small deterministic pipeline:
 
 ```text
-Action -> Inspector(s) -> Rules -> Engine -> Decision -> CLI/API result
+Action -> Inspector(s) -> Rules -> Engine -> Decision -> Typed Result -> CLI/API result
 ```
 
 The implementation intentionally separates domain analysis from policy evaluation.
@@ -68,6 +68,21 @@ The CLI is the current user-facing interface. It supports:
 
 The CLI combines inspector analysis and engine rule evaluation into a user-facing result.
 
+### Typed Results
+
+File: `agent_circuit_breaker/core/results.py`
+
+v1.6.0 adds typed result primitives:
+
+- `EvaluationRequest`
+- `DecisionResult`
+- `Finding`
+
+The typed model records stable decision evidence for future policy packs and
+integration adapters. It does not change the stable v1.x CLI or API dictionary
+contract. Public results can be converted into typed results and then converted
+back to the existing dictionary shape.
+
 ## Decision Flow
 
 1. CLI receives an action.
@@ -77,6 +92,8 @@ The CLI combines inspector analysis and engine rule evaluation into a user-facin
 5. If a rule matches, the engine returns that rule's response.
 6. If no rule matches and the inspector recognizes the operation as safe, the CLI reports `ALLOW`.
 7. If no rule matches and the operation is not recognized as safe, the CLI reports `UNKNOWN`.
+8. Public API evaluation converts the result into a typed internal `DecisionResult`.
+9. The API returns the stable v1.x dictionary; the CLI returns the stable text or JSON output.
 
 This preserves the engine's simple contract while allowing the CLI to provide a useful allow decision for known safe filesystem operations.
 

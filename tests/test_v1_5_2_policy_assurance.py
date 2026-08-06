@@ -23,8 +23,8 @@ from agent_circuit_breaker_mcp.proxy import inspect_arguments
 
 
 class TestVersionAndSchemas(unittest.TestCase):
-    def test_version_is_1_5_2(self):
-        self.assertEqual(agent_circuit_breaker.__version__, "1.5.2")
+    def test_version_is_current_release(self):
+        self.assertEqual(agent_circuit_breaker.__version__, "1.6.0")
 
     def test_schema_registry_exports_public_contracts(self):
         schemas = all_schemas()

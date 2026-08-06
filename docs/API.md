@@ -137,6 +137,36 @@ result = await breaker.evaluate_tool_call(
 
 The SDK uses the dependency-free pipeline documented in [PIPELINE_ARCHITECTURE.md](PIPELINE_ARCHITECTURE.md). Existing package-level APIs remain stable.
 
+## Typed Decision Primitives
+
+v1.6.0 adds dependency-free typed primitives for integrations that need stable
+decision evidence before public JSON output is expanded:
+
+- `EvaluationRequest`
+- `DecisionResult`
+- `Finding`
+
+These are additive. `evaluate_action(...)` still returns the same v1.x dictionary
+shape.
+
+```python
+from agent_circuit_breaker import DecisionResult, EvaluationRequest, evaluate_action
+
+legacy = evaluate_action("rm -rf /")
+typed = DecisionResult.from_legacy_result(
+    legacy,
+    request=EvaluationRequest.from_action("rm -rf /"),
+)
+
+assert typed.verdict == "block"
+assert typed.findings[0].rule_id == "fs_recursive_delete"
+assert typed.to_legacy_dict() == legacy
+```
+
+`DecisionResult.to_dict()` returns the typed model with `findings`, `reason`,
+`evaluation_id`, and `fail_secure`. `DecisionResult.to_legacy_dict()` returns the
+stable v1.x public result dictionary.
+
 ## Optional Pipeline Integrations
 
 The default install has no runtime dependencies. Optional enterprise integrations are available through extras:

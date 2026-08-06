@@ -430,10 +430,6 @@ Implemented so far:
 - DNS-free network egress evaluation to preserve local-first behavior.
 - approval records preserve prior approve/deny decisions on duplicate approval creation.
 
-### Planned Patch Slices
-
-- later `v1.5.x`: OWASP/NIST posture reporting and curated policy packs.
-
 ## v1.6: Domain Policy Architecture
 
 Goal: prepare Agent Circuit Breaker for broader safety domains without weakening the
@@ -442,9 +438,20 @@ fail-secure v1.x contract.
 Planning document:
 [ADR-0001: Domain Policy Packs And Decision Model](adr/ADR-0001-domain-policy-packs-and-decision-model.md)
 
-Candidate work:
+### v1.6.0: Typed Decision Foundation
 
-- internal typed decision model with stable findings.
+Status: released as `v1.6.0`.
+
+Implemented so far:
+
+- dependency-free `EvaluationRequest`, `DecisionResult`, and `Finding` dataclasses.
+- deterministic conversion from stable v1.x public result dictionaries into typed decisions.
+- legacy dictionary round-tripping so existing API and CLI behavior remains unchanged.
+- stable typed findings for matched rules and fail-secure evaluation errors.
+- focused regression coverage for typed blocks, unknowns, errors, and evaluation IDs.
+
+Candidate follow-up work:
+
 - explicit policy source trust levels for signed, system, user, local, and repository policies.
 - first-party domain policy pack metadata.
 - generated catalog output grouped by domain and pack.

@@ -65,6 +65,7 @@ The current stable package includes:
 - trajectory bypass hardening for egress, scope, and forbidden-target matching.
 - trusted publishing workflow that runs TestPyPI before PyPI on releases.
 - dependency-free async pipeline SDK with protocol-based guards and local state stores.
+- typed `EvaluationRequest`, `DecisionResult`, and `Finding` primitives for stable internal decision evidence.
 - optional Redis, OpenTelemetry, and Prometheus integrations for enterprise deployments.
 - pipeline benchmark helper and lockfile/resolved-dependency package policy inputs.
 - recursive pipeline SDK inspection for arbitrary tool schema string fields.
@@ -76,6 +77,7 @@ The current stable package includes:
 
 ## Release Notes
 
+- [v1.6.0](releases/v1.6.0.md)
 - [v1.5.2](releases/v1.5.2.md)
 - [v1.5.1](releases/v1.5.1.md)
 - [v1.5.0](releases/v1.5.0.md)

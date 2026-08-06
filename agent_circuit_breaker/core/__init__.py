@@ -3,12 +3,15 @@
 from .benchmarks import PipelineBenchmark, benchmark_pipeline
 from .context import AgentContext, current_context, context_scope
 from .pipeline import PipelineEngine
-from .results import GuardResult, PipelineResult
+from .results import DecisionResult, EvaluationRequest, Finding, GuardResult, PipelineResult
 from .sdk import AgentCircuitBreaker
 
 __all__ = [
     "AgentCircuitBreaker",
     "AgentContext",
+    "DecisionResult",
+    "EvaluationRequest",
+    "Finding",
     "GuardResult",
     "PipelineBenchmark",
     "PipelineEngine",

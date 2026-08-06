@@ -1,6 +1,6 @@
 # Agent Circuit Breaker Plan
 
-Current release target: `v1.5.2` policy assurance and enterprise hardening.
+Current release target: `v1.6.0` typed decision foundation.
 
 The historical v1.0 stable plan remains below for project context.
 

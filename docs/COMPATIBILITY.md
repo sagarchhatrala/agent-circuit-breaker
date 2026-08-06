@@ -25,6 +25,9 @@ The public Python API is:
 - `Decision`
 - `Rule`
 - `Engine`
+- `EvaluationRequest`
+- `DecisionResult`
+- `Finding`
 - pipeline SDK DTOs and `AgentCircuitBreaker`
 
 The stable result shape for `evaluate_action` includes:
@@ -45,6 +48,10 @@ When a custom rule file is provided, results may also include:
 - `custom_rules`
 
 New fields may be added in minor releases. Existing fields should not be removed or renamed without a major release.
+
+Typed decision primitives added in v1.6.0 are additive. They may be used by
+advanced integrations, but `evaluate_action(...)` continues to return the stable
+dictionary shape above.
 
 ## CLI Contract
 

@@ -4,6 +4,12 @@ This document describes the stable JSON fields returned by the CLI and Python AP
 
 The contract is additive for v1.x compatible releases. Existing fields keep their meaning. New fields may be added when they do not change the meaning of existing fields.
 
+v1.6.0 adds internal typed `DecisionResult` and `Finding` primitives. The public
+CLI and `evaluate_action(...)` JSON/dictionary output remains unchanged by
+default. Callers that opt into typed conversion can use
+`DecisionResult.from_legacy_result(result)` and then call `to_dict()` for typed
+findings or `to_legacy_dict()` for the stable v1.x shape.
+
 ## Top-Level Result
 
 `circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
