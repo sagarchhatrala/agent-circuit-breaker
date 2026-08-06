@@ -25,6 +25,29 @@ class TestSecurityDocs(unittest.TestCase):
         self.assertIn("[THREAT_MODEL.md](THREAT_MODEL.md)", docs_index)
         self.assertIn("[INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)", docs_index)
 
+    def test_docs_index_links_architecture_adr(self):
+        """The docs index should link the current architecture ADR."""
+        docs_index = (DOCS_DIR / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "[ADR-0001: Domain Policy Packs And Decision Model]"
+            "(adr/ADR-0001-domain-policy-packs-and-decision-model.md)",
+            docs_index,
+        )
+
+    def test_architecture_adr_preserves_security_principles(self):
+        """The architecture ADR should preserve the fail-secure project direction."""
+        adr = (
+            DOCS_DIR
+            / "adr"
+            / "ADR-0001-domain-policy-packs-and-decision-model.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("fail secure", adr)
+        self.assertIn("deterministic", adr)
+        self.assertIn("Every block should have at least:", adr)
+        self.assertIn("Repository policy should be allowed to strengthen enforcement", adr)
+
     def test_security_model_states_non_sandbox_boundary(self):
         """The security model must clearly state the sandbox non-goal."""
         security_model = (DOCS_DIR / "SECURITY_MODEL.md").read_text(encoding="utf-8")

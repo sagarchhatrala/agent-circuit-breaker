@@ -433,3 +433,28 @@ Implemented so far:
 ### Planned Patch Slices
 
 - later `v1.5.x`: OWASP/NIST posture reporting and curated policy packs.
+
+## v1.6: Domain Policy Architecture
+
+Goal: prepare Agent Circuit Breaker for broader safety domains without weakening the
+fail-secure v1.x contract.
+
+Planning document:
+[ADR-0001: Domain Policy Packs And Decision Model](adr/ADR-0001-domain-policy-packs-and-decision-model.md)
+
+Candidate work:
+
+- internal typed decision model with stable findings.
+- explicit policy source trust levels for signed, system, user, local, and repository policies.
+- first-party domain policy pack metadata.
+- generated catalog output grouped by domain and pack.
+- canonical allow, block, unknown, and bypass fixtures for first-party packs.
+- golden JSON decision tests for stable integration output.
+
+Design constraints:
+
+- keep existing v1.x public API behavior compatible.
+- keep built-in blocks ahead of local allow rules.
+- keep external policy primarily declarative.
+- keep executable plugins as trusted-code extensions only.
+- do not add telemetry, analytics, sandboxing, or probabilistic enforcement.

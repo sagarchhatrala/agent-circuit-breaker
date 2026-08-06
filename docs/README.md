@@ -35,6 +35,7 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 
 - [Architecture](ARCHITECTURE.md)
 - [Design decisions](DESIGN_DECISIONS.md)
+- [ADR-0001: Domain Policy Packs And Decision Model](adr/ADR-0001-domain-policy-packs-and-decision-model.md)
 - [Roadmap](ROADMAP.md)
 
 ## Current Coverage
