@@ -21,7 +21,7 @@ class NetworkEgressGuard:
     async def evaluate(self, context: AgentContext) -> GuardResult:
         urls = _urls_from_context(context)
         if not urls:
-            return GuardResult.unknown(self.guard_id, "no URL")
+            return GuardResult.not_applicable(self.guard_id, "no URL")
 
         for url in urls:
             parsed = urlparse(_with_scheme(url))

@@ -76,8 +76,31 @@ class PipelineEngine:
                     )
                     return PipelineResult(DENY, context.request_id, tuple(results), result.guard_id, result.reason)
 
-        verdict = ALLOW if any(result.verdict == ALLOW for result in results) else UNKNOWN
-        return PipelineResult(verdict, context.request_id, tuple(results))
+        applicable_unknowns = [
+            result
+            for result in results
+            if result.verdict == UNKNOWN and result.applicable
+        ]
+        incomplete = [result for result in results if not result.coverage_complete]
+        allows = [result for result in results if result.verdict == ALLOW]
+        validation = {
+            "schema_version": 1,
+            "status": "valid",
+            "allow_permitted": bool(allows) and not applicable_unknowns and not incomplete,
+            "applicable_unknowns": [result.guard_id for result in applicable_unknowns],
+            "incomplete_coverage": [result.guard_id for result in incomplete],
+        }
+        if validation["allow_permitted"]:
+            return PipelineResult(ALLOW, context.request_id, tuple(results), validation=validation)
+
+        reason = "no guard allowed action"
+        if applicable_unknowns:
+            reason = "applicable guard returned unknown"
+        elif incomplete:
+            reason = "guard coverage incomplete"
+        validation["status"] = "rejected" if allows else "valid"
+        validation["reason"] = reason
+        return PipelineResult(UNKNOWN, context.request_id, tuple(results), reason=reason, validation=validation)
 
     @staticmethod
     async def _run_guard(guard: GuardProtocol, context: AgentContext) -> GuardResult:

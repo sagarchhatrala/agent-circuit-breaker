@@ -119,6 +119,11 @@ def _is_remote_script_to_shell(action: str) -> bool:
     return _has_command_risk(action, "cmd_remote_script_to_shell")
 
 
+def _is_nested_dangerous_execution(action: str) -> bool:
+    """Detect dangerous commands hidden inside shell/interpreter wrappers."""
+    return _has_command_risk(action, "cmd_nested_dangerous_execution")
+
+
 def _is_package_publish_without_context(action: str) -> bool:
     """Detect package publish commands without explicit release context."""
     return _has_command_risk(action, "cmd_package_publish_without_context")
@@ -273,6 +278,18 @@ BUILTIN_RULES = [
         matcher=_is_remote_script_to_shell,
         metadata={
             "description": "Blocks curl/wget output piped directly to sh or bash",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_nested_dangerous_execution",
+        title="Dangerous nested command execution detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_nested_dangerous_execution,
+        metadata={
+            "description": "Blocks dangerous commands passed through shell or interpreter execution flags",
             "category": "command",
         }
     ),

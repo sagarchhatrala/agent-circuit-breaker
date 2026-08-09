@@ -38,7 +38,7 @@ class FilesystemGuard:
     async def evaluate(self, context: AgentContext) -> GuardResult:
         paths = _paths_from_context(context)
         if not paths:
-            return GuardResult.unknown(self.guard_id, "no filesystem path")
+            return GuardResult.not_applicable(self.guard_id, "no filesystem path")
 
         operation = _operation_from_context(context)
         for path in paths:

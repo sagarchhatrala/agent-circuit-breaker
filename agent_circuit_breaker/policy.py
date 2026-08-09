@@ -35,7 +35,10 @@ def load_policy(
     """Load a policy from explicit path, environment, or repository defaults."""
     if path and path.startswith(("https://", "http://")):
         with urlopen(path, timeout=10) as response:  # nosec: caller-selected policy source
-            raw = response.read(1024 * 1024).decode("utf-8")
+            raw_bytes = response.read(MAX_POLICY_FILE_BYTES + 1)
+        if len(raw_bytes) > MAX_POLICY_FILE_BYTES:
+            raise ValueError(f"remote policy exceeds {MAX_POLICY_FILE_BYTES} bytes")
+        raw = raw_bytes.decode("utf-8")
         return _validate_policy(
             json.loads(raw),
             path,

@@ -16,8 +16,8 @@ result = evaluate_action("rm -rf /")
 
 Important result fields:
 
-- `verdict`: `allow`, `block`, `error`, or `unknown`.
-- `decision`: `ALLOW`, `BLOCK`, `ERROR`, or `UNKNOWN`.
+- `verdict`: `allow`, `block`, `error`, `unknown`, or `pending_approval`.
+- `decision`: `ALLOW`, `BLOCK`, `ERROR`, `UNKNOWN`, or `PENDING_APPROVAL`.
 - `matched_rule`: matching rule ID when a rule matched.
 - `rule_details`: matching rule details when available.
 - `operation_analysis`: filesystem-oriented analysis.

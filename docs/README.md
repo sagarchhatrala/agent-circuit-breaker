@@ -75,9 +75,13 @@ The current stable package includes:
 - explicit resource limits for policy inputs and MCP traversal.
 - default redaction for persisted audit, approval, and ledger records.
 - inspection coverage and decision validation evidence for action results.
+- nested shell/interpreter wrapper hardening.
+- pipeline SDK decision validation for applicable `UNKNOWN` guard results.
+- richer MCP error evidence, approval expiry support, and replay evidence in the local run ledger.
 
 ## Release Notes
 
+- [v1.6.3](releases/v1.6.3.md)
 - [v1.6.2](releases/v1.6.2.md)
 - [v1.6.1](releases/v1.6.1.md)
 - [v1.6.0](releases/v1.6.0.md)

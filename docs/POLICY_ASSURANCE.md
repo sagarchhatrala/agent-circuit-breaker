@@ -97,3 +97,9 @@ Audit events, approval records, and run-ledger entries redact common secret-like
 Set `ACB_RETAIN_RAW_RECORDS=1` only in controlled environments that explicitly require raw local retention.
 
 Redaction is not DLP. It is a deterministic safety guard against common accidental credential persistence.
+
+## Approval Expiry
+
+Approval records can be made temporary by setting `ACB_APPROVAL_TTL_SECONDS` or
+by constructing `ApprovalStore(..., ttl_seconds=...)` in SDK integrations.
+Expired records are marked `expired` and cannot be approved or denied.

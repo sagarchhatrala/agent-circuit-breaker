@@ -70,6 +70,9 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - long-running agent trajectories: repeated blocked actions, forbidden target references, outbound output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
 - pipeline SDK guardrails: shell operators, filesystem path policy, private-network egress, package install policy, repeated tool-call sequences, context-window limits, and tool-call volume.
 - pipeline SDK recursive argument inspection across arbitrary tool schema field names.
+- nested shell/interpreter wrapper hardening for `sh -c`, `bash -c`, `cmd /c`, PowerShell command wrappers, and common interpreter eval flags.
+- pipeline SDK decision validation so applicable `UNKNOWN` guard results cannot be hidden by another guard's `ALLOW`.
+- richer MCP error evidence, approval expiry support, and replay evidence in the local run ledger.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
@@ -79,7 +82,7 @@ Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask 
 - **Local-first**: default evaluation is offline and dependency-free.
 - **Auditable**: the core is Python stdlib-only and small enough to inspect.
 - **Fail-closed**: malformed inputs, invalid rules, and signature failures stop instead of silently allowing.
-- **Evidence-backed ALLOW**: v1.6.2 records mandatory inspection coverage and rejects `ALLOW` when required inspection was incomplete.
+- **Evidence-backed ALLOW**: records mandatory inspection coverage and rejects `ALLOW` when required inspection was incomplete.
 - **Composable**: use it from CLI, Python, CI, pre-commit, MCP proxy mode, or another agent runtime.
 
 ## Installation
@@ -159,6 +162,12 @@ Optionally require a human-held approval token for approve/deny decisions:
 ```bash
 set ACB_APPROVAL_TOKEN=<human-held-token>
 agent-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+```
+
+Optionally expire local approval records:
+
+```bash
+set ACB_APPROVAL_TTL_SECONDS=86400
 ```
 
 Write a tamper-evident local audit trail:
@@ -374,6 +383,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
+- optional approval expiry with `ACB_APPROVAL_TTL_SECONDS`.
 - approval records include warning metadata when no local approval token is configured.
 - versioned JSON schema export for policy and result contracts.
 - typed decision and finding primitives for future policy-pack and adapter work.
@@ -407,8 +417,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.2`
-- Test suite: 480 tests
+- Current version: `1.6.3`
+- Test suite: 488 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -432,6 +442,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.3 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.3.md)
 - [v1.6.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.2.md)
 - [v1.6.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.1.md)
 - [v1.6.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.0.md)

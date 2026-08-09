@@ -44,7 +44,7 @@ class ContextWindowBreaker:
     async def evaluate(self, context: AgentContext) -> GuardResult:
         payload = context.tool_args.get("payload") or context.tool_args.get("prompt") or context.tool_args.get("messages")
         if payload is None:
-            return GuardResult.unknown(self.guard_id, "no LLM payload")
+            return GuardResult.not_applicable(self.guard_id, "no LLM payload")
         tokens = _fast_token_count(payload)
         if tokens > self.max_tokens:
             return GuardResult.deny(

@@ -7,6 +7,7 @@ import sys
 import threading
 from typing import Any, Dict, Iterable, List, Optional
 
+from agent_circuit_breaker import __version__
 from agent_circuit_breaker.api import evaluate_action
 from agent_circuit_breaker.cli import CircuitBreakerCLI
 from agent_circuit_breaker.limits import MAX_MCP_MESSAGE_BYTES, MAX_MCP_RECURSION_DEPTH, ensure_text_within_limit
@@ -368,14 +369,23 @@ def _load_trajectory_contract(path: str) -> Dict[str, Any]:
 
 
 def _error_result(command: str, error: str) -> Dict[str, Any]:
-    return {
+    result = {
         "command": command,
         "verdict": "error",
         "decision": "ERROR",
-        "risk_score": 100,
         "matched_rule": None,
+        "rule_details": None,
+        "operation_analysis": None,
+        "command_analysis": None,
+        "sql_analysis": None,
+        "risk_score": 100,
+        "policy": None,
+        "engine_version": __version__,
         "error": error,
     }
+    result["inspection_coverage"] = CircuitBreakerCLI._error_inspection_coverage(error)
+    CircuitBreakerCLI._validate_decision(result)
+    return result
 
 
 if __name__ == "__main__":

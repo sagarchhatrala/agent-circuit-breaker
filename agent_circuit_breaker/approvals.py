@@ -3,7 +3,7 @@
 import hashlib
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -22,8 +22,9 @@ def default_approval_dir() -> Path:
 class ApprovalStore:
     """File-backed local approval queue."""
 
-    def __init__(self, directory: Optional[str] = None):
+    def __init__(self, directory: Optional[str] = None, *, ttl_seconds: Optional[int] = None):
         self.directory = Path(directory) if directory else default_approval_dir()
+        self.ttl_seconds = _approval_ttl_seconds(ttl_seconds)
 
     def create(self, result: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Create a pending approval record for a result."""
@@ -37,6 +38,7 @@ class ApprovalStore:
             "status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "decided_at": None,
+            "expires_at": _expires_at(self.ttl_seconds),
             "approval_security": approval_security_context(),
             "redaction": redaction_metadata(),
             "context": redact_record(context if context is not None else approval_context(result)),
@@ -65,6 +67,11 @@ class ApprovalStore:
         if not path.exists():
             raise FileNotFoundError(f"approval not found: {approval_id}")
         record = json.loads(path.read_text(encoding="utf-8"))
+        if _is_expired(record):
+            record["status"] = "expired"
+            record["decided_at"] = datetime.now(timezone.utc).isoformat()
+            path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+            raise ValueError(f"approval expired: {approval_id}")
         record["status"] = status
         record["decided_at"] = datetime.now(timezone.utc).isoformat()
         path.write_text(json.dumps(record, indent=2), encoding="utf-8")
@@ -160,6 +167,38 @@ def approval_security_context() -> Dict[str, Any]:
         "token_required": token_required,
         "warning": warning,
     }
+
+
+def _approval_ttl_seconds(value: Optional[int]) -> Optional[int]:
+    if value is not None:
+        return value if value > 0 else None
+    configured = os.environ.get("ACB_APPROVAL_TTL_SECONDS")
+    if not configured:
+        return None
+    try:
+        parsed = int(configured)
+    except ValueError:
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _expires_at(ttl_seconds: Optional[int]) -> Optional[str]:
+    if ttl_seconds is None:
+        return None
+    return (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).isoformat()
+
+
+def _is_expired(record: Dict[str, Any]) -> bool:
+    expires_at = record.get("expires_at")
+    if not expires_at:
+        return False
+    try:
+        expires = datetime.fromisoformat(str(expires_at))
+    except ValueError:
+        return True
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) >= expires
 
 
 def _stable_hash(value: Any) -> str:

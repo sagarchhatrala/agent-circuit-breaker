@@ -78,6 +78,14 @@ class RunLedger:
                     "decision": action.get("decision"),
                     "matched_rule": action.get("matched_rule"),
                     "risk_score": action.get("risk_score"),
+                    "engine_version": action.get("engine_version"),
+                    "policy": action.get("policy"),
+                    "policy_source": action.get("policy_source"),
+                    "policy_trust": action.get("policy_trust"),
+                    "policy_signature": action.get("policy_signature"),
+                    "inspection_coverage": action.get("inspection_coverage"),
+                    "decision_validation": action.get("decision_validation"),
+                    "error": action.get("error"),
                 }
                 for action in result.get("actions", [])
             ],

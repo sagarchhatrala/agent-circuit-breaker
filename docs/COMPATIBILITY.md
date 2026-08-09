@@ -154,3 +154,9 @@ as additive action-result fields. Existing fields keep their v1.x meaning.
 Automatic known-safe `ALLOW` now requires complete single-segment inspection.
 A chained action that previously inherited a safe first segment may now remain
 `UNKNOWN` unless a rule or policy mode produces a stricter decision.
+
+v1.6.3 expands built-in command hardening for dangerous commands wrapped behind
+common shell/interpreter execution flags. Some actions that were previously
+`UNKNOWN`, such as `bash -c "rm -rf /"`, now return `BLOCK`. Pipeline SDK
+results also include additive validation metadata; an applicable guard returning
+`UNKNOWN` prevents another guard's `ALLOW` from becoming the aggregate verdict.

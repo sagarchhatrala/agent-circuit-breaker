@@ -108,6 +108,9 @@ segment with no operators or risk flags, the CLI maps that result to `ALLOW`.
 
 v1.6.2 records this in `inspection_coverage` and validates the final decision in
 `decision_validation`. Incomplete mandatory inspection cannot produce `ALLOW`.
+v1.6.3 extends the same fail-secure direction by blocking dangerous payloads
+hidden behind common shell/interpreter execution flags and by adding validation
+metadata to the async pipeline SDK.
 
 This keeps policy layers explicit:
 

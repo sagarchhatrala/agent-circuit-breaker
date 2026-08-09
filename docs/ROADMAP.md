@@ -474,6 +474,20 @@ Implemented so far:
 - approval IDs scoped to policy and inspection context.
 - audit summaries for inspection coverage and decision validation.
 
+### v1.6.3: Decision Path Hardening
+
+Status: released as `v1.6.3`.
+
+Implemented so far:
+
+- deterministic detection for dangerous commands wrapped behind common shell and interpreter execution flags.
+- pipeline SDK validation metadata for aggregate allow decisions.
+- applicable `UNKNOWN` guard results prevent another guard's `ALLOW` from becoming the aggregate pipeline verdict.
+- MCP custom-rule failure results include inspection coverage and decision validation evidence.
+- local run-ledger replay preserves action-level engine, policy, coverage, and validation evidence.
+- optional approval expiry through `ACB_APPROVAL_TTL_SECONDS` or `ApprovalStore(..., ttl_seconds=...)`.
+- explicit oversize detection for remote policy loading.
+
 Candidate follow-up work:
 
 - explicit policy source trust levels for signed, system, user, local, and repository policies.

@@ -144,6 +144,7 @@ Add command-oriented built-in rules only after the inspector tests pass. Candida
 - `cmd_git_force_push`
 - `cmd_recursive_world_writable`
 - `cmd_remote_script_to_shell`
+- `cmd_nested_dangerous_execution`
 - `cmd_sensitive_file_exfiltration`
 
 Rules should call the command inspector rather than duplicating parser logic.

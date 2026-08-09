@@ -96,6 +96,9 @@ class FilesystemInspector:
         if not path:
             raise ValueError("Path cannot be empty or whitespace")
 
+        if re.match(r"^[a-zA-Z]:[^/\\]", path):
+            path = f"{path[:2]}\\{path[2:]}"
+
         # Replace backslashes with forward slashes for uniform processing
         path = path.replace("\\", "/")
 

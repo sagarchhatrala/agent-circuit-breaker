@@ -1,6 +1,6 @@
 # Pipeline Architecture
 
-`v1.4.9` added a dependency-free async pipeline for integrations that want to evaluate full tool-call contexts instead of only command strings. `v1.5.0` adds optional enterprise integrations around that core while keeping the default install dependency-free.
+`v1.4.9` added a dependency-free async pipeline for integrations that want to evaluate full tool-call contexts instead of only command strings. `v1.5.0` adds optional enterprise integrations around that core while keeping the default install dependency-free. `v1.6.3` adds aggregate decision validation metadata.
 
 The existing CLI, `evaluate_action(...)`, and `evaluate_trajectory(...)` APIs remain supported. The pipeline is additive.
 
@@ -28,7 +28,9 @@ agent_circuit_breaker/
 
 Tool schemas are caller-defined, so the pipeline does not depend on fixed argument names. `AgentContext.string_values()` recursively exposes every nested string-valued argument, and `action_text()` combines those strings for guards that evaluate action text.
 
-`GuardResult` returns `allow`, `deny`, or `unknown`. A guard should return `unknown` when the context is outside its domain. The pipeline denies immediately when any guard denies, allows when at least one guard allows and no guard denies, and returns `unknown` when no guard applies.
+`GuardResult` returns `allow`, `deny`, or `unknown`. A guard should return `GuardResult.not_applicable(...)` when the context is outside its domain. The pipeline denies immediately when any guard denies. It allows only when at least one guard allows and no applicable guard returned `unknown` or incomplete coverage. It returns `unknown` when no guard applies or when an applicable guard could not complete a deterministic allow/block decision.
+
+`PipelineResult.validation` records the aggregate decision validation summary, including applicable unknown guards and incomplete coverage guards that prevented an aggregate allow.
 
 If a guard raises an exception, the pipeline converts it to `deny`.
 

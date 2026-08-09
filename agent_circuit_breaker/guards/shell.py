@@ -28,7 +28,7 @@ class ShellGuard:
     async def evaluate(self, context: AgentContext) -> GuardResult:
         command = _command_text(context)
         if not command:
-            return GuardResult.unknown(self.guard_id, "no shell command")
+            return GuardResult.not_applicable(self.guard_id, "no shell command")
 
         analysis = CommandInspector.analyze_command(command)
         if not analysis.get("is_valid"):

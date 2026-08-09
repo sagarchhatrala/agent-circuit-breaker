@@ -185,6 +185,16 @@ class GuardResult:
     severity: str = "LOW"
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
+    @property
+    def applicable(self) -> bool:
+        """Return false when a guard explicitly reports it did not apply."""
+        return bool(self.metadata.get("applicable", True))
+
+    @property
+    def coverage_complete(self) -> bool:
+        """Return false when a guard explicitly reports incomplete coverage."""
+        return bool(self.metadata.get("coverage_complete", True))
+
     @classmethod
     def allow(cls, guard_id: str, reason: str = "", metadata: Mapping[str, Any] | None = None) -> "GuardResult":
         return cls(ALLOW, guard_id, reason, "LOW", metadata or {})
@@ -203,6 +213,10 @@ class GuardResult:
     def unknown(cls, guard_id: str, reason: str = "", metadata: Mapping[str, Any] | None = None) -> "GuardResult":
         return cls(UNKNOWN, guard_id, reason, "LOW", metadata or {})
 
+    @classmethod
+    def not_applicable(cls, guard_id: str, reason: str = "") -> "GuardResult":
+        return cls(UNKNOWN, guard_id, reason, "LOW", {"applicable": False, "coverage_complete": True})
+
 
 @dataclass(frozen=True)
 class PipelineResult:
@@ -213,6 +227,7 @@ class PipelineResult:
     guard_results: Tuple[GuardResult, ...]
     denied_by: str | None = None
     reason: str = ""
+    validation: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def allowed(self) -> bool:

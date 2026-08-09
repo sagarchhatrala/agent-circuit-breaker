@@ -14,6 +14,7 @@ class CommandInspector:
         "cmd_git_force_push": 85,
         "cmd_recursive_world_writable": 85,
         "cmd_remote_script_to_shell": 100,
+        "cmd_nested_dangerous_execution": 100,
         "cmd_package_publish_without_context": 75,
         "cmd_destructive_docker": 85,
         "cmd_cloud_resource_deletion": 85,
@@ -272,6 +273,14 @@ class CommandInspector:
                 "Root-level find delete command detected",
             )
 
+        nested = CommandInspector._nested_command_payload(command, segment["args"])
+        if nested and CommandInspector._nested_payload_is_dangerous(nested):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_nested_dangerous_execution",
+                "Nested command payload contains dangerous action",
+            )
+
     @staticmethod
     def _detect_full_command_risks(result: Dict[str, Any]) -> None:
         """Detect risks that are easier to identify from the full command text."""
@@ -405,6 +414,79 @@ class CommandInspector:
             return True
 
         if command == "yarn" and args[:2] == ["npm", "publish"]:
+            return True
+
+        return False
+
+    @staticmethod
+    def _nested_command_payload(command: str, args: List[str]) -> Optional[str]:
+        """Return the command string passed to common shell/interpreter wrappers."""
+        shell_wrappers = {"sh", "bash", "zsh", "dash", "ksh"}
+        if command in shell_wrappers:
+            for index, arg in enumerate(args):
+                if arg.lower() == "-c" and index + 1 < len(args):
+                    return args[index + 1]
+
+        if command in {"cmd", "cmd.exe"}:
+            for index, arg in enumerate(args):
+                if arg.lower() in {"/c", "/k"} and index + 1 < len(args):
+                    return " ".join(args[index + 1 :])
+
+        if command in {"pwsh", "pwsh.exe", "powershell", "powershell.exe"}:
+            command_flags = {"-c", "-command", "/c", "/command"}
+            for index, arg in enumerate(args):
+                if arg.lower() in command_flags and index + 1 < len(args):
+                    return " ".join(args[index + 1 :])
+
+        interpreter_flags = {
+            "python": {"-c"},
+            "python3": {"-c"},
+            "py": {"-c"},
+            "node": {"-e", "--eval"},
+            "ruby": {"-e"},
+            "perl": {"-e"},
+            "php": {"-r"},
+        }
+        flags = interpreter_flags.get(command)
+        if flags:
+            for index, arg in enumerate(args):
+                if arg.lower() in flags and index + 1 < len(args):
+                    return args[index + 1]
+
+        return None
+
+    @staticmethod
+    def _nested_payload_is_dangerous(payload: str) -> bool:
+        """Return true when a wrapped payload deterministically contains danger."""
+        if not payload.strip():
+            return False
+
+        try:
+            nested = CommandInspector.analyze_command(payload)
+        except Exception:
+            return True
+
+        if not nested.get("is_valid"):
+            return True
+
+        if nested.get("risk_flags") or nested.get("is_dangerous"):
+            return True
+
+        try:
+            from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
+            from agent_circuit_breaker.inspectors.sql import SQLInspector
+        except Exception:
+            return False
+
+        for segment in nested.get("segments") or []:
+            operation = FilesystemInspector.analyze_operation(segment.get("raw") or "")
+            if operation.get("operation") == "delete" and (
+                operation.get("is_dangerous") or "recursive" in operation.get("flags", set())
+            ):
+                return True
+
+        sql = SQLInspector.analyze_sql(payload)
+        if sql.get("is_valid") and (sql.get("risk_flags") or sql.get("is_dangerous")):
             return True
 
         return False

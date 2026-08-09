@@ -16,7 +16,7 @@ class LegacyActionGuard:
 
         action = context.action_text()
         if not action:
-            return GuardResult.unknown(self.guard_id, "no action text")
+            return GuardResult.not_applicable(self.guard_id, "no action text")
 
         result = evaluate_action(action)
         verdict = result.get("verdict")
@@ -29,4 +29,8 @@ class LegacyActionGuard:
             )
         if verdict == "allow":
             return GuardResult.allow(self.guard_id, "legacy evaluator allowed action", {"legacy_result": result})
-        return GuardResult.unknown(self.guard_id, "legacy evaluator returned unknown", {"legacy_result": result})
+        return GuardResult.unknown(
+            self.guard_id,
+            "legacy evaluator returned unknown",
+            {"legacy_result": result, "applicable": False},
+        )

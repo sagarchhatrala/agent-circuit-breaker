@@ -34,11 +34,11 @@ class PackageInstallGuard:
     async def evaluate(self, context: AgentContext) -> GuardResult:
         command = context.action_text()
         if not command:
-            return GuardResult.unknown(self.guard_id, "no package command")
+            return GuardResult.not_applicable(self.guard_id, "no package command")
 
         analysis = CommandInspector.analyze_command(command)
         if not analysis.get("segments"):
-            return GuardResult.unknown(self.guard_id, "no package command")
+            return GuardResult.not_applicable(self.guard_id, "no package command")
 
         segment = analysis["segments"][0]
         binary = (segment.get("command") or "").lower()
@@ -53,7 +53,7 @@ class PackageInstallGuard:
             if result.verdict == "deny":
                 return result
             return self._evaluate_resolved_dependencies(context)
-        return GuardResult.unknown(self.guard_id, "not a package install")
+        return GuardResult.not_applicable(self.guard_id, "not a package install")
 
     def _evaluate_pip(self, args: list[str]) -> GuardResult:
         if self.required_index_url:

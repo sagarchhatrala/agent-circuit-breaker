@@ -15,6 +15,11 @@ v1.6.2 adds additive `inspection_coverage`, `decision_validation`, and
 they make it possible for integrations and audit pipelines to answer what was
 inspected before a decision was returned.
 
+v1.6.3 keeps the action-result contract additive while expanding evidence in
+MCP error results and local run-ledger replay. Pipeline SDK results now include
+additive validation metadata describing whether applicable unknown guard results
+prevented an aggregate allow.
+
 ## Top-Level Result
 
 `agent-circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
