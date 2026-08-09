@@ -19,7 +19,8 @@ The caller is responsible for:
 
 - sending every proposed action to Agent Circuit Breaker before execution.
 - treating `BLOCK` and `ERROR` as stop conditions.
-- deciding whether `UNKNOWN` should stop or require human review.
+- treating `UNKNOWN` as a stop or review condition unless a separate allowlist
+  explicitly accepts the ambiguity.
 - preventing bypass paths that execute actions without evaluation.
 
 ## Decision Model
@@ -50,9 +51,10 @@ known-safe allow is only permitted for a single complete command segment with no
 shell operators, no command risk flags, valid SQL inspection, and no SQL risk
 flags. A recognized safe first segment cannot make a later chained segment safe.
 
-Integrations that need strict fail-secure behavior should continue to execute
-only on `ALLOW`, stop on `BLOCK` and `ERROR`, and route `UNKNOWN` through strict
-mode, approval mode, or their own explicit allowlist.
+Integrations should execute only on `ALLOW`. v1.6.5 makes this the default for
+the MCP proxy and the pipeline SDK: `UNKNOWN` stops forwarding/execution unless
+the integration explicitly opts in with `--allow-unknown` or
+`AgentCircuitBreaker(allow_core_unknown=True)`.
 
 ## Trajectory Evaluation
 
@@ -84,7 +86,12 @@ Policy files and external rule packs can include an embedded `signature` object.
 
 ## Strict and Approval Modes
 
-Default `check` behavior preserves `UNKNOWN` for unclassified actions. `--mode strict` converts `UNKNOWN` to `BLOCK` for fail-secure environments. `team` and `prod` profiles route `UNKNOWN` to `PENDING_APPROVAL`, making ambiguity visible to a human instead of silently passing through.
+Default `check` behavior preserves `UNKNOWN` for unclassified actions so callers
+can see ambiguity directly. `--mode strict` converts `UNKNOWN` to `BLOCK` for
+fail-secure environments. `team` and `prod` profiles route `UNKNOWN` to
+`PENDING_APPROVAL`, making ambiguity visible to a human instead of silently
+passing through. Executable adapters such as MCP forwarding and the pipeline SDK
+stop on `UNKNOWN` by default.
 
 Local approval records are an audit and review workflow by default. They are not a complete separation-of-duties control if the same agent process can run `agent-circuit-breaker approvals approve <ID>`. Approval records include warning metadata when `ACB_APPROVAL_TOKEN` is not configured. To require a human-held token for approve/deny decisions, set `ACB_APPROVAL_TOKEN` outside the agent runtime and pass `--approval-token` when deciding an approval. Approval validation must be performed against a fresh evaluation result; approval does not bypass inspection, policy, or decision validation. In high-stakes environments, keep the approval decision path outside the agent's shell and tool authority.
 

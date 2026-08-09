@@ -232,6 +232,9 @@ not carry `tools/call` arguments report coverage status `not_applicable` rather
 than claiming that security-relevant content was inspected. Stateful MCP
 trajectory inspection may include `trajectory_state` with attempted and
 forwarded action counts; blocked calls are attempted but not forwarded.
+In v1.6.5, MCP `UNKNOWN` tool-call inspections are stop conditions by default.
+`--allow-unknown` is an explicit compatibility opt-in and does not change the
+shape of the JSON-RPC error response contract.
 
 ## Approval Context
 

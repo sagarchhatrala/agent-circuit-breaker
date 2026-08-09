@@ -4,6 +4,35 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.5] - 2026-08-09
+
+### Changed
+
+- MCP proxy forwarding now stops `UNKNOWN` tool-call inspections by default.
+- Pipeline SDK facade evaluations now treat core evaluator `UNKNOWN` results as
+  applicable unknowns by default, preventing unrelated guard allows from making
+  an unclassified action executable.
+- Added explicit compatibility opt-ins: `agent-circuit-breaker-mcp-proxy
+  --allow-unknown`, `MCPRunGuard(allow_unknown=True)`, and
+  `AgentCircuitBreaker(allow_core_unknown=True)`.
+- Documentation now clarifies the difference between preserving `UNKNOWN` in
+  low-level results and stopping `UNKNOWN` in executable adapter paths.
+
+### Security
+
+- Hardens cross-adapter execution semantics so `ALLOW` remains the only default
+  executable state for MCP and pipeline integrations.
+- Adds regression coverage for default MCP UNKNOWN blocking, explicit MCP
+  UNKNOWN forwarding opt-in, default pipeline UNKNOWN blocking, explicit
+  pipeline UNKNOWN allow opt-in, and interpreter-wrapper UNKNOWN handling.
+
+### Compatibility
+
+- Existing v1.x CLI/API result fields and schemas keep their meaning.
+- Low-level `check` behavior still reports `UNKNOWN` for unclassified actions.
+- Callers that intentionally relied on previous MCP or pipeline UNKNOWN
+  forwarding can opt in explicitly.
+
 ## [1.6.4] - 2026-08-09
 
 ### Added

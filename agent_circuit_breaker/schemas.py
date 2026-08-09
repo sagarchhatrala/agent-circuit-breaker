@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Any, Dict
 
 
-SCHEMA_VERSION = "1.6.4"
+SCHEMA_VERSION = "1.6.5"
 JSON_SCHEMA_DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 

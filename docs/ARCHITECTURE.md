@@ -114,6 +114,9 @@ metadata to the async pipeline SDK.
 v1.6.4 adds a compact canonical internal decision summary used by audit, ledger,
 approval, trajectory, and adapter consistency tests while preserving the v1.x
 public JSON fields.
+v1.6.5 keeps the low-level `UNKNOWN` result explicit but makes executable MCP
+and pipeline SDK paths stop by default unless a caller opts into allowing
+unknown actions.
 
 This keeps policy layers explicit:
 

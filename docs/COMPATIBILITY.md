@@ -166,3 +166,9 @@ coverage/state metadata, and approval revalidation helpers as additive evidence.
 Cleartext `http://` remote policy URLs now require explicit opt-in with
 `--allow-insecure-remote-policy`; HTTPS and local policy loading remain
 compatible.
+
+v1.6.5 keeps the CLI/API action result contract intact but tightens executable
+adapter defaults. MCP proxy forwarding and the pipeline SDK facade stop core
+`UNKNOWN` results by default. Callers that intentionally rely on a separate
+allowlist can opt in with `agent-circuit-breaker-mcp-proxy --allow-unknown` or
+`AgentCircuitBreaker(allow_core_unknown=True)`.

@@ -15,7 +15,7 @@ from agent_circuit_breaker.trajectory import evaluate_trajectory
 
 
 COMMAND_FIELDS = ("command", "cmd", "query", "sql", "script", "shell", "run")
-BLOCKING_VERDICTS = {"block", "pending_approval", "error"}
+STOP_VERDICTS = {"block", "pending_approval", "error", "unknown"}
 
 
 class MCPRunGuard:
@@ -28,11 +28,13 @@ class MCPRunGuard:
         mode: Optional[str] = None,
         rules: Optional[str] = None,
         contract: Optional[Dict[str, Any]] = None,
+        allow_unknown: bool = False,
     ):
         self.profile = profile
         self.mode = mode
         self.rules = rules
         self.contract = contract
+        self.allow_unknown = allow_unknown
         self.actions: List[str] = []
         self.forwarded_actions: List[str] = []
 
@@ -62,7 +64,7 @@ class MCPRunGuard:
         )
         self.actions.extend(values)
         return {
-            "allowed": result["verdict"] not in BLOCKING_VERDICTS,
+            "allowed": _verdict_allowed(result["verdict"], allow_unknown=self.allow_unknown),
             "trajectory": result,
             "coverage": _argument_coverage(candidates),
             "state": self.state_summary(),
@@ -106,6 +108,7 @@ def inspect_arguments(
     profile: Optional[str] = None,
     mode: Optional[str] = None,
     rules: Optional[str] = None,
+    allow_unknown: bool = False,
 ) -> Dict[str, Any]:
     """Inspect command-like values recursively inside MCP tool arguments."""
     checks = []
@@ -139,7 +142,10 @@ def inspect_arguments(
             result = evaluate_action(value)
         checks.append({"field": field_path, "result": result})
 
-    blocked = any(check["result"]["verdict"] in BLOCKING_VERDICTS for check in checks)
+    blocked = any(
+        not _verdict_allowed(check["result"]["verdict"], allow_unknown=allow_unknown)
+        for check in checks
+    )
     return {
         "allowed": not blocked,
         "checks": checks,
@@ -154,6 +160,7 @@ def inspect_jsonrpc_message(
     mode: Optional[str] = None,
     rules: Optional[str] = None,
     run_guard: Optional[MCPRunGuard] = None,
+    allow_unknown: bool = False,
 ) -> Dict[str, Any]:
     """Inspect an MCP JSON-RPC message and return forwarding metadata."""
     if message.get("method") != "tools/call":
@@ -166,7 +173,7 @@ def inspect_jsonrpc_message(
 
     params = message.get("params") or {}
     arguments = params.get("arguments") if isinstance(params, dict) else None
-    inspection = inspect_arguments(arguments or {}, profile=profile, mode=mode, rules=rules)
+    inspection = inspect_arguments(arguments or {}, profile=profile, mode=mode, rules=rules, allow_unknown=allow_unknown)
     if run_guard is not None:
         trajectory_inspection = run_guard.inspect_arguments(arguments or {})
         inspection["trajectory"] = trajectory_inspection["trajectory"]
@@ -188,7 +195,11 @@ def blocked_jsonrpc_response(message: Dict[str, Any], inspection: Dict[str, Any]
     if "id" not in message:
         return None
     first_block = next(
-        (check for check in inspection["checks"] if check["result"]["verdict"] in BLOCKING_VERDICTS),
+        (
+            check
+            for check in inspection["checks"]
+            if not _verdict_allowed(check["result"]["verdict"], allow_unknown=False)
+        ),
         None,
     )
     result = first_block["result"] if first_block else {}
@@ -220,6 +231,7 @@ def proxy_stdio(
     mode: Optional[str] = None,
     rules: Optional[str] = None,
     run_guard: Optional[MCPRunGuard] = None,
+    allow_unknown: bool = False,
 ) -> int:
     """Run a stdio JSON-RPC MCP proxy in front of an upstream server command."""
     process = subprocess.Popen(  # nosec: explicit user-provided MCP server command
@@ -251,6 +263,7 @@ def proxy_stdio(
                     mode=mode,
                     rules=rules,
                     run_guard=run_guard,
+                    allow_unknown=allow_unknown,
                 )
                 if not inspection["allowed"]:
                     response = inspection.get("response")
@@ -280,21 +293,41 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--rules", help="External JSON rule file")
     parser.add_argument("--trajectory", action="store_true", help="Enable stateful trajectory checks across MCP tool calls")
     parser.add_argument("--trajectory-policy", help="JSON file containing a trajectory run contract")
+    parser.add_argument("--allow-unknown", action="store_true", help="Forward UNKNOWN tool calls instead of stopping")
     parser.add_argument("server_command", nargs="*", help="Upstream MCP server command")
     args = parser.parse_args(argv)
     contract = _load_trajectory_contract(args.trajectory_policy) if args.trajectory_policy else None
     run_guard = (
-        MCPRunGuard(profile=args.profile, mode=args.mode, rules=args.rules, contract=contract)
+        MCPRunGuard(
+            profile=args.profile,
+            mode=args.mode,
+            rules=args.rules,
+            contract=contract,
+            allow_unknown=args.allow_unknown,
+        )
         if args.trajectory or args.trajectory_policy
         else None
     )
 
     if args.inspect_only:
-        return inspect_stdin(profile=args.profile, mode=args.mode, rules=args.rules, run_guard=run_guard)
+        return inspect_stdin(
+            profile=args.profile,
+            mode=args.mode,
+            rules=args.rules,
+            run_guard=run_guard,
+            allow_unknown=args.allow_unknown,
+        )
 
     if not args.server_command:
         parser.error("server_command is required unless --inspect-only is used")
-    return proxy_stdio(args.server_command, profile=args.profile, mode=args.mode, rules=args.rules, run_guard=run_guard)
+    return proxy_stdio(
+        args.server_command,
+        profile=args.profile,
+        mode=args.mode,
+        rules=args.rules,
+        run_guard=run_guard,
+        allow_unknown=args.allow_unknown,
+    )
 
 
 def inspect_stdin(
@@ -303,6 +336,7 @@ def inspect_stdin(
     mode: Optional[str] = None,
     rules: Optional[str] = None,
     run_guard: Optional[MCPRunGuard] = None,
+    allow_unknown: bool = False,
 ) -> int:
     """Read JSON payloads from stdin and write inspection results to stdout."""
     for line in sys.stdin:
@@ -314,7 +348,7 @@ def inspect_stdin(
             payload = json.loads(line)
             if not isinstance(payload, dict):
                 raise ValueError("payload must be a JSON object")
-            inspection = inspect_arguments(payload, profile=profile, mode=mode, rules=rules)
+            inspection = inspect_arguments(payload, profile=profile, mode=mode, rules=rules, allow_unknown=allow_unknown)
             if run_guard is not None:
                 trajectory_inspection = run_guard.inspect_arguments(payload)
                 inspection["trajectory"] = trajectory_inspection["trajectory"]
@@ -373,6 +407,13 @@ def _argument_coverage(
         "error": error,
         "unknowns": unknowns,
     }
+
+
+def _verdict_allowed(verdict: Any, *, allow_unknown: bool = False) -> bool:
+    normalized = str(verdict or "").lower()
+    if allow_unknown and normalized == "unknown":
+        return True
+    return normalized not in STOP_VERDICTS
 
 
 def _relay_server_stdout(process: subprocess.Popen[str]) -> None:

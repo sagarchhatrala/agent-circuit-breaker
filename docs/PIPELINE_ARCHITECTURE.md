@@ -1,6 +1,6 @@
 # Pipeline Architecture
 
-`v1.4.9` added a dependency-free async pipeline for integrations that want to evaluate full tool-call contexts instead of only command strings. `v1.5.0` adds optional enterprise integrations around that core while keeping the default install dependency-free. `v1.6.3` adds aggregate decision validation metadata.
+`v1.4.9` added a dependency-free async pipeline for integrations that want to evaluate full tool-call contexts instead of only command strings. `v1.5.0` adds optional enterprise integrations around that core while keeping the default install dependency-free. `v1.6.3` adds aggregate decision validation metadata. `v1.6.5` stops core `UNKNOWN` results by default in the SDK facade unless callers explicitly opt in.
 
 The existing CLI, `evaluate_action(...)`, and `evaluate_trajectory(...)` APIs remain supported. The pipeline is additive.
 
@@ -34,11 +34,18 @@ Tool schemas are caller-defined, so the pipeline does not depend on fixed argume
 
 If a guard raises an exception, the pipeline converts it to `deny`.
 
-For v1.6.4 consistency, custom guards should reserve `GuardResult.unknown(...)`
+For v1.6.4+ consistency, custom guards should reserve `GuardResult.unknown(...)`
 for cases where the guard applied but could not complete a deterministic
 decision. If the guard's domain does not apply to the current tool call, return
 `GuardResult.not_applicable(...)` so an unrelated allow cannot hide an applicable
 unknown and an unrelated skip does not block a valid allow.
+
+`LegacyActionGuard`, which bridges the classic action evaluator into the
+pipeline, treats a core `UNKNOWN` as applicable by default. That means a generic
+pipeline SDK evaluation stops on unclassified action text. Callers that already
+have a separate allowlist or review layer may instantiate
+`AgentCircuitBreaker(allow_core_unknown=True)` to preserve the previous
+compatibility behavior.
 
 ## SDK Example
 
