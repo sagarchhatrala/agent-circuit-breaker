@@ -1,4 +1,4 @@
-"""Tests for trajectory-level long-horizon safety analysis."""
+﻿"""Tests for trajectory-level long-horizon safety analysis."""
 
 import json
 import os
@@ -299,7 +299,7 @@ class TestTrajectoryCLI(unittest.TestCase):
             old_argv = sys.argv
             old_stdout = sys.stdout
             try:
-                sys.argv = ["circuit-breaker", "trajectory", str(path), "--format", "json"]
+                sys.argv = ["agent-circuit-breaker", "trajectory", str(path), "--format", "json"]
                 sys.stdout = StringIO()
                 exit_code = main()
                 output = sys.stdout.getvalue()

@@ -1,4 +1,4 @@
-"""Dependency-free stdio JSON-RPC proxy for MCP tool calls."""
+﻿"""Dependency-free stdio JSON-RPC proxy for MCP tool calls."""
 
 import argparse
 import json
@@ -221,7 +221,7 @@ def proxy_stdio(
 def main(argv: Optional[List[str]] = None) -> int:
     """Run inspection mode or a stdio MCP proxy."""
     parser = argparse.ArgumentParser(
-        prog="circuit-breaker-mcp-proxy",
+        prog="agent-circuit-breaker-mcp-proxy",
         description="Agent Circuit Breaker stdio JSON-RPC proxy for MCP servers",
     )
     parser.add_argument("--inspect-only", action="store_true", help="Read JSON payloads and emit inspection results")

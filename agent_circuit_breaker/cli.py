@@ -1,4 +1,4 @@
-"""Command-line interface for Agent Circuit Breaker."""
+﻿"""Command-line interface for Agent Circuit Breaker."""
 
 import sys
 import json
@@ -284,13 +284,30 @@ class CircuitBreakerCLI:
         policy_path: Optional[str],
         include_plugins: bool,
         require_signature: bool = False,
+        trust_repository_policy: bool = False,
     ) -> Dict[str, Any]:
         """Load optional policy, rules, and plugins for a command mode."""
-        policy = (
-            load_policy(policy_path, require_signature=require_signature)
-            if policy_path
-            else load_policy(start_dir=".", require_signature=require_signature)
-        )
+        try:
+            policy = (
+                load_policy(
+                    policy_path,
+                    require_signature=require_signature,
+                    trust_repository_policy=trust_repository_policy,
+                )
+                if policy_path
+                else load_policy(
+                    start_dir=".",
+                    require_signature=require_signature,
+                    trust_repository_policy=trust_repository_policy,
+                )
+            )
+        except ValueError as exc:
+            return {
+                "is_valid": False,
+                "errors": [str(exc)],
+                "rule_path": policy_path,
+                "rules": [],
+            }
         resolved_rule_path = rule_file_path or policy.get("rules_path")
         resolved_rule_definition = None if rule_file_path else policy.get("rules_definition")
         resolved_profile = profile_name or policy.get("profile")
@@ -329,6 +346,9 @@ class CircuitBreakerCLI:
             "profile_name": resolved_profile,
             "mode": resolved_mode,
             "policy_source": policy.get("path"),
+            "policy_source_type": policy.get("source_type"),
+            "policy_trust_level": policy.get("trust_level"),
+            "policy_trusted": policy.get("trusted"),
             "policy_signature": policy.get("signature"),
         }
 
@@ -461,6 +481,7 @@ class CircuitBreakerCLI:
         include_plugins: bool = False,
         audit: bool = False,
         require_signature: bool = False,
+        trust_repository_policy: bool = False,
     ) -> int:
         """
         Run in command mode, evaluating a single command.
@@ -478,6 +499,7 @@ class CircuitBreakerCLI:
             policy_path,
             include_plugins,
             require_signature=require_signature,
+            trust_repository_policy=trust_repository_policy,
         )
         if not runtime["is_valid"]:
             output = self.format_rule_validation_output(
@@ -495,6 +517,11 @@ class CircuitBreakerCLI:
         )
         if runtime.get("policy_source"):
             result["policy_source"] = runtime["policy_source"]
+            result["policy_trust"] = {
+                "source_type": runtime.get("policy_source_type"),
+                "trust_level": runtime.get("policy_trust_level"),
+                "trusted": runtime.get("policy_trusted"),
+            }
         if runtime.get("policy_signature"):
             result["policy_signature"] = runtime["policy_signature"]
         if result["verdict"] == "pending_approval":
@@ -535,6 +562,7 @@ class CircuitBreakerCLI:
         policy_path: Optional[str] = None,
         include_plugins: bool = False,
         require_signature: bool = False,
+        trust_repository_policy: bool = False,
     ) -> int:
         """Run explanation mode for a single action."""
         runtime = self._load_runtime_options(
@@ -544,6 +572,7 @@ class CircuitBreakerCLI:
             policy_path,
             include_plugins,
             require_signature=require_signature,
+            trust_repository_policy=trust_repository_policy,
         )
         if not runtime["is_valid"]:
             print(
@@ -562,6 +591,11 @@ class CircuitBreakerCLI:
         )
         if runtime.get("policy_source"):
             result["policy_source"] = runtime["policy_source"]
+            result["policy_trust"] = {
+                "source_type": runtime.get("policy_source_type"),
+                "trust_level": runtime.get("policy_trust_level"),
+                "trusted": runtime.get("policy_trusted"),
+            }
         explanation = explain_result(result)
         if self.output_format == "json":
             result["explanation"] = explanation
@@ -582,6 +616,7 @@ class CircuitBreakerCLI:
         audit: bool = False,
         sarif: bool = False,
         require_signature: bool = False,
+        trust_repository_policy: bool = False,
     ) -> int:
         """Run static scan mode over text files."""
         runtime = self._load_runtime_options(
@@ -591,6 +626,7 @@ class CircuitBreakerCLI:
             policy_path,
             include_plugins,
             require_signature=require_signature,
+            trust_repository_policy=trust_repository_policy,
         )
         if not runtime["is_valid"]:
             print(
@@ -639,6 +675,7 @@ class CircuitBreakerCLI:
         audit: bool = False,
         ledger: bool = False,
         require_signature: bool = False,
+        trust_repository_policy: bool = False,
     ) -> int:
         """Run trajectory mode over a JSON run file."""
         runtime = self._load_runtime_options(
@@ -648,6 +685,7 @@ class CircuitBreakerCLI:
             policy_path,
             include_plugins,
             require_signature=require_signature,
+            trust_repository_policy=trust_repository_policy,
         )
         if not runtime["is_valid"]:
             print(
@@ -697,6 +735,11 @@ class CircuitBreakerCLI:
 
         if runtime.get("policy_source"):
             result["policy_source"] = runtime["policy_source"]
+            result["policy_trust"] = {
+                "source_type": runtime.get("policy_source_type"),
+                "trust_level": runtime.get("policy_trust_level"),
+                "trusted": runtime.get("policy_trusted"),
+            }
         if runtime.get("policy_signature"):
             result["policy_signature"] = runtime["policy_signature"]
         if result["verdict"] == "pending_approval":
@@ -1054,21 +1097,21 @@ class CircuitBreakerCLI:
 Agent Circuit Breaker - Safety Evaluation Tool
 
 Usage:
-  circuit-breaker check <ACTION> [OPTIONS]
-  circuit-breaker explain <ACTION> [OPTIONS]
-  circuit-breaker scan <PATH...> [OPTIONS]
-  circuit-breaker trajectory <RUN.json> [OPTIONS]
-  circuit-breaker install-hooks [OPTIONS]
-  circuit-breaker timeline [OPTIONS]
-  circuit-breaker ledger [RUN_ID] [OPTIONS]
-  circuit-breaker approvals list|approve <ID>|deny <ID>
-  circuit-breaker plugins [--format json]
-  circuit-breaker validate-rules <PATH> [OPTIONS]
-  circuit-breaker rules test <PATH> [OPTIONS]
-  circuit-breaker schemas [NAME]
-  circuit-breaker catalog [--format json]
-  circuit-breaker -c <ACTION> [OPTIONS]
-  circuit-breaker -i [OPTIONS]
+  agent-circuit-breaker check <ACTION> [OPTIONS]
+  agent-circuit-breaker explain <ACTION> [OPTIONS]
+  agent-circuit-breaker scan <PATH...> [OPTIONS]
+  agent-circuit-breaker trajectory <RUN.json> [OPTIONS]
+  agent-circuit-breaker install-hooks [OPTIONS]
+  agent-circuit-breaker timeline [OPTIONS]
+  agent-circuit-breaker ledger [RUN_ID] [OPTIONS]
+  agent-circuit-breaker approvals list|approve <ID>|deny <ID>
+  agent-circuit-breaker plugins [--format json]
+  agent-circuit-breaker validate-rules <PATH> [OPTIONS]
+  agent-circuit-breaker rules test <PATH> [OPTIONS]
+  agent-circuit-breaker schemas [NAME]
+  agent-circuit-breaker catalog [--format json]
+  agent-circuit-breaker -c <ACTION> [OPTIONS]
+  agent-circuit-breaker -i [OPTIONS]
 
 Options:
   -h, --help              Show this help message
@@ -1085,28 +1128,30 @@ Options:
   --approval-token TOKEN  Token required when ACB_APPROVAL_TOKEN is configured
   --policy PATH_OR_URL    Load central policy before local CLI overrides
   --require-signature     Require policy/rule JSON signatures before loading
+  --trust-repository-policy
+                          Allow auto-discovered repository policy to weaken controls
   --plugins               Load optional rule-provider plugins
   --sarif                 Emit SARIF for scan mode
 
 Examples:
-  circuit-breaker check 'rm -rf /'              # Evaluate an action
-  circuit-breaker check 'mkdir /tmp/example'    # Known safe filesystem action
-  circuit-breaker check 'ls -la'                # Unknown action
-  circuit-breaker check 'rm -rf /etc' --format json
-  circuit-breaker check 'deploy production' --rules ./rules.json
-  circuit-breaker explain 'git push --force origin main'
-  circuit-breaker scan ./scripts ./README.md
-  circuit-breaker trajectory ./agent-run.json --format json
-  circuit-breaker install-hooks --write
-  circuit-breaker timeline --verify
-  circuit-breaker ledger --verify
-  circuit-breaker approvals list
-  circuit-breaker plugins --format json
-  circuit-breaker validate-rules ./rules.json
-  circuit-breaker rules test ./policy-tests
-  circuit-breaker schemas rule-file
-  circuit-breaker catalog --format json
-  circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
+  agent-circuit-breaker check 'rm -rf /'              # Evaluate an action
+  agent-circuit-breaker check 'mkdir /tmp/example'    # Known safe filesystem action
+  agent-circuit-breaker check 'ls -la'                # Unknown action
+  agent-circuit-breaker check 'rm -rf /etc' --format json
+  agent-circuit-breaker check 'deploy production' --rules ./rules.json
+  agent-circuit-breaker explain 'git push --force origin main'
+  agent-circuit-breaker scan ./scripts ./README.md
+  agent-circuit-breaker trajectory ./agent-run.json --format json
+  agent-circuit-breaker install-hooks --write
+  agent-circuit-breaker timeline --verify
+  agent-circuit-breaker ledger --verify
+  agent-circuit-breaker approvals list
+  agent-circuit-breaker plugins --format json
+  agent-circuit-breaker validate-rules ./rules.json
+  agent-circuit-breaker rules test ./policy-tests
+  agent-circuit-breaker schemas rule-file
+  agent-circuit-breaker catalog --format json
+  agent-circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
 Exit Codes:
   0 - Command allowed
@@ -1125,7 +1170,7 @@ def main() -> int:
         Exit code
     """
     parser = argparse.ArgumentParser(
-        prog="circuit-breaker",
+        prog="agent-circuit-breaker",
         description="Agent Circuit Breaker - Deterministic Safety Layer for AI Agents",
         add_help=False,
     )
@@ -1156,6 +1201,11 @@ def main() -> int:
     parser.add_argument("--approval-token", help="Approval token required when ACB_APPROVAL_TOKEN is configured")
     parser.add_argument("--policy", dest="policy_path", type=str, help="Central policy file or URL")
     parser.add_argument("--require-signature", action="store_true", help="Require signed policy/rule JSON")
+    parser.add_argument(
+        "--trust-repository-policy",
+        action="store_true",
+        help="Trust auto-discovered repository policy to weaken controls",
+    )
     parser.add_argument("--plugins", action="store_true", help="Load installed rule plugins")
     parser.add_argument("--sarif", action="store_true", help="Emit SARIF for scan mode")
     parser.add_argument("--write", action="store_true", help="Write generated scaffolds where supported")
@@ -1196,6 +1246,7 @@ def main() -> int:
                 include_plugins=args.plugins,
                 audit=args.audit,
                 require_signature=args.require_signature,
+                trust_repository_policy=args.trust_repository_policy,
             )
 
         if args.command_parts:
@@ -1209,6 +1260,7 @@ def main() -> int:
                     include_plugins=args.plugins,
                     audit=args.audit,
                     require_signature=args.require_signature,
+                    trust_repository_policy=args.trust_repository_policy,
                 )
 
             if args.command_parts[0] == "explain" and len(args.command_parts) >= 2:
@@ -1220,6 +1272,7 @@ def main() -> int:
                     policy_path=args.policy_path,
                     include_plugins=args.plugins,
                     require_signature=args.require_signature,
+                    trust_repository_policy=args.trust_repository_policy,
                 )
 
             if args.command_parts[0] == "scan" and len(args.command_parts) >= 2:
@@ -1233,6 +1286,7 @@ def main() -> int:
                     audit=args.audit,
                     sarif=args.sarif,
                     require_signature=args.require_signature,
+                    trust_repository_policy=args.trust_repository_policy,
                 )
 
             if args.command_parts[0] == "trajectory" and len(args.command_parts) == 2:
@@ -1246,6 +1300,7 @@ def main() -> int:
                     audit=args.audit,
                     ledger=args.ledger,
                     require_signature=args.require_signature,
+                    trust_repository_policy=args.trust_repository_policy,
                 )
 
             if args.command_parts[0] == "install-hooks":
@@ -1283,8 +1338,8 @@ def main() -> int:
                 return cli.run_catalog_mode()
 
             print(
-                "Error: expected 'circuit-breaker check <action>' or "
-                "'circuit-breaker validate-rules <path>'",
+                "Error: expected 'agent-circuit-breaker check <action>' or "
+                "'agent-circuit-breaker validate-rules <path>'",
                 file=sys.stderr,
             )
             return 1

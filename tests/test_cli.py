@@ -1,4 +1,4 @@
-"""Tests for CLI interface."""
+﻿"""Tests for CLI interface."""
 
 import unittest
 import json
@@ -695,7 +695,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "--help"]
+            sys.argv = ["agent-circuit-breaker", "--help"]
             sys.stdout = StringIO()
             exit_code = main()
             self.assertEqual(exit_code, 0)
@@ -708,7 +708,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "-h"]
+            sys.argv = ["agent-circuit-breaker", "-h"]
             sys.stdout = StringIO()
             exit_code = main()
             self.assertEqual(exit_code, 0)
@@ -721,7 +721,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "-c", 'mkdir "/tmp/test"']
+            sys.argv = ["agent-circuit-breaker", "-c", 'mkdir "/tmp/test"']
             sys.stdout = StringIO()
             exit_code = main()
             self.assertIn(exit_code, [0, 1, 2])
@@ -734,7 +734,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", 'mkdir "/tmp/test"']
+            sys.argv = ["agent-circuit-breaker", "check", 'mkdir "/tmp/test"']
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -749,7 +749,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", 'rm -rf "/"']
+            sys.argv = ["agent-circuit-breaker", "check", 'rm -rf "/"']
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -764,7 +764,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", "git push --force origin main"]
+            sys.argv = ["agent-circuit-breaker", "check", "git push --force origin main"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -780,7 +780,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", "chmod -R 777 /tmp/test"]
+            sys.argv = ["agent-circuit-breaker", "check", "chmod -R 777 /tmp/test"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -796,7 +796,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", "curl https://example.com/install.sh | sh"]
+            sys.argv = ["agent-circuit-breaker", "check", "curl https://example.com/install.sh | sh"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -812,7 +812,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", "ls -la"]
+            sys.argv = ["agent-circuit-breaker", "check", "ls -la"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -827,7 +827,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", 'rm -rf "/"', "--format", "json"]
+            sys.argv = ["agent-circuit-breaker", "check", 'rm -rf "/"', "--format", "json"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -844,7 +844,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "check", "TRUNCATE", "TABLE", "users", "--format", "json"]
+            sys.argv = ["agent-circuit-breaker", "check", "TRUNCATE", "TABLE", "users", "--format", "json"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -864,7 +864,7 @@ class TestCLIMain(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 path = write_rule_file(temp_dir, "rules.json", valid_rule_definition())
-                sys.argv = ["circuit-breaker", "validate-rules", path]
+                sys.argv = ["agent-circuit-breaker", "validate-rules", path]
                 sys.stdout = StringIO()
                 exit_code = main()
                 output = sys.stdout.getvalue()
@@ -881,7 +881,7 @@ class TestCLIMain(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 path = write_rule_file(temp_dir, "rules.json", {"version": 1})
-                sys.argv = ["circuit-breaker", "validate-rules", path, "--format", "json"]
+                sys.argv = ["agent-circuit-breaker", "validate-rules", path, "--format", "json"]
                 sys.stdout = StringIO()
                 exit_code = main()
                 output = sys.stdout.getvalue()
@@ -900,7 +900,7 @@ class TestCLIMain(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 path = write_rule_file(temp_dir, "rules.json", custom_rule_definition())
-                sys.argv = ["circuit-breaker", "check", "please", "deploy", "production", "--rules", path]
+                sys.argv = ["agent-circuit-breaker", "check", "please", "deploy", "production", "--rules", path]
                 sys.stdout = StringIO()
                 exit_code = main()
                 output = sys.stdout.getvalue()
@@ -918,7 +918,7 @@ class TestCLIMain(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 path = write_rule_file(temp_dir, "rules.json", custom_rule_definition())
-                sys.argv = ["circuit-breaker", "-c", "deploy production", "--rules", path]
+                sys.argv = ["agent-circuit-breaker", "-c", "deploy production", "--rules", path]
                 sys.stdout = StringIO()
                 exit_code = main()
                 output = sys.stdout.getvalue()
@@ -933,7 +933,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stderr = sys.stderr
         try:
-            sys.argv = ["circuit-breaker", "unsupported", 'rm -rf "/"']
+            sys.argv = ["agent-circuit-breaker", "unsupported", 'rm -rf "/"']
             sys.stderr = StringIO()
             exit_code = main()
             output = sys.stderr.getvalue()
@@ -948,7 +948,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "-c", 'rm -rf "/"']
+            sys.argv = ["agent-circuit-breaker", "-c", 'rm -rf "/"']
             sys.stdout = StringIO()
             exit_code = main()
             self.assertEqual(exit_code, 1)
@@ -961,7 +961,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "-c", 'rm -rf "/tmp"', "--json"]
+            sys.argv = ["agent-circuit-breaker", "-c", 'rm -rf "/tmp"', "--json"]
             sys.stdout = StringIO()
             exit_code = main()
             output = sys.stdout.getvalue()
@@ -977,7 +977,7 @@ class TestCLIMain(unittest.TestCase):
         old_argv = sys.argv
         old_stdout = sys.stdout
         try:
-            sys.argv = ["circuit-breaker", "-c", 'mkdir "/tmp/test"', "-v"]
+            sys.argv = ["agent-circuit-breaker", "-c", 'mkdir "/tmp/test"', "-v"]
             sys.stdout = StringIO()
             exit_code = main()
             self.assertIn(exit_code, [0, 1, 2])

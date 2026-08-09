@@ -1,4 +1,4 @@
-# Local Allowlist Pattern
+﻿# Local Allowlist Pattern
 
 Agent Circuit Breaker supports a local allowlist pattern through external JSON rules with `response` set to `allow`.
 
@@ -40,13 +40,13 @@ Use this pattern only for deterministic, known-safe workflows. Built-in block ru
 Validate it:
 
 ```bash
-circuit-breaker validate-rules examples/allowlist_rules.json
+agent-circuit-breaker validate-rules examples/allowlist_rules.json
 ```
 
 Use it:
 
 ```bash
-circuit-breaker check "git status --short" --rules examples/allowlist_rules.json
+agent-circuit-breaker check "git status --short" --rules examples/allowlist_rules.json
 ```
 
 Expected verdict:
@@ -59,7 +59,7 @@ Matched Rule: allow_repo_status_checks
 Built-in blocks still win:
 
 ```bash
-circuit-breaker check "rm -rf /" --rules examples/allowlist_rules.json
+agent-circuit-breaker check "rm -rf /" --rules examples/allowlist_rules.json
 ```
 
 Expected verdict:

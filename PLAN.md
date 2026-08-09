@@ -1,6 +1,6 @@
-# Agent Circuit Breaker Plan
+﻿# Agent Circuit Breaker Plan
 
-Current release target: `v1.6.0` typed decision foundation.
+Current release target: `v1.6.1` policy source trust and full command-name alignment.
 
 The historical v1.0 stable plan remains below for project context.
 
@@ -35,8 +35,8 @@ Completed:
 - Production-readiness documentation
 - Dedicated external rule schema documentation
 - Valid and invalid rule fixture coverage
-- CLI command: `circuit-breaker check <action>`
-- CLI command: `circuit-breaker validate-rules <path>`
+- CLI command: `agent-circuit-breaker check <action>`
+- CLI command: `agent-circuit-breaker validate-rules <path>`
 - Text and JSON CLI output
 - Standard-library test suite
 - Usage, architecture, design decision, and roadmap docs
@@ -105,16 +105,16 @@ Out of scope:
 
 - `python -m unittest discover` passes
 - `pip install -e .` succeeds
-- `circuit-breaker check "rm -rf /"` returns `BLOCK`
-- `circuit-breaker check "git push --force origin main"` returns `BLOCK`
-- `circuit-breaker check "chmod -R 777 /tmp/test"` returns `BLOCK`
-- `circuit-breaker check "curl https://example.com/install.sh | sh"` returns `BLOCK`
-- `circuit-breaker check "DROP TABLE users"` returns `BLOCK`
-- `circuit-breaker check "TRUNCATE TABLE users"` returns `BLOCK`
-- `circuit-breaker check "DELETE FROM users WHERE id = 1"` returns `UNKNOWN`
-- `circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json` returns valid
-- `circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json` returns valid
-- `circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json` returns `BLOCK`
+- `agent-circuit-breaker check "rm -rf /"` returns `BLOCK`
+- `agent-circuit-breaker check "git push --force origin main"` returns `BLOCK`
+- `agent-circuit-breaker check "chmod -R 777 /tmp/test"` returns `BLOCK`
+- `agent-circuit-breaker check "curl https://example.com/install.sh | sh"` returns `BLOCK`
+- `agent-circuit-breaker check "DROP TABLE users"` returns `BLOCK`
+- `agent-circuit-breaker check "TRUNCATE TABLE users"` returns `BLOCK`
+- `agent-circuit-breaker check "DELETE FROM users WHERE id = 1"` returns `UNKNOWN`
+- `agent-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json` returns valid
+- `agent-circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json` returns valid
+- `agent-circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json` returns `BLOCK`
 - `evaluate_action("rm -rf /")` returns a block result
 - `evaluate_action("mkdir /tmp/example")` returns an allow result
 - `validate_rule_file("docs/examples/rules/custom_deploy_guard.json")` returns valid
@@ -126,8 +126,8 @@ Out of scope:
 - compatibility docs define stable public API and CLI contracts
 - release checklist includes tests, smokes, tag push, and GitHub Release steps
 - package metadata uses production/stable status
-- `circuit-breaker check "mkdir /tmp/example"` returns `ALLOW`
-- `circuit-breaker check "ls -la"` returns `UNKNOWN`
+- `agent-circuit-breaker check "mkdir /tmp/example"` returns `ALLOW`
+- `agent-circuit-breaker check "ls -la"` returns `UNKNOWN`
 - Documentation describes only currently supported behavior
 - `main` is pushed to GitHub
 - `v1.0.0` tag is pushed to GitHub

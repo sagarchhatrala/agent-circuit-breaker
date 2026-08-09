@@ -1,4 +1,4 @@
-# Agent Circuit Breaker
+﻿# Agent Circuit Breaker
 
 Agent Circuit Breaker is a local-first runtime safety gate for AI agents, MCP tools, and long-horizon coding workflows.
 
@@ -34,15 +34,15 @@ pip install agent-circuit-breaker
 ## CLI Examples
 
 ```bash
-circuit-breaker check "rm -rf /"
+agent-circuit-breaker check "rm -rf /"
 ```
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
 ```
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --ledger
+agent-circuit-breaker trajectory ./agent-run.json --ledger
 ```
 
 ## Python Example

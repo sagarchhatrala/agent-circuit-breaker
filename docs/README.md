@@ -77,6 +77,7 @@ The current stable package includes:
 
 ## Release Notes
 
+- [v1.6.1](releases/v1.6.1.md)
 - [v1.6.0](releases/v1.6.0.md)
 - [v1.5.2](releases/v1.5.2.md)
 - [v1.5.1](releases/v1.5.1.md)

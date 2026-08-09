@@ -1,4 +1,4 @@
-# JSON Output Contract
+﻿# JSON Output Contract
 
 This document describes the stable JSON fields returned by the CLI and Python API.
 
@@ -12,7 +12,7 @@ findings or `to_legacy_dict()` for the stable v1.x shape.
 
 ## Top-Level Result
 
-`circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
+`agent-circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
 
 - `command`: original action value passed by the caller.
 - `verdict`: lowercase result: `allow`, `block`, `error`, `unknown`, or `pending_approval`.
@@ -28,6 +28,7 @@ findings or `to_legacy_dict()` for the stable v1.x shape.
 - `approval`: present when a pending approval record is created by the CLI.
 - `audit`: present when CLI audit logging is requested.
 - `policy_source`: present when a central policy file or URL was loaded.
+- `policy_trust`: present when a central policy file or URL was loaded and trust metadata is available.
 - `policy_signature`: present when a loaded policy contained a verified signature.
 - `custom_rules`: present only when the Python API is called with `rule_file_path`.
 
@@ -114,17 +115,17 @@ Invalid custom rule files fail closed with `verdict` set to `error`.
 
 ## Scan Output
 
-`circuit-breaker scan <path...> --format json` returns:
+`agent-circuit-breaker scan <path...> --format json` returns:
 
 - `files_scanned`: number of scanned text files.
 - `findings`: list of blocked, pending approval, or error findings.
 - `summary`: counts for total findings, blocked findings, pending approvals, and errors.
 
-`circuit-breaker scan <path...> --sarif` emits SARIF 2.1.0 for GitHub code scanning integrations.
+`agent-circuit-breaker scan <path...> --sarif` emits SARIF 2.1.0 for GitHub code scanning integrations.
 
 ## Trajectory Output
 
-`circuit-breaker trajectory <run.json> --format json` and `evaluate_trajectory(actions, contract=...)` return:
+`agent-circuit-breaker trajectory <run.json> --format json` and `evaluate_trajectory(actions, contract=...)` return:
 
 - `schema_version`: trajectory output schema version.
 - `run_id`: deterministic short hash derived from the actions and contract.
@@ -138,6 +139,7 @@ Invalid custom rule files fail closed with `verdict` set to `error`.
 - `audit`: present when CLI audit logging is requested.
 - `ledger`: present when trajectory ledger logging is requested.
 - `policy_source`: present when a central policy file or URL was loaded.
+- `policy_trust`: present when a central policy file or URL was loaded and trust metadata is available.
 - `policy_signature`: present when a loaded policy contained a verified signature.
 
 Trajectory findings contain:
@@ -162,7 +164,7 @@ Current trajectory finding IDs:
 
 ## MCP Trajectory Metadata
 
-When `circuit-breaker-mcp-proxy` is run with `--trajectory` or `--trajectory-policy`, blocked JSON-RPC error responses may include these extra `error.data` fields:
+When `agent-circuit-breaker-mcp-proxy` is run with `--trajectory` or `--trajectory-policy`, blocked JSON-RPC error responses may include these extra `error.data` fields:
 
 - `trajectory_verdict`: aggregate trajectory verdict that contributed to the block.
 - `trajectory_finding`: first trajectory finding ID that contributed to the block.
@@ -196,9 +198,9 @@ Approval records also include an additive `approval_security` object:
 
 ## Run Ledger
 
-`circuit-breaker trajectory <run.json> --ledger` appends the full trajectory result to a local hash-chained JSONL ledger.
+`agent-circuit-breaker trajectory <run.json> --ledger` appends the full trajectory result to a local hash-chained JSONL ledger.
 
-`circuit-breaker ledger --format json` returns:
+`agent-circuit-breaker ledger --format json` returns:
 
 - `path`: ledger path.
 - `entries`: recent ledger entries.
@@ -212,4 +214,4 @@ Each ledger entry contains:
 - `result`
 - `entry_hash`
 
-`circuit-breaker ledger <RUN_ID> --format json` returns replayable run data with command, verdict, decision, matched rule, risk score, contract, summary, and trajectory findings.
+`agent-circuit-breaker ledger <RUN_ID> --format json` returns replayable run data with command, verdict, decision, matched rule, risk score, contract, summary, and trajectory findings.

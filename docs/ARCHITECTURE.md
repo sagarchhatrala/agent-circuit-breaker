@@ -1,4 +1,4 @@
-# Architecture
+﻿# Architecture
 
 Agent Circuit Breaker is organized around a small deterministic pipeline:
 
@@ -61,8 +61,8 @@ File: `agent_circuit_breaker/cli.py`
 
 The CLI is the current user-facing interface. It supports:
 
-- `circuit-breaker check <action>`
-- `circuit-breaker -c <action>`
+- `agent-circuit-breaker check <action>`
+- `agent-circuit-breaker -c <action>`
 - interactive mode
 - text and JSON output
 

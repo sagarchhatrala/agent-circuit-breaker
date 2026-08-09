@@ -1,4 +1,4 @@
-# Long-Horizon Agent Safety
+﻿# Long-Horizon Agent Safety
 
 Agent Circuit Breaker provides deterministic runtime controls for long-running, tool-using AI agents.
 
@@ -20,7 +20,7 @@ This matters for coding agents, MCP-connected agents, autonomous development wor
 
 ## What Trajectory Evaluation Does
 
-`circuit-breaker trajectory` evaluates an ordered action sequence and returns an aggregate run verdict.
+`agent-circuit-breaker trajectory` evaluates an ordered action sequence and returns an aggregate run verdict.
 
 It can detect:
 
@@ -53,7 +53,7 @@ Example run contract:
 Run it:
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --format json
+agent-circuit-breaker trajectory ./agent-run.json --format json
 ```
 
 The result is blocked because the run contract allowed Slack output, while the action attempted a GitHub PR.
@@ -65,13 +65,13 @@ For MCP servers, Agent Circuit Breaker can inspect every string-valued `tools/ca
 Enable stateful run checks:
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
 ```
 
 Load a run contract:
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
 ```
 
 In stateful mode, a tool call that reads `.env` followed by a later tool call that uploads data can be blocked even if neither individual action triggered a single-action block rule.
@@ -89,10 +89,10 @@ When a trajectory requires approval, approval records include compact review con
 For replayable local records:
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --ledger
-circuit-breaker ledger
-circuit-breaker ledger <RUN_ID>
-circuit-breaker ledger --verify
+agent-circuit-breaker trajectory ./agent-run.json --ledger
+agent-circuit-breaker ledger
+agent-circuit-breaker ledger <RUN_ID>
+agent-circuit-breaker ledger --verify
 ```
 
 The run ledger is a local hash-chained JSONL file. It is useful for debugging, review, and lightweight governance. It is not a remote telemetry system.
@@ -105,7 +105,7 @@ For a stronger local gate, configure an approval token outside the agent runtime
 
 ```bash
 set ACB_APPROVAL_TOKEN=<human-held-token>
-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+agent-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
 ```
 
 For high-stakes environments, keep the approval decision path outside the agent's shell/tool authority.

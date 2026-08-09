@@ -1,4 +1,4 @@
-# Policy Assurance
+﻿# Policy Assurance
 
 Agent Circuit Breaker v1.5.2 adds local policy assurance tools for teams that treat safety policy as code.
 
@@ -9,8 +9,8 @@ These tools do not add telemetry, collectors, dashboards, or agent analytics. Th
 Use `rules test` to validate custom rule packs against positive and negative fixtures before deployment.
 
 ```bash
-circuit-breaker rules test ./policy-tests
-circuit-breaker rules test ./policy-tests/deploy.test.json --format json
+agent-circuit-breaker rules test ./policy-tests
+agent-circuit-breaker rules test ./policy-tests/deploy.test.json --format json
 ```
 
 Rule test files use `*.test.json`:
@@ -36,12 +36,12 @@ Invalid rule files, malformed test fixtures, and failed cases return exit code `
 Export versioned public JSON schema artifacts:
 
 ```bash
-circuit-breaker schemas
-circuit-breaker schemas rule-file
-circuit-breaker schemas policy-file
-circuit-breaker schemas decision-output
-circuit-breaker schemas trajectory-output
-circuit-breaker schemas audit-event
+agent-circuit-breaker schemas
+agent-circuit-breaker schemas rule-file
+agent-circuit-breaker schemas policy-file
+agent-circuit-breaker schemas decision-output
+agent-circuit-breaker schemas trajectory-output
+agent-circuit-breaker schemas audit-event
 ```
 
 The schemas are documentation and integration contracts. Runtime validation remains dependency-free.
@@ -51,8 +51,8 @@ The schemas are documentation and integration contracts. Runtime validation rema
 Generate the built-in rule catalog from the shipped rule objects:
 
 ```bash
-circuit-breaker catalog
-circuit-breaker catalog --format json
+agent-circuit-breaker catalog
+agent-circuit-breaker catalog --format json
 ```
 
 The catalog is generated from code so docs can stay aligned with actual enforcement coverage.
@@ -69,6 +69,26 @@ v1.5.2 defines explicit limits for:
 - MCP message size and argument recursion depth.
 
 Oversized inputs fail closed with an error verdict or validation error.
+
+## Policy Source Trust
+
+v1.6.1 treats auto-discovered repository policy as repository-sourced policy.
+Repository policy can strengthen enforcement by default, but it cannot weaken
+controls unless the caller passes `--trust-repository-policy`.
+
+Allowed by default for repository policy:
+
+- adding block or approval rules.
+- selecting `strict` or `approval` mode.
+- selecting `repo`, `team`, or `prod` profiles.
+- setting `strict` to `true`.
+
+Rejected by default for repository policy:
+
+- adding allow rules.
+- selecting `advisory` mode.
+- selecting the `solo` profile.
+- setting `strict` to `false`.
 
 ## Persisted Record Redaction
 

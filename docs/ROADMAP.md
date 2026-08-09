@@ -1,4 +1,4 @@
-# Roadmap
+﻿# Roadmap
 
 This roadmap tracks planned milestones while keeping each release narrow and testable.
 
@@ -320,7 +320,7 @@ Status: released as `v1.4.3`.
 Implemented so far:
 
 - `evaluate_trajectory(...)` public API.
-- `circuit-breaker trajectory <run.json>` CLI mode.
+- `agent-circuit-breaker trajectory <run.json>` CLI mode.
 - optional run contracts for goals, allowed scopes, forbidden targets, allowed outputs, blocked-attempt limits, and unknown-action limits.
 - trajectory findings for repeated blocked actions, output-channel drift, forbidden targets, scope violations, unknown-action volume, and secret-like reads followed by egress.
 
@@ -330,8 +330,8 @@ Status: released as `v1.4.4`.
 
 Implemented so far:
 
-- `circuit-breaker-mcp-proxy --trajectory`.
-- `circuit-breaker-mcp-proxy --trajectory-policy <path>`.
+- `agent-circuit-breaker-mcp-proxy --trajectory`.
+- `agent-circuit-breaker-mcp-proxy --trajectory-policy <path>`.
 - programmatic `MCPRunGuard`.
 - MCP JSON-RPC block metadata for trajectory verdicts and findings.
 
@@ -342,8 +342,8 @@ Status: released as `v1.4.5`.
 Implemented so far:
 
 - contextual approval summaries for trajectory runs.
-- `circuit-breaker trajectory <run.json> --ledger`.
-- `circuit-breaker ledger`, `circuit-breaker ledger <RUN_ID>`, and `circuit-breaker ledger --verify`.
+- `agent-circuit-breaker trajectory <run.json> --ledger`.
+- `agent-circuit-breaker ledger`, `agent-circuit-breaker ledger <RUN_ID>`, and `agent-circuit-breaker ledger --verify`.
 - local hash-chained `RunLedger`.
 
 ### v1.4.6: Broader Secret And Data Egress Flows
@@ -449,6 +449,17 @@ Implemented so far:
 - legacy dictionary round-tripping so existing API and CLI behavior remains unchanged.
 - stable typed findings for matched rules and fail-secure evaluation errors.
 - focused regression coverage for typed blocks, unknowns, errors, and evaluation IDs.
+
+### v1.6.1: Policy Source Trust
+
+Status: released as `v1.6.1`.
+
+Implemented so far:
+
+- explicit policy source metadata for default, explicit, environment, remote, and repository policies.
+- fail-secure validation for auto-discovered repository policy that attempts to weaken controls.
+- `--trust-repository-policy` for callers that intentionally trust local repository policy.
+- full command-name alignment around `agent-circuit-breaker` and `agent-circuit-breaker-mcp-proxy`.
 
 Candidate follow-up work:
 

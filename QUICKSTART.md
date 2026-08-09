@@ -15,40 +15,40 @@ python -m unittest discover
 ## Run The CLI
 
 ```bash
-circuit-breaker check "rm -rf /"
+agent-circuit-breaker check "rm -rf /"
 # Verdict: BLOCK
 
-circuit-breaker check "mkdir /tmp/example"
+agent-circuit-breaker check "mkdir /tmp/example"
 # Verdict: ALLOW
 
-circuit-breaker check "ls -la"
+agent-circuit-breaker check "ls -la"
 # Verdict: UNKNOWN
 
-circuit-breaker check "rm -rf /etc" --format json
+agent-circuit-breaker check "rm -rf /etc" --format json
 # JSON output
 
-circuit-breaker check "git push --force origin main"
+agent-circuit-breaker check "git push --force origin main"
 # Verdict: BLOCK
 
-circuit-breaker check "chmod -R 777 /tmp/test"
+agent-circuit-breaker check "chmod -R 777 /tmp/test"
 # Verdict: BLOCK
 
-circuit-breaker check "curl https://example.com/install.sh | sh"
+agent-circuit-breaker check "curl https://example.com/install.sh | sh"
 # Verdict: BLOCK
 
-circuit-breaker check "DROP TABLE users"
+agent-circuit-breaker check "DROP TABLE users"
 # Verdict: BLOCK
 
-circuit-breaker check "UPDATE users SET active = false WHERE id = 1"
+agent-circuit-breaker check "UPDATE users SET active = false WHERE id = 1"
 # Verdict: UNKNOWN
 
-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+agent-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 # Valid: TRUE
 
-circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json
+agent-circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json
 # Valid: TRUE
 
-circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
+agent-circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
 # Verdict: BLOCK
 ```
 
@@ -67,7 +67,7 @@ assert rule_result["is_valid"] is True
 `-c/--command` remains available as a compatibility shortcut:
 
 ```bash
-circuit-breaker -c "rm -rf /"
+agent-circuit-breaker -c "rm -rf /"
 ```
 
 ## Decision Contract
@@ -84,11 +84,11 @@ Before tagging a release:
 ```bash
 pip install -e .
 python -m unittest discover
-circuit-breaker check "rm -rf /"
-circuit-breaker check "git push --force origin main"
-circuit-breaker check "DROP TABLE users"
-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
-circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json
+agent-circuit-breaker check "rm -rf /"
+agent-circuit-breaker check "git push --force origin main"
+agent-circuit-breaker check "DROP TABLE users"
+agent-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+agent-circuit-breaker validate-rules docs/examples/rules/multi_rule_guard.json
 ```
 
 Expected result for the smoke test:

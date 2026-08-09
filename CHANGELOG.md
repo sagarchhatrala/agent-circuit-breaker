@@ -1,8 +1,28 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
+
+## [1.6.1] - 2026-08-09
+
+### Added
+
+- Added policy source trust metadata for loaded policies.
+- Added fail-secure validation for auto-discovered repository policies.
+- Added `--trust-repository-policy` for explicitly trusting repository policy that can weaken inherited controls.
+- Added regression tests for repository policy strengthening, weakening rejection, and trusted override behavior.
+
+### Changed
+
+- Updated the console command names, documentation, tests, and examples to use `agent-circuit-breaker` and `agent-circuit-breaker-mcp-proxy`.
+- Auto-discovered repository policy may strengthen enforcement by default, but cannot add allow rules, select advisory mode, select the solo profile, or disable strict mode unless explicitly trusted.
+
+### Compatibility
+
+- Explicit `--policy` paths and `ACB_POLICY` remain caller-selected policy sources.
+- Built-in blocks still take precedence over custom allow rules.
+- The default install remains dependency-free.
 
 ## [1.6.0] - 2026-08-06
 
@@ -25,9 +45,9 @@ This project follows semantic versioning after `v1.0.0`.
 
 ### Added
 
-- Added versioned JSON schema artifacts and `circuit-breaker schemas [NAME]`.
-- Added fixture-based custom rule tests with `circuit-breaker rules test <PATH>`.
-- Added generated built-in rule catalog output with `circuit-breaker catalog`.
+- Added versioned JSON schema artifacts and `agent-circuit-breaker schemas [NAME]`.
+- Added fixture-based custom rule tests with `agent-circuit-breaker rules test <PATH>`.
+- Added generated built-in rule catalog output with `agent-circuit-breaker catalog`.
 - Added architecture boundary tests for core package isolation.
 - Added explicit resource limits for command text, rule files, policy files, trajectory inputs, approval payloads, and MCP traversal.
 - Added default redaction for common secret-like values in audit, approval, and ledger persistence.
@@ -149,8 +169,8 @@ This project follows semantic versioning after `v1.0.0`.
 ### Added
 
 - Added contextual approval summaries for trajectory results.
-- Added `--ledger` for `circuit-breaker trajectory` to persist full trajectory results in a local hash-chained run ledger.
-- Added `circuit-breaker ledger`, `circuit-breaker ledger <RUN_ID>`, and `circuit-breaker ledger --verify`.
+- Added `--ledger` for `agent-circuit-breaker trajectory` to persist full trajectory results in a local hash-chained run ledger.
+- Added `agent-circuit-breaker ledger`, `agent-circuit-breaker ledger <RUN_ID>`, and `agent-circuit-breaker ledger --verify`.
 - Added `RunLedger` for local replay of stored trajectory runs.
 
 ### Compatibility
@@ -162,7 +182,7 @@ This project follows semantic versioning after `v1.0.0`.
 
 ### Added
 
-- Added optional stateful MCP trajectory enforcement through `circuit-breaker-mcp-proxy --trajectory`.
+- Added optional stateful MCP trajectory enforcement through `agent-circuit-breaker-mcp-proxy --trajectory`.
 - Added `--trajectory-policy <path>` for supplying an MCP run contract with trajectory fields such as `allowed_outputs`, `allowed_scopes`, and `forbidden_targets`.
 - Added programmatic `MCPRunGuard` support for integrations that want to keep trajectory state outside the stdio proxy.
 - Added MCP JSON-RPC error metadata for trajectory verdicts and trajectory finding IDs.
@@ -176,7 +196,7 @@ This project follows semantic versioning after `v1.0.0`.
 ### Added
 
 - Added trajectory-level analysis for long-running agent runs through `evaluate_trajectory(...)`.
-- Added `circuit-breaker trajectory <run.json>` for evaluating JSON action sequences and optional run contracts.
+- Added `agent-circuit-breaker trajectory <run.json>` for evaluating JSON action sequences and optional run contracts.
 - Added deterministic trajectory findings for repeated blocked actions, forbidden targets, write-like actions outside allowed scopes, output-channel drift, unknown-action volume, and secret-like reads followed by egress.
 
 ### Changed
@@ -198,7 +218,7 @@ This project follows semantic versioning after `v1.0.0`.
 
 ### Changed
 
-- `circuit-breaker-mcp-proxy` now inspects every string-valued tool-call argument recursively instead of only a short key allowlist.
+- `agent-circuit-breaker-mcp-proxy` now inspects every string-valued tool-call argument recursively instead of only a short key allowlist.
 - `--require-signature` now requires an authenticity-providing algorithm, currently `hmac-sha256`.
 - Plain SHA-256 is treated as checksum-only integrity metadata, not an authenticity signature.
 
@@ -216,7 +236,7 @@ This project follows semantic versioning after `v1.0.0`.
 
 ### Added
 
-- Added a dependency-free stdio JSON-RPC MCP proxy entry point: `circuit-breaker-mcp-proxy`.
+- Added a dependency-free stdio JSON-RPC MCP proxy entry point: `agent-circuit-breaker-mcp-proxy`.
 - Added MCP `tools/call` argument inspection with JSON-RPC error responses for blocked, pending, or error verdicts.
 - Added optional JSON policy/rule-pack signature verification with deterministic `sha256` and `hmac-sha256` support.
 - Added `--require-signature` for policy and rule-file loading.

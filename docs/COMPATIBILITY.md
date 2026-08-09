@@ -1,4 +1,4 @@
-# Compatibility Policy
+﻿# Compatibility Policy
 
 This policy describes the intended stability contract for Agent Circuit Breaker.
 
@@ -57,15 +57,20 @@ dictionary shape above.
 
 The stable CLI commands are:
 
-- `circuit-breaker check <action>`
-- `circuit-breaker validate-rules <path>`
-- `circuit-breaker -c <action>`
-- `circuit-breaker explain <action>`
-- `circuit-breaker scan <path...>`
-- `circuit-breaker trajectory <run.json>`
-- `circuit-breaker rules test <path>`
-- `circuit-breaker schemas [name]`
-- `circuit-breaker catalog`
+- `agent-circuit-breaker check <action>`
+- `agent-circuit-breaker validate-rules <path>`
+- `agent-circuit-breaker -c <action>`
+- `agent-circuit-breaker explain <action>`
+- `agent-circuit-breaker scan <path...>`
+- `agent-circuit-breaker trajectory <run.json>`
+- `agent-circuit-breaker rules test <path>`
+- `agent-circuit-breaker schemas [name]`
+- `agent-circuit-breaker catalog`
+
+The published console entry points are:
+
+- `agent-circuit-breaker`
+- `agent-circuit-breaker-mcp-proxy`
 
 The stable output modes are:
 
@@ -121,6 +126,16 @@ Unsupported features remain unsupported unless a future schema version adds them
 - arbitrary Python matchers.
 
 Signed rule and policy JSON support currently requires authenticity when `--require-signature` is used. `hmac-sha256` signatures are accepted; checksum-only `sha256` documents are not accepted as required signatures.
+
+## Policy Source Trust
+
+Explicit `--policy` paths, `ACB_POLICY`, and caller-selected remote policy URLs are
+treated as caller-selected sources. Auto-discovered repository policy is treated as
+repository-sourced policy.
+
+Repository-sourced policy may strengthen enforcement by default. It cannot add
+allow rules, select `advisory` mode, select the `solo` profile, or explicitly set
+`strict` to `false` unless the caller passes `--trust-repository-policy`.
 
 ## Resource Limits
 

@@ -1,4 +1,4 @@
-# v0.4 Rule Loading And Validation Plan
+﻿# v0.4 Rule Loading And Validation Plan
 
 The v0.4 milestone adds safe validation for external rule definitions. The goal is to let users describe rules in data files without allowing arbitrary code execution.
 
@@ -107,7 +107,7 @@ Load JSON from disk with explicit errors:
 Add:
 
 ```bash
-circuit-breaker validate-rules path/to/rules.json
+agent-circuit-breaker validate-rules path/to/rules.json
 ```
 
 Expected behavior:
@@ -128,7 +128,7 @@ Do not include these custom rules in normal `check` evaluation until tests prove
 After validation and construction are stable, add an explicit option:
 
 ```bash
-circuit-breaker check "action" --rules path/to/rules.json
+agent-circuit-breaker check "action" --rules path/to/rules.json
 ```
 
 This should append validated custom rules after built-in rules unless the docs explicitly define another order.

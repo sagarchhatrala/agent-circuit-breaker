@@ -1,4 +1,4 @@
-"""Hook scaffold generation for local agent workflows."""
+﻿"""Hook scaffold generation for local agent workflows."""
 
 from pathlib import Path
 from typing import Dict
@@ -14,7 +14,7 @@ def main() -> int:
     if not command:
         return 0
     result = subprocess.run(
-        ["circuit-breaker", "check", command],
+        ["agent-circuit-breaker", "check", command],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -36,7 +36,7 @@ def hook_instructions(agent: str = "generic") -> str:
     """Return non-vendor-specific hook instructions."""
     return (
         "Create a pre-command hook that calls:\n"
-        "  circuit-breaker check \"<command>\"\n\n"
+        "  agent-circuit-breaker check \"<command>\"\n\n"
         "Allow exit code 0, stop on exit code 1, and treat exit code 2 as not vetted. "
         f"Selected agent profile: {agent}."
     )

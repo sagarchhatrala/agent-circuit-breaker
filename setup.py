@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from setuptools import find_packages, setup
 
@@ -8,7 +8,7 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.6.0",
+    version="1.6.1",
     description="Deterministic safety gate for AI coding agents",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -35,8 +35,8 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "circuit-breaker=agent_circuit_breaker.cli:main",
-            "circuit-breaker-mcp-proxy=agent_circuit_breaker_mcp.proxy:main",
+            "agent-circuit-breaker=agent_circuit_breaker.cli:main",
+            "agent-circuit-breaker-mcp-proxy=agent_circuit_breaker_mcp.proxy:main",
         ],
     },
     classifiers=[
@@ -49,5 +49,5 @@ setup(
         "Topic :: Software Development :: Quality Assurance",
         "Topic :: System :: Systems Administration",
     ],
-    keywords="security safety ai-agents mcp circuit-breaker deterministic",
+    keywords="security safety ai-agents mcp agent-circuit-breaker deterministic",
 )

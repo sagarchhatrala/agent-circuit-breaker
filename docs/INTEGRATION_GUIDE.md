@@ -1,4 +1,4 @@
-# Integration Guide
+﻿# Integration Guide
 
 Agent Circuit Breaker should sit between an agent and any execution layer.
 
@@ -14,7 +14,7 @@ Recommended flow:
 Use the CLI when the integration can shell out before execution:
 
 ```bash
-circuit-breaker check "rm -rf /"
+agent-circuit-breaker check "rm -rf /"
 ```
 
 Exit codes:
@@ -59,7 +59,7 @@ Invalid custom rule files return an `error` verdict and include `custom_rules` e
 Use trajectory evaluation when the integration has an ordered list of actions for a long-running agent run:
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --format json
+agent-circuit-breaker trajectory ./agent-run.json --format json
 ```
 
 The JSON file can be either a list of action strings or an object with `actions` plus run-contract fields:
@@ -80,15 +80,15 @@ The JSON file can be either a list of action strings or an object with `actions`
 Use `--ledger` when the integration should keep a local replayable record:
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --ledger
-circuit-breaker ledger <RUN_ID>
+agent-circuit-breaker trajectory ./agent-run.json --ledger
+agent-circuit-breaker ledger <RUN_ID>
 ```
 
 When approvals are used in an agent-accessible shell, configure the approval decision path separately. A local token gate can be enabled with `ACB_APPROVAL_TOKEN`:
 
 ```bash
 set ACB_APPROVAL_TOKEN=<human-held-token>
-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+agent-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
 ```
 
 For stronger separation of duties, run approval decisions outside the agent runtime entirely.
@@ -108,19 +108,19 @@ result = evaluate_trajectory(
 Use the MCP proxy when an agent talks to an MCP server over stdio:
 
 ```bash
-circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
 ```
 
 Enable stateful long-horizon checks across multiple MCP `tools/call` messages:
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
 ```
 
 Load a run contract for MCP calls:
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
 ```
 
 ## Rule Validation
@@ -128,7 +128,7 @@ circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python 
 Validate custom rule files before using them:
 
 ```bash
-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+agent-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
 ```
 
 or:

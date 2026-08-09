@@ -1,4 +1,4 @@
-# Agent Circuit Breaker
+﻿# Agent Circuit Breaker
 
 [![PyPI](https://img.shields.io/pypi/v/agent-circuit-breaker)](https://pypi.org/project/agent-circuit-breaker/)
 [![Python](https://img.shields.io/pypi/pyversions/agent-circuit-breaker)](https://pypi.org/project/agent-circuit-breaker/)
@@ -18,13 +18,13 @@ It is built for the moment when an AI agent is about to do something powerful an
 ```bash
 pip install agent-circuit-breaker
 
-circuit-breaker check "rm -rf /etc"
+agent-circuit-breaker check "rm -rf /etc"
 # Verdict: BLOCK
 
-circuit-breaker check "git push --force origin main"
+agent-circuit-breaker check "git push --force origin main"
 # Verdict: BLOCK
 
-circuit-breaker check "ls /home"
+agent-circuit-breaker check "ls /home"
 # Verdict: UNKNOWN
 ```
 
@@ -47,7 +47,7 @@ Modern agent failures are not always visible in a single command. A long-running
 Agent Circuit Breaker addresses that class of risk with trajectory evaluation:
 
 - declare a run contract with `goal`, `allowed_scopes`, `forbidden_targets`, and `allowed_outputs`.
-- evaluate an ordered action sequence with `circuit-breaker trajectory`.
+- evaluate an ordered action sequence with `agent-circuit-breaker trajectory`.
 - enable stateful trajectory checks across MCP `tools/call` messages.
 - route full tool-call contexts through the async `AgentCircuitBreaker` pipeline SDK.
 - preserve review context through approvals and a local run ledger.
@@ -112,77 +112,77 @@ Package pages:
 Check an action:
 
 ```bash
-circuit-breaker check "rm -rf /"
+agent-circuit-breaker check "rm -rf /"
 ```
 
 Use JSON for integrations:
 
 ```bash
-circuit-breaker check "DROP TABLE users" --format json
+agent-circuit-breaker check "DROP TABLE users" --format json
 ```
 
 Explain a risky command:
 
 ```bash
-circuit-breaker explain "git push --force origin main"
+agent-circuit-breaker explain "git push --force origin main"
 ```
 
 Scan scripts, runbooks, SQL files, and CI content:
 
 ```bash
-circuit-breaker scan ./scripts ./README.md
+agent-circuit-breaker scan ./scripts ./README.md
 ```
 
 Emit SARIF for GitHub code scanning:
 
 ```bash
-circuit-breaker scan . --sarif > acb.sarif
+agent-circuit-breaker scan . --sarif > acb.sarif
 ```
 
 Use strict mode when ambiguity should stop:
 
 ```bash
-circuit-breaker check "ls /home" --mode strict
+agent-circuit-breaker check "ls /home" --mode strict
 # Verdict: BLOCK
 ```
 
 Route high-risk or unknown actions to approval:
 
 ```bash
-circuit-breaker check "rm -rf /" --profile team
-circuit-breaker approvals list
+agent-circuit-breaker check "rm -rf /" --profile team
+agent-circuit-breaker approvals list
 ```
 
 Optionally require a human-held approval token for approve/deny decisions:
 
 ```bash
 set ACB_APPROVAL_TOKEN=<human-held-token>
-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
+agent-circuit-breaker --approval-token <human-held-token> approvals approve <ID>
 ```
 
 Write a tamper-evident local audit trail:
 
 ```bash
-circuit-breaker check "DROP TABLE users" --audit
-circuit-breaker timeline --verify
+agent-circuit-breaker check "DROP TABLE users" --audit
+agent-circuit-breaker timeline --verify
 ```
 
 Guard an MCP server over stdio:
 
 ```bash
-circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --profile team -- python -m your_mcp_server
 ```
 
 Enable stateful MCP trajectory checks across tool calls:
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory -- python -m your_mcp_server
 ```
 
 Use a run-contract JSON file with the MCP proxy:
 
 ```bash
-circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
+agent-circuit-breaker-mcp-proxy --trajectory-policy ./agent-run-policy.json -- python -m your_mcp_server
 ```
 
 Evaluate a long-running agent run from a JSON file:
@@ -201,16 +201,16 @@ Evaluate a long-running agent run from a JSON file:
 ```
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --format json
+agent-circuit-breaker trajectory ./agent-run.json --format json
 # Verdict: BLOCK
 ```
 
 Write a replayable local run ledger entry:
 
 ```bash
-circuit-breaker trajectory ./agent-run.json --ledger
-circuit-breaker ledger
-circuit-breaker ledger --verify
+agent-circuit-breaker trajectory ./agent-run.json --ledger
+agent-circuit-breaker ledger
+agent-circuit-breaker ledger --verify
 ```
 
 ## Python API
@@ -286,23 +286,25 @@ The stable API and JSON fields are documented in:
 Use external JSON rules when your team has project-specific hazards:
 
 ```bash
-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
-circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
+agent-circuit-breaker validate-rules docs/examples/rules/custom_deploy_guard.json
+agent-circuit-breaker check "deploy production" --rules docs/examples/rules/custom_deploy_guard.json
 ```
 
 Load central policy from a local file:
 
 ```bash
-circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json
+agent-circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json
 ```
 
 Require signed policy or rule JSON:
 
 ```bash
-circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json --require-signature
+agent-circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json --require-signature
 ```
 
 `--require-signature` requires authenticity, not just a same-file checksum. Use `hmac-sha256` with a key supplied through the configured environment variable for signed policy/rule packs.
+
+Auto-discovered repository policy can strengthen enforcement by default. To allow repository policy to weaken controls, pass `--trust-repository-policy` explicitly.
 
 Rule schema and examples:
 
@@ -314,9 +316,9 @@ Rule schema and examples:
 Validate custom policy behavior before rollout:
 
 ```bash
-circuit-breaker rules test ./policy-tests
-circuit-breaker schemas rule-file
-circuit-breaker catalog --format json
+agent-circuit-breaker rules test ./policy-tests
+agent-circuit-breaker schemas rule-file
+agent-circuit-breaker catalog --format json
 ```
 
 ## Safety Profiles
@@ -329,7 +331,7 @@ circuit-breaker catalog --format json
 | `prod` | production-like workflows | route to approval |
 
 ```bash
-circuit-breaker check "aws s3 rb s3://bucket --force" --profile prod
+agent-circuit-breaker check "aws s3 rb s3://bucket --force" --profile prod
 ```
 
 ## CI And Repository Integration
@@ -404,8 +406,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.0`
-- Test suite: 466 tests
+- Current version: `1.6.1`
+- Test suite: 473 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -429,6 +431,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.1.md)
 - [v1.6.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.0.md)
 - [v1.5.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.2.md)
 - [v1.5.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.1.md)

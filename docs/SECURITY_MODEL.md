@@ -1,4 +1,4 @@
-# Security Model
+﻿# Security Model
 
 Agent Circuit Breaker is a deterministic pre-execution safety checkpoint for agent-proposed actions.
 
@@ -50,7 +50,7 @@ The MCP proxy can opt in to trajectory evaluation with `--trajectory` or `--traj
 
 ## Run Ledger
 
-`circuit-breaker trajectory --ledger` writes full trajectory results to a local hash-chained JSONL ledger. The ledger is replayable and tamper-evident in the same local-integrity sense as the audit timeline: hash-chain verification can detect after-the-fact edits to the ledger file, but it does not prevent deletion, rollback, or tampering by a user or process with write access to the file.
+`agent-circuit-breaker trajectory --ledger` writes full trajectory results to a local hash-chained JSONL ledger. The ledger is replayable and tamper-evident in the same local-integrity sense as the audit timeline: hash-chain verification can detect after-the-fact edits to the ledger file, but it does not prevent deletion, rollback, or tampering by a user or process with write access to the file.
 
 ## Rule Ordering
 
@@ -70,7 +70,7 @@ Policy files and external rule packs can include an embedded `signature` object.
 
 Default `check` behavior preserves `UNKNOWN` for unclassified actions. `--mode strict` converts `UNKNOWN` to `BLOCK` for fail-secure environments. `team` and `prod` profiles route `UNKNOWN` to `PENDING_APPROVAL`, making ambiguity visible to a human instead of silently passing through.
 
-Local approval records are an audit and review workflow by default. They are not a complete separation-of-duties control if the same agent process can run `circuit-breaker approvals approve <ID>`. Approval records include warning metadata when `ACB_APPROVAL_TOKEN` is not configured. To require a human-held token for approve/deny decisions, set `ACB_APPROVAL_TOKEN` outside the agent runtime and pass `--approval-token` when deciding an approval. In high-stakes environments, keep the approval decision path outside the agent's shell and tool authority.
+Local approval records are an audit and review workflow by default. They are not a complete separation-of-duties control if the same agent process can run `agent-circuit-breaker approvals approve <ID>`. Approval records include warning metadata when `ACB_APPROVAL_TOKEN` is not configured. To require a human-held token for approve/deny decisions, set `ACB_APPROVAL_TOKEN` outside the agent runtime and pass `--approval-token` when deciding an approval. In high-stakes environments, keep the approval decision path outside the agent's shell and tool authority.
 
 ## Fail-Closed Behavior
 

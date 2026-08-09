@@ -1,4 +1,4 @@
-"""Tests for v1.5.2 policy assurance and hardening."""
+﻿"""Tests for v1.5.2 policy assurance and hardening."""
 
 import ast
 import json
@@ -24,7 +24,7 @@ from agent_circuit_breaker_mcp.proxy import inspect_arguments
 
 class TestVersionAndSchemas(unittest.TestCase):
     def test_version_is_current_release(self):
-        self.assertEqual(agent_circuit_breaker.__version__, "1.6.0")
+        self.assertEqual(agent_circuit_breaker.__version__, "1.6.1")
 
     def test_schema_registry_exports_public_contracts(self):
         schemas = all_schemas()
@@ -122,7 +122,7 @@ class TestRuleTestingAndCatalog(unittest.TestCase):
             old_argv = sys.argv
             old_stdout = sys.stdout
             try:
-                sys.argv = ["circuit-breaker", "rules", "test", str(root), "--format", "json"]
+                sys.argv = ["agent-circuit-breaker", "rules", "test", str(root), "--format", "json"]
                 sys.stdout = StringIO()
                 exit_code = main()
                 output = sys.stdout.getvalue()
