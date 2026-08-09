@@ -31,9 +31,15 @@ def load_policy(
     start_dir: Optional[str] = None,
     require_signature: bool = False,
     trust_repository_policy: bool = False,
+    allow_insecure_remote_policy: bool = False,
 ) -> Dict[str, Any]:
     """Load a policy from explicit path, environment, or repository defaults."""
     if path and path.startswith(("https://", "http://")):
+        if path.startswith("http://") and not allow_insecure_remote_policy:
+            raise ValueError(
+                "insecure remote policy transport is disabled by default; "
+                "use HTTPS or explicitly allow insecure remote policy loading"
+            )
         with urlopen(path, timeout=10) as response:  # nosec: caller-selected policy source
             raw_bytes = response.read(MAX_POLICY_FILE_BYTES + 1)
         if len(raw_bytes) > MAX_POLICY_FILE_BYTES:

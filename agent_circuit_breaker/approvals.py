@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from agent_circuit_breaker.decision import from_legacy_result
 from agent_circuit_breaker.limits import MAX_APPROVAL_PAYLOAD_BYTES
 from agent_circuit_breaker.redaction import redact_record, redaction_metadata
 
@@ -76,6 +77,48 @@ class ApprovalStore:
         record["decided_at"] = datetime.now(timezone.utc).isoformat()
         path.write_text(json.dumps(record, indent=2), encoding="utf-8")
         return record
+
+    def is_valid_for_result(self, approval_id: str, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Return whether an approved record matches a freshly evaluated result.
+
+        Approval validation never replaces fresh evaluation. Callers must first
+        evaluate the current action, then verify that an unexpired approved
+        record still matches that exact decision context.
+        """
+        path = self._path(approval_id)
+        if not path.exists():
+            return {"is_valid": False, "reason": "approval not found", "approval_id": approval_id}
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if _is_expired(record):
+            return {"is_valid": False, "reason": "approval expired", "approval_id": approval_id}
+        if record.get("status") != "approved":
+            return {
+                "is_valid": False,
+                "reason": f"approval status is {record.get('status')}",
+                "approval_id": approval_id,
+            }
+        expected_id = self._approval_id(result)
+        if approval_id != expected_id:
+            return {
+                "is_valid": False,
+                "reason": "approval does not match current action context",
+                "approval_id": approval_id,
+                "expected_id": expected_id,
+            }
+        record_summary = _canonical_summary(record.get("result") or {})
+        current_summary = _canonical_summary(result)
+        if record_summary and current_summary and record_summary != current_summary:
+            return {
+                "is_valid": False,
+                "reason": "canonical decision context changed",
+                "approval_id": approval_id,
+            }
+        return {
+            "is_valid": True,
+            "reason": "approval matches current evaluated result",
+            "approval_id": approval_id,
+            "expires_at": record.get("expires_at"),
+        }
 
     def _path(self, approval_id: str) -> Path:
         return self.directory / f"{approval_id}.json"
@@ -204,3 +247,21 @@ def _is_expired(record: Dict[str, Any]) -> bool:
 def _stable_hash(value: Any) -> str:
     encoded = json.dumps(value, sort_keys=True, default=str).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _canonical_summary(result: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        summary = from_legacy_result(result).to_summary()
+    except Exception:
+        return {}
+    return {
+        "action_fingerprint": summary.get("action_fingerprint"),
+        "decision": summary.get("decision"),
+        "verdict": summary.get("verdict"),
+        "matched_rule": summary.get("matched_rule"),
+        "policy_source": summary.get("policy_source"),
+        "policy_trust": summary.get("policy_trust"),
+        "engine_version": summary.get("engine_version"),
+        "coverage": ((summary.get("evidence") or {}).get("coverage") or {}),
+        "validation": ((summary.get("evidence") or {}).get("validation") or {}),
+    }

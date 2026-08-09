@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
+from agent_circuit_breaker.decision import from_legacy_result
 from agent_circuit_breaker.normalization import normalize_for_matching
 
 
@@ -64,6 +66,7 @@ def evaluate_trajectory(
     return {
         "schema_version": 1,
         "run_id": _run_id(action_list, contract),
+        "run_fingerprint": _run_fingerprint(action_list, contract),
         "verdict": verdict,
         "decision": verdict.upper(),
         "summary": _summary(evaluations, findings),
@@ -95,6 +98,7 @@ def _evaluate_step(index: int, action: str, evaluator: Evaluator) -> Evaluation:
     result = evaluator(action)
     result = dict(result)
     result["trajectory_index"] = index
+    result["canonical_decision"] = from_legacy_result(result).to_summary()
     return result
 
 
@@ -341,6 +345,12 @@ def _summary(evaluations: List[Evaluation], findings: List[Finding]) -> Dict[str
 def _run_id(actions: List[str], contract: Optional[Dict[str, Any]]) -> str:
     material = {"actions": actions, "contract": contract or {}}
     encoded = repr(material).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
+
+
+def _run_fingerprint(actions: List[str], contract: Optional[Dict[str, Any]]) -> str:
+    material = {"schema_version": 1, "actions": actions, "contract": contract or {}}
+    encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
 
 

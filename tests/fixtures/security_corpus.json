@@ -1,0 +1,37 @@
+[
+  {
+    "id": "known_safe_create_dir",
+    "action": "mkdir /tmp/acb",
+    "expected_decision": "ALLOW",
+    "expected_verdict": "allow",
+    "expected_matched_rule": null
+  },
+  {
+    "id": "recursive_root_delete",
+    "action": "rm -rf /",
+    "expected_decision": "BLOCK",
+    "expected_verdict": "block",
+    "expected_matched_rule": "fs_recursive_delete"
+  },
+  {
+    "id": "nested_recursive_delete",
+    "action": "bash -c \"rm -rf /\"",
+    "expected_decision": "BLOCK",
+    "expected_verdict": "block",
+    "expected_matched_rule": "cmd_nested_dangerous_execution"
+  },
+  {
+    "id": "unknown_git_status",
+    "action": "git status",
+    "expected_decision": "UNKNOWN",
+    "expected_verdict": "unknown",
+    "expected_matched_rule": null
+  },
+  {
+    "id": "destructive_sql",
+    "action": "DROP TABLE users",
+    "expected_decision": "BLOCK",
+    "expected_verdict": "block",
+    "expected_matched_rule": "sql_drop_table"
+  }
+]

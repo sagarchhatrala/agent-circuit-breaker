@@ -111,6 +111,9 @@ v1.6.2 records this in `inspection_coverage` and validates the final decision in
 v1.6.3 extends the same fail-secure direction by blocking dangerous payloads
 hidden behind common shell/interpreter execution flags and by adding validation
 metadata to the async pipeline SDK.
+v1.6.4 adds a compact canonical internal decision summary used by audit, ledger,
+approval, trajectory, and adapter consistency tests while preserving the v1.x
+public JSON fields.
 
 This keeps policy layers explicit:
 
@@ -124,6 +127,8 @@ This keeps policy layers explicit:
 - `BLOCK`: a block rule matched
 - `ERROR`: malformed input or evaluation failure
 - `UNKNOWN`: no rule matched and no safe classification exists
+- `PENDING_APPROVAL`: action requires human review and is not executable until a
+  fresh evaluation is matched to an approved record
 
 ## Error Handling
 

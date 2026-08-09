@@ -77,10 +77,11 @@ The current stable package includes:
 - inspection coverage and decision validation evidence for action results.
 - nested shell/interpreter wrapper hardening.
 - pipeline SDK decision validation for applicable `UNKNOWN` guard results.
-- richer MCP error evidence, approval expiry support, and replay evidence in the local run ledger.
+- canonical decision summaries, MCP trajectory state evidence, approval revalidation, and replay evidence in the local run ledger.
 
 ## Release Notes
 
+- [v1.6.4](releases/v1.6.4.md)
 - [v1.6.3](releases/v1.6.3.md)
 - [v1.6.2](releases/v1.6.2.md)
 - [v1.6.1](releases/v1.6.1.md)

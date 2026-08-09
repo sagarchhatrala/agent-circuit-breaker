@@ -20,6 +20,10 @@ MCP error results and local run-ledger replay. Pipeline SDK results now include
 additive validation metadata describing whether applicable unknown guard results
 prevented an aggregate allow.
 
+v1.6.4 adds compact canonical decision summaries to audit and ledger-oriented
+projections, plus trajectory `run_fingerprint` and MCP coverage/state metadata.
+The top-level CLI/API action result remains v1.x compatible.
+
 ## Top-Level Result
 
 `agent-circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
@@ -43,6 +47,7 @@ prevented an aggregate allow.
 - `engine_version`: Agent Circuit Breaker engine version that produced the result.
 - `inspection_coverage`: mandatory inspection evidence for filesystem, command, and SQL analysis.
 - `decision_validation`: final decision validation evidence, including `ALLOW` eligibility checks.
+- `canonical_decision`: compact canonical decision summary when an integration projection includes it.
 - `custom_rules`: present only when the Python API is called with `rule_file_path`.
 
 ## Inspection Coverage
@@ -179,11 +184,12 @@ Invalid custom rule files fail closed with `verdict` set to `error`.
 
 - `schema_version`: trajectory output schema version.
 - `run_id`: deterministic short hash derived from the actions and contract.
+- `run_fingerprint`: canonical JSON fingerprint derived from the actions and contract.
 - `verdict`: aggregate run verdict: `allow`, `block`, `error`, `unknown`, or `pending_approval`.
 - `decision`: uppercase aggregate decision.
 - `summary`: counts for actions, allowed, blocked, unknown, pending approval, errors, and trajectory findings.
 - `contract`: normalized run contract.
-- `actions`: per-action evaluation results. Each action result preserves the normal check result fields and adds `trajectory_index`.
+- `actions`: per-action evaluation results. Each action result preserves the normal check result fields and adds `trajectory_index` and canonical decision evidence.
 - `trajectory_findings`: sequence-level findings.
 - `error`: present when trajectory parsing or validation fails.
 - `audit`: present when CLI audit logging is requested.
@@ -220,6 +226,12 @@ When `agent-circuit-breaker-mcp-proxy` is run with `--trajectory` or `--trajecto
 - `trajectory_finding`: first trajectory finding ID that contributed to the block.
 
 When trajectory mode is not enabled, MCP proxy responses remain stateless and these fields are `null` or absent depending on the response path.
+
+MCP inspection coverage includes `security_relevant`. Protocol messages that do
+not carry `tools/call` arguments report coverage status `not_applicable` rather
+than claiming that security-relevant content was inspected. Stateful MCP
+trajectory inspection may include `trajectory_state` with attempted and
+forwarded action counts; blocked calls are attempted but not forwarded.
 
 ## Approval Context
 

@@ -4,6 +4,28 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.4] - 2026-08-09
+
+### Added
+
+- Added an internal canonical decision contract for audit, ledger, approval, trajectory, and adapter consistency.
+- Added cross-adapter security corpus tests for allow, block, unknown, nested command, and SQL decisions.
+- Added approval revalidation against a freshly evaluated action result.
+- Added trajectory `run_fingerprint` based on canonical JSON serialization.
+- Added MCP attempted-versus-forwarded trajectory state and security-relevance coverage metadata.
+
+### Changed
+
+- `http://` remote policy URLs are rejected by default; callers must explicitly opt in with `--allow-insecure-remote-policy`.
+- Audit events and run-ledger replay include compact canonical decision summaries.
+- Documentation now clarifies canonical decision semantics, approval revalidation, MCP coverage, and remote policy transport behavior.
+
+### Compatibility
+
+- Existing v1.x CLI/API result fields keep their meaning.
+- Existing `run_id` remains present; `run_fingerprint` is additive.
+- The default install remains dependency-free.
+
 ## [1.6.2] - 2026-08-09
 
 ### Added

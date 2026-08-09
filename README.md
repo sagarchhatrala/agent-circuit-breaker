@@ -72,7 +72,8 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - pipeline SDK recursive argument inspection across arbitrary tool schema field names.
 - nested shell/interpreter wrapper hardening for `sh -c`, `bash -c`, `cmd /c`, PowerShell command wrappers, and common interpreter eval flags.
 - pipeline SDK decision validation so applicable `UNKNOWN` guard results cannot be hidden by another guard's `ALLOW`.
-- richer MCP error evidence, approval expiry support, and replay evidence in the local run ledger.
+- canonical decision summaries for audit, ledger, approval, and integration consistency.
+- richer MCP error evidence, attempted-versus-forwarded MCP trajectory state, approval expiry/revalidation support, and replay evidence in the local run ledger.
 
 Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask a human, or apply a local allowlist.
 
@@ -169,6 +170,10 @@ Optionally expire local approval records:
 ```bash
 set ACB_APPROVAL_TTL_SECONDS=86400
 ```
+
+Approval records are review evidence, not an execution bypass. A caller should
+evaluate the current action again, then validate that the approved record still
+matches the fresh action, policy, inspection coverage, and decision context.
 
 Write a tamper-evident local audit trail:
 
@@ -306,6 +311,10 @@ Load central policy from a local file:
 agent-circuit-breaker check "deploy production" --policy .agent-circuit-breaker/policy.json
 ```
 
+Explicit `https://` policy URLs are supported. Cleartext `http://` policy URLs
+are rejected by default; use `--allow-insecure-remote-policy` only when the
+caller intentionally accepts insecure policy transport risk.
+
 Require signed policy or rule JSON:
 
 ```bash
@@ -366,8 +375,8 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 
 - local approval queue with `PENDING_APPROVAL`.
 - tamper-evident hash-chained audit timeline.
-- replayable local run ledger for trajectory results.
-- central policy loading from local files or explicit caller-selected URLs.
+- replayable local run ledger for trajectory results, including canonical decision evidence.
+- central policy loading from local files or explicit caller-selected HTTPS URLs.
 - optional signed policy/rule-pack verification.
 - plugin discovery through Python entry points.
 - MCP stdio proxy mode for guarding tool-call arguments.
@@ -384,6 +393,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - contextual approval records for trajectory runs.
 - optional approval-token gate for local approval decisions.
 - optional approval expiry with `ACB_APPROVAL_TTL_SECONDS`.
+- approval revalidation for exact fresh action and policy context matches.
 - approval records include warning metadata when no local approval token is configured.
 - versioned JSON schema export for policy and result contracts.
 - typed decision and finding primitives for future policy-pack and adapter work.
@@ -417,8 +427,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.3`
-- Test suite: 488 tests
+- Current version: `1.6.4`
+- Test suite: 501 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -442,6 +452,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.4 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.4.md)
 - [v1.6.3 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.3.md)
 - [v1.6.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.2.md)
 - [v1.6.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.1.md)

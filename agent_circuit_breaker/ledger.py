@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from agent_circuit_breaker.decision import from_legacy_result
 from agent_circuit_breaker.redaction import redact_record, redaction_metadata
 
 
@@ -66,6 +67,7 @@ class RunLedger:
         result = entry.get("result") or {}
         return {
             "run_id": run_id,
+            "run_fingerprint": result.get("run_fingerprint"),
             "verdict": result.get("verdict"),
             "summary": result.get("summary"),
             "contract": result.get("contract"),
@@ -85,6 +87,8 @@ class RunLedger:
                     "policy_signature": action.get("policy_signature"),
                     "inspection_coverage": action.get("inspection_coverage"),
                     "decision_validation": action.get("decision_validation"),
+                    "canonical_decision": action.get("canonical_decision")
+                    or _canonical_action_summary(action),
                     "error": action.get("error"),
                 }
                 for action in result.get("actions", [])
@@ -129,3 +133,10 @@ def read_ledger_entries(path: Path) -> Iterable[Dict[str, Any]]:
             if line:
                 entries.append(json.loads(line))
     return entries
+
+
+def _canonical_action_summary(action: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        return from_legacy_result(action).to_summary()
+    except Exception:
+        return {}

@@ -76,7 +76,7 @@ This means a custom `allow` rule cannot override a built-in `block` rule. Custom
 
 ## Network Use
 
-Core command evaluation is offline by default. The only built-in network path is explicit central policy loading with `--policy https://...` or `--policy http://...`; that URL is selected by the caller and fetched as policy data before evaluation. Local policy auto-discovery never performs network I/O.
+Core command evaluation is offline by default. The only built-in network path is explicit central policy loading with `--policy https://...`. Cleartext `http://` policy URLs are rejected by default because policy data can change enforcement behavior; callers that intentionally accept insecure transport risk must pass `--allow-insecure-remote-policy`. Local policy auto-discovery never performs network I/O.
 
 ## Signed Policy and Rule Packs
 
@@ -86,7 +86,7 @@ Policy files and external rule packs can include an embedded `signature` object.
 
 Default `check` behavior preserves `UNKNOWN` for unclassified actions. `--mode strict` converts `UNKNOWN` to `BLOCK` for fail-secure environments. `team` and `prod` profiles route `UNKNOWN` to `PENDING_APPROVAL`, making ambiguity visible to a human instead of silently passing through.
 
-Local approval records are an audit and review workflow by default. They are not a complete separation-of-duties control if the same agent process can run `agent-circuit-breaker approvals approve <ID>`. Approval records include warning metadata when `ACB_APPROVAL_TOKEN` is not configured. To require a human-held token for approve/deny decisions, set `ACB_APPROVAL_TOKEN` outside the agent runtime and pass `--approval-token` when deciding an approval. In high-stakes environments, keep the approval decision path outside the agent's shell and tool authority.
+Local approval records are an audit and review workflow by default. They are not a complete separation-of-duties control if the same agent process can run `agent-circuit-breaker approvals approve <ID>`. Approval records include warning metadata when `ACB_APPROVAL_TOKEN` is not configured. To require a human-held token for approve/deny decisions, set `ACB_APPROVAL_TOKEN` outside the agent runtime and pass `--approval-token` when deciding an approval. Approval validation must be performed against a fresh evaluation result; approval does not bypass inspection, policy, or decision validation. In high-stakes environments, keep the approval decision path outside the agent's shell and tool authority.
 
 ## Fail-Closed Behavior
 
@@ -112,7 +112,7 @@ Agent Circuit Breaker does not by default:
 - execute shell commands.
 - connect to databases.
 
-It fetches a remote policy only when the caller explicitly supplies an `http://` or `https://` policy URL.
+It fetches a remote policy only when the caller explicitly supplies a policy URL. HTTPS is accepted by default. HTTP requires explicit insecure opt-in.
 
 ## Pipeline SDK Boundary
 

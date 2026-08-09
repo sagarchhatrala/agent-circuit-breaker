@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Any, Dict
 
 
-SCHEMA_VERSION = "1.6.3"
+SCHEMA_VERSION = "1.6.4"
 JSON_SCHEMA_DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 
@@ -103,6 +103,7 @@ DECISION_OUTPUT_SCHEMA: Dict[str, Any] = {
         "policy_source": {"type": ["string", "null"]},
         "policy_trust": {"type": ["object", "null"]},
         "policy_signature": {"type": ["object", "null"]},
+        "canonical_decision": {"type": ["object", "null"]},
     },
     "additionalProperties": True,
 }
@@ -117,6 +118,7 @@ TRAJECTORY_OUTPUT_SCHEMA: Dict[str, Any] = {
     "properties": {
         "schema_version": {"type": "integer"},
         "run_id": {"type": ["string", "null"]},
+        "run_fingerprint": {"type": ["string", "null"]},
         "verdict": {"enum": ["allow", "block", "error", "unknown", "pending_approval"]},
         "decision": {"enum": ["ALLOW", "BLOCK", "ERROR", "UNKNOWN", "PENDING_APPROVAL"]},
         "summary": {"type": "object"},

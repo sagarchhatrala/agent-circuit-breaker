@@ -503,6 +503,7 @@ class CircuitBreakerCLI:
         include_plugins: bool,
         require_signature: bool = False,
         trust_repository_policy: bool = False,
+        allow_insecure_remote_policy: bool = False,
     ) -> Dict[str, Any]:
         """Load optional policy, rules, and plugins for a command mode."""
         try:
@@ -511,6 +512,7 @@ class CircuitBreakerCLI:
                     policy_path,
                     require_signature=require_signature,
                     trust_repository_policy=trust_repository_policy,
+                    allow_insecure_remote_policy=allow_insecure_remote_policy,
                 )
                 if policy_path
                 else load_policy(
@@ -700,6 +702,7 @@ class CircuitBreakerCLI:
         audit: bool = False,
         require_signature: bool = False,
         trust_repository_policy: bool = False,
+        allow_insecure_remote_policy: bool = False,
     ) -> int:
         """
         Run in command mode, evaluating a single command.
@@ -718,6 +721,7 @@ class CircuitBreakerCLI:
             include_plugins,
             require_signature=require_signature,
             trust_repository_policy=trust_repository_policy,
+            allow_insecure_remote_policy=allow_insecure_remote_policy,
         )
         if not runtime["is_valid"]:
             output = self.format_rule_validation_output(
@@ -781,6 +785,7 @@ class CircuitBreakerCLI:
         include_plugins: bool = False,
         require_signature: bool = False,
         trust_repository_policy: bool = False,
+        allow_insecure_remote_policy: bool = False,
     ) -> int:
         """Run explanation mode for a single action."""
         runtime = self._load_runtime_options(
@@ -791,6 +796,7 @@ class CircuitBreakerCLI:
             include_plugins,
             require_signature=require_signature,
             trust_repository_policy=trust_repository_policy,
+            allow_insecure_remote_policy=allow_insecure_remote_policy,
         )
         if not runtime["is_valid"]:
             print(
@@ -835,6 +841,7 @@ class CircuitBreakerCLI:
         sarif: bool = False,
         require_signature: bool = False,
         trust_repository_policy: bool = False,
+        allow_insecure_remote_policy: bool = False,
     ) -> int:
         """Run static scan mode over text files."""
         runtime = self._load_runtime_options(
@@ -845,6 +852,7 @@ class CircuitBreakerCLI:
             include_plugins,
             require_signature=require_signature,
             trust_repository_policy=trust_repository_policy,
+            allow_insecure_remote_policy=allow_insecure_remote_policy,
         )
         if not runtime["is_valid"]:
             print(
@@ -894,6 +902,7 @@ class CircuitBreakerCLI:
         ledger: bool = False,
         require_signature: bool = False,
         trust_repository_policy: bool = False,
+        allow_insecure_remote_policy: bool = False,
     ) -> int:
         """Run trajectory mode over a JSON run file."""
         runtime = self._load_runtime_options(
@@ -904,6 +913,7 @@ class CircuitBreakerCLI:
             include_plugins,
             require_signature=require_signature,
             trust_repository_policy=trust_repository_policy,
+            allow_insecure_remote_policy=allow_insecure_remote_policy,
         )
         if not runtime["is_valid"]:
             print(
@@ -1345,6 +1355,8 @@ Options:
   --ledger                Append full trajectory results to the run ledger
   --approval-token TOKEN  Token required when ACB_APPROVAL_TOKEN is configured
   --policy PATH_OR_URL    Load central policy before local CLI overrides
+  --allow-insecure-remote-policy
+                          Allow http:// policy URLs; HTTPS is required by default
   --require-signature     Require policy/rule JSON signatures before loading
   --trust-repository-policy
                           Allow auto-discovered repository policy to weaken controls
@@ -1418,6 +1430,11 @@ def main() -> int:
     parser.add_argument("--ledger", action="store_true", help="Append full trajectory results to the run ledger")
     parser.add_argument("--approval-token", help="Approval token required when ACB_APPROVAL_TOKEN is configured")
     parser.add_argument("--policy", dest="policy_path", type=str, help="Central policy file or URL")
+    parser.add_argument(
+        "--allow-insecure-remote-policy",
+        action="store_true",
+        help="Allow http:// policy URLs; HTTPS is required by default",
+    )
     parser.add_argument("--require-signature", action="store_true", help="Require signed policy/rule JSON")
     parser.add_argument(
         "--trust-repository-policy",
@@ -1465,6 +1482,7 @@ def main() -> int:
                 audit=args.audit,
                 require_signature=args.require_signature,
                 trust_repository_policy=args.trust_repository_policy,
+                allow_insecure_remote_policy=args.allow_insecure_remote_policy,
             )
 
         if args.command_parts:
@@ -1479,6 +1497,7 @@ def main() -> int:
                     audit=args.audit,
                     require_signature=args.require_signature,
                     trust_repository_policy=args.trust_repository_policy,
+                    allow_insecure_remote_policy=args.allow_insecure_remote_policy,
                 )
 
             if args.command_parts[0] == "explain" and len(args.command_parts) >= 2:
@@ -1491,6 +1510,7 @@ def main() -> int:
                     include_plugins=args.plugins,
                     require_signature=args.require_signature,
                     trust_repository_policy=args.trust_repository_policy,
+                    allow_insecure_remote_policy=args.allow_insecure_remote_policy,
                 )
 
             if args.command_parts[0] == "scan" and len(args.command_parts) >= 2:
@@ -1505,6 +1525,7 @@ def main() -> int:
                     sarif=args.sarif,
                     require_signature=args.require_signature,
                     trust_repository_policy=args.trust_repository_policy,
+                    allow_insecure_remote_policy=args.allow_insecure_remote_policy,
                 )
 
             if args.command_parts[0] == "trajectory" and len(args.command_parts) == 2:
@@ -1519,6 +1540,7 @@ def main() -> int:
                     ledger=args.ledger,
                     require_signature=args.require_signature,
                     trust_repository_policy=args.trust_repository_policy,
+                    allow_insecure_remote_policy=args.allow_insecure_remote_policy,
                 )
 
             if args.command_parts[0] == "install-hooks":

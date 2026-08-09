@@ -34,6 +34,7 @@ class MCPRunGuard:
         self.rules = rules
         self.contract = contract
         self.actions: List[str] = []
+        self.forwarded_actions: List[str] = []
 
     def inspect_arguments(self, arguments: Any) -> Dict[str, Any]:
         """Evaluate the current tool-call arguments in accumulated run context."""
@@ -64,6 +65,21 @@ class MCPRunGuard:
             "allowed": result["verdict"] not in BLOCKING_VERDICTS,
             "trajectory": result,
             "coverage": _argument_coverage(candidates),
+            "state": self.state_summary(),
+        }
+
+    def mark_forwarded(self, arguments: Any) -> Dict[str, Any]:
+        """Record command-like values that were actually forwarded upstream."""
+        values = [value for _field, value in _command_candidates(arguments)]
+        self.forwarded_actions.extend(values)
+        return self.state_summary()
+
+    def state_summary(self) -> Dict[str, Any]:
+        """Return compact attempted-versus-forwarded MCP run state."""
+        return {
+            "attempted_count": len(self.actions),
+            "forwarded_count": len(self.forwarded_actions),
+            "blocked_count": max(0, len(self.actions) - len(self.forwarded_actions)),
         }
 
     def _evaluate_action(self, action: str) -> Dict[str, Any]:
@@ -144,7 +160,7 @@ def inspect_jsonrpc_message(
         return {
             "allowed": True,
             "checks": [],
-            "coverage": _argument_coverage([]),
+            "coverage": _argument_coverage([], status="not_applicable", security_relevant=False),
             "response": None,
         }
 
@@ -155,12 +171,15 @@ def inspect_jsonrpc_message(
         trajectory_inspection = run_guard.inspect_arguments(arguments or {})
         inspection["trajectory"] = trajectory_inspection["trajectory"]
         inspection["trajectory_coverage"] = trajectory_inspection.get("coverage")
+        inspection["trajectory_state"] = trajectory_inspection.get("state")
         if not trajectory_inspection["allowed"]:
             inspection["allowed"] = False
 
     response = None
     if not inspection["allowed"]:
         response = blocked_jsonrpc_response(message, inspection)
+    elif run_guard is not None:
+        inspection["trajectory_state"] = run_guard.mark_forwarded(arguments or {})
     return {**inspection, "response": response}
 
 
@@ -299,6 +318,8 @@ def inspect_stdin(
             if run_guard is not None:
                 trajectory_inspection = run_guard.inspect_arguments(payload)
                 inspection["trajectory"] = trajectory_inspection["trajectory"]
+                inspection["trajectory_coverage"] = trajectory_inspection.get("coverage")
+                inspection["trajectory_state"] = trajectory_inspection.get("state")
                 if not trajectory_inspection["allowed"]:
                     inspection["allowed"] = False
             print(json.dumps(inspection, sort_keys=True))
@@ -336,17 +357,21 @@ def _argument_coverage(
     *,
     status: str = "complete",
     error: Optional[str] = None,
+    security_relevant: bool = True,
 ) -> Dict[str, Any]:
     """Return additive MCP argument inspection coverage metadata."""
     inspected_fields = [field for field, _value in candidates]
+    mandatory_complete = status in {"complete", "not_applicable"}
+    unknowns = [] if mandatory_complete else ["arguments"]
     return {
         "schema_version": 1,
         "status": status,
-        "mandatory_complete": status == "complete",
+        "mandatory_complete": mandatory_complete,
+        "security_relevant": security_relevant,
         "inspected_fields": inspected_fields,
         "inspected_count": len(inspected_fields),
         "error": error,
-        "unknowns": [] if status == "complete" else ["arguments"],
+        "unknowns": unknowns,
     }
 
 

@@ -160,3 +160,9 @@ common shell/interpreter execution flags. Some actions that were previously
 `UNKNOWN`, such as `bash -c "rm -rf /"`, now return `BLOCK`. Pipeline SDK
 results also include additive validation metadata; an applicable guard returning
 `UNKNOWN` prevents another guard's `ALLOW` from becoming the aggregate verdict.
+
+v1.6.4 adds canonical decision summaries, trajectory `run_fingerprint`, MCP
+coverage/state metadata, and approval revalidation helpers as additive evidence.
+Cleartext `http://` remote policy URLs now require explicit opt-in with
+`--allow-insecure-remote-policy`; HTTPS and local policy loading remain
+compatible.

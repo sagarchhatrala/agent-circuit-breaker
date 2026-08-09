@@ -34,6 +34,12 @@ Tool schemas are caller-defined, so the pipeline does not depend on fixed argume
 
 If a guard raises an exception, the pipeline converts it to `deny`.
 
+For v1.6.4 consistency, custom guards should reserve `GuardResult.unknown(...)`
+for cases where the guard applied but could not complete a deterministic
+decision. If the guard's domain does not apply to the current tool call, return
+`GuardResult.not_applicable(...)` so an unrelated allow cannot hide an applicable
+unknown and an unrelated skip does not block a valid allow.
+
 ## SDK Example
 
 ```python

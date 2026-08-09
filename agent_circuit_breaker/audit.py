@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
+from agent_circuit_breaker.decision import from_legacy_result
 from agent_circuit_breaker.redaction import redact_record, redaction_metadata
 
 
@@ -98,6 +99,7 @@ def audit_event_from_result(result: Dict[str, Any], source: str = "cli") -> Dict
     """Build a compact audit event from an evaluation result."""
     coverage = result.get("inspection_coverage") or {}
     validation = result.get("decision_validation") or {}
+    canonical = from_legacy_result(result)
     event = {
         "source": source,
         "command": result.get("command"),
@@ -124,6 +126,7 @@ def audit_event_from_result(result: Dict[str, Any], source: str = "cli") -> Dict
             "allow_permitted": validation.get("allow_permitted"),
             "reason": validation.get("reason"),
         },
+        "canonical_decision": canonical.to_summary(),
         "redaction": redaction_metadata(),
     }
     return redact_record(event)
