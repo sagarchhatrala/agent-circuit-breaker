@@ -1,6 +1,6 @@
 ﻿# Agent Circuit Breaker Plan
 
-Current release target: `v1.6.1` policy source trust and full command-name alignment.
+Current release target: `v1.6.2` inspection coverage and decision validation.
 
 The historical v1.0 stable plan remains below for project context.
 

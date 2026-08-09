@@ -96,6 +96,8 @@ def read_entries(path: Path) -> Iterable[Dict[str, Any]]:
 
 def audit_event_from_result(result: Dict[str, Any], source: str = "cli") -> Dict[str, Any]:
     """Build a compact audit event from an evaluation result."""
+    coverage = result.get("inspection_coverage") or {}
+    validation = result.get("decision_validation") or {}
     event = {
         "source": source,
         "command": result.get("command"),
@@ -104,6 +106,24 @@ def audit_event_from_result(result: Dict[str, Any], source: str = "cli") -> Dict
         "risk_score": result.get("risk_score"),
         "matched_rule": result.get("matched_rule"),
         "policy": result.get("policy"),
+        "policy_source": result.get("policy_source"),
+        "policy_trust": result.get("policy_trust"),
+        "policy_signature": result.get("policy_signature"),
+        "inspection_coverage": {
+            "schema_version": coverage.get("schema_version"),
+            "status": coverage.get("status"),
+            "mandatory_complete": coverage.get("mandatory_complete"),
+            "allow_eligible": coverage.get("allow_eligible"),
+            "auto_allow_reason": coverage.get("auto_allow_reason"),
+            "unknowns": coverage.get("unknowns") or [],
+        },
+        "decision_validation": {
+            "schema_version": validation.get("schema_version"),
+            "status": validation.get("status"),
+            "allow_source": validation.get("allow_source"),
+            "allow_permitted": validation.get("allow_permitted"),
+            "reason": validation.get("reason"),
+        },
         "redaction": redaction_metadata(),
     }
     return redact_record(event)

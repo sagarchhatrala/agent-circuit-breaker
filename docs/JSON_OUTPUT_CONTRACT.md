@@ -10,6 +10,11 @@ default. Callers that opt into typed conversion can use
 `DecisionResult.from_legacy_result(result)` and then call `to_dict()` for typed
 findings or `to_legacy_dict()` for the stable v1.x shape.
 
+v1.6.2 adds additive `inspection_coverage`, `decision_validation`, and
+`engine_version` fields. These fields do not change existing field meaning, but
+they make it possible for integrations and audit pipelines to answer what was
+inspected before a decision was returned.
+
 ## Top-Level Result
 
 `agent-circuit-breaker check "<action>" --format json` and `evaluate_action(action)` return an object with these fields:
@@ -30,7 +35,47 @@ findings or `to_legacy_dict()` for the stable v1.x shape.
 - `policy_source`: present when a central policy file or URL was loaded.
 - `policy_trust`: present when a central policy file or URL was loaded and trust metadata is available.
 - `policy_signature`: present when a loaded policy contained a verified signature.
+- `engine_version`: Agent Circuit Breaker engine version that produced the result.
+- `inspection_coverage`: mandatory inspection evidence for filesystem, command, and SQL analysis.
+- `decision_validation`: final decision validation evidence, including `ALLOW` eligibility checks.
 - `custom_rules`: present only when the Python API is called with `rule_file_path`.
+
+## Inspection Coverage
+
+`inspection_coverage` is an additive object with:
+
+- `schema_version`: coverage schema version.
+- `status`: `complete`, `incomplete`, or `failed`.
+- `mandatory_complete`: whether every mandatory inspector completed.
+- `allow_eligible`: whether the action is eligible for automatic known-safe allow.
+- `auto_allow_reason`: reason string when automatic known-safe allow was used, otherwise `null`.
+- `records`: per-inspector records for `filesystem`, `command`, and `sql`.
+- `limits`: relevant evaluation limits such as `max_command_bytes`.
+- `unknowns`: mandatory inspection areas that did not complete.
+
+Each coverage record contains:
+
+- `name`: inspector name.
+- `target`: inspected target.
+- `mandatory`: whether the inspector is mandatory for action decisions.
+- `status`: `complete` or `failed`.
+- `error`: error text or `null`.
+- `limits_reached`: whether a configured limit was reached.
+- `metadata`: compact inspector-specific evidence.
+
+`ALLOW` is valid only when mandatory coverage is complete. Automatic known-safe
+allow additionally requires a single complete command segment with no shell
+operators, no command risk flags, valid SQL inspection, and no SQL risk flags.
+
+## Decision Validation
+
+`decision_validation` is an additive object with:
+
+- `schema_version`: validation schema version.
+- `status`: `valid` or `rejected`.
+- `allow_source`: `auto_known_safe`, `rule`, or `null`.
+- `allow_permitted`: whether an `ALLOW` decision was allowed to stand.
+- `reason`: deterministic explanation text.
 
 ## Rule Details
 

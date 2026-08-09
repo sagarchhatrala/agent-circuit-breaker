@@ -79,6 +79,7 @@ Unknown actions stay explicit as `UNKNOWN`; callers decide whether to stop, ask 
 - **Local-first**: default evaluation is offline and dependency-free.
 - **Auditable**: the core is Python stdlib-only and small enough to inspect.
 - **Fail-closed**: malformed inputs, invalid rules, and signature failures stop instead of silently allowing.
+- **Evidence-backed ALLOW**: v1.6.2 records mandatory inspection coverage and rejects `ALLOW` when required inspection was incomplete.
 - **Composable**: use it from CLI, Python, CI, pre-commit, MCP proxy mode, or another agent runtime.
 
 ## Installation
@@ -406,8 +407,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.1`
-- Test suite: 473 tests
+- Current version: `1.6.2`
+- Test suite: 480 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -431,6 +432,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.2.md)
 - [v1.6.1 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.1.md)
 - [v1.6.0 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.0.md)
 - [v1.5.2 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.5.2.md)

@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Any, Dict
 
 
-SCHEMA_VERSION = "1.6.1"
+SCHEMA_VERSION = "1.6.2"
 JSON_SCHEMA_DRAFT = "https://json-schema.org/draft/2020-12/schema"
 
 
@@ -97,6 +97,12 @@ DECISION_OUTPUT_SCHEMA: Dict[str, Any] = {
         "risk_score": {"type": "integer", "minimum": 0, "maximum": 100},
         "error": {"type": ["string", "null"]},
         "policy": {"type": ["object", "null"]},
+        "engine_version": {"type": ["string", "null"]},
+        "inspection_coverage": {"type": ["object", "null"]},
+        "decision_validation": {"type": ["object", "null"]},
+        "policy_source": {"type": ["string", "null"]},
+        "policy_trust": {"type": ["object", "null"]},
+        "policy_signature": {"type": ["object", "null"]},
     },
     "additionalProperties": True,
 }
@@ -137,6 +143,11 @@ AUDIT_EVENT_SCHEMA: Dict[str, Any] = {
         "risk_score": {"type": ["integer", "null"]},
         "matched_rule": {"type": ["string", "null"]},
         "policy": {"type": ["object", "null"]},
+        "policy_source": {"type": ["string", "null"]},
+        "policy_trust": {"type": ["object", "null"]},
+        "policy_signature": {"type": ["object", "null"]},
+        "inspection_coverage": {"type": ["object", "null"]},
+        "decision_validation": {"type": ["object", "null"]},
         "redaction": {"type": "object"},
     },
     "additionalProperties": True,

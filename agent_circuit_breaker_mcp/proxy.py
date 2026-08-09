@@ -36,10 +36,22 @@ class MCPRunGuard:
 
     def inspect_arguments(self, arguments: Any) -> Dict[str, Any]:
         """Evaluate the current tool-call arguments in accumulated run context."""
-        candidates = list(_command_candidates(arguments))
+        try:
+            candidates = list(_command_candidates(arguments))
+        except Exception as exc:
+            return {
+                "allowed": False,
+                "trajectory": None,
+                "coverage": _argument_coverage([], status="failed", error=str(exc)),
+                "error": str(exc),
+            }
         values = [value for _field, value in candidates]
         if not values:
-            return {"allowed": True, "trajectory": None}
+            return {
+                "allowed": True,
+                "trajectory": None,
+                "coverage": _argument_coverage(candidates),
+            }
 
         result = evaluate_trajectory(
             self.actions + values,
@@ -50,6 +62,7 @@ class MCPRunGuard:
         return {
             "allowed": result["verdict"] not in BLOCKING_VERDICTS,
             "trajectory": result,
+            "coverage": _argument_coverage(candidates),
         }
 
     def _evaluate_action(self, action: str) -> Dict[str, Any]:
@@ -79,7 +92,17 @@ def inspect_arguments(
 ) -> Dict[str, Any]:
     """Inspect command-like values recursively inside MCP tool arguments."""
     checks = []
-    for field_path, value in _command_candidates(arguments):
+    try:
+        candidates = list(_command_candidates(arguments))
+    except Exception as exc:
+        return {
+            "allowed": False,
+            "checks": [],
+            "coverage": _argument_coverage([], status="failed", error=str(exc)),
+            "error": str(exc),
+        }
+
+    for field_path, value in candidates:
         if rules or profile or mode:
             cli = CircuitBreakerCLI()
             custom_rules = []
@@ -103,6 +126,7 @@ def inspect_arguments(
     return {
         "allowed": not blocked,
         "checks": checks,
+        "coverage": _argument_coverage(candidates),
     }
 
 
@@ -116,7 +140,12 @@ def inspect_jsonrpc_message(
 ) -> Dict[str, Any]:
     """Inspect an MCP JSON-RPC message and return forwarding metadata."""
     if message.get("method") != "tools/call":
-        return {"allowed": True, "checks": [], "response": None}
+        return {
+            "allowed": True,
+            "checks": [],
+            "coverage": _argument_coverage([]),
+            "response": None,
+        }
 
     params = message.get("params") or {}
     arguments = params.get("arguments") if isinstance(params, dict) else None
@@ -124,6 +153,7 @@ def inspect_jsonrpc_message(
     if run_guard is not None:
         trajectory_inspection = run_guard.inspect_arguments(arguments or {})
         inspection["trajectory"] = trajectory_inspection["trajectory"]
+        inspection["trajectory_coverage"] = trajectory_inspection.get("coverage")
         if not trajectory_inspection["allowed"]:
             inspection["allowed"] = False
 
@@ -298,6 +328,25 @@ def _command_candidates(value: Any, path: str = "", depth: int = 0) -> Iterable[
                 yield child_path, child
             elif isinstance(child, (dict, list)):
                 yield from _command_candidates(child, child_path, depth + 1)
+
+
+def _argument_coverage(
+    candidates: List[tuple[str, str]],
+    *,
+    status: str = "complete",
+    error: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Return additive MCP argument inspection coverage metadata."""
+    inspected_fields = [field for field, _value in candidates]
+    return {
+        "schema_version": 1,
+        "status": status,
+        "mandatory_complete": status == "complete",
+        "inspected_fields": inspected_fields,
+        "inspected_count": len(inspected_fields),
+        "error": error,
+        "unknowns": [] if status == "complete" else ["arguments"],
+    }
 
 
 def _relay_server_stdout(process: subprocess.Popen[str]) -> None:

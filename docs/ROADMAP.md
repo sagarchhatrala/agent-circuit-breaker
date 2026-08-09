@@ -461,6 +461,19 @@ Implemented so far:
 - `--trust-repository-policy` for callers that intentionally trust local repository policy.
 - full command-name alignment around `agent-circuit-breaker` and `agent-circuit-breaker-mcp-proxy`.
 
+### v1.6.2: Inspection Coverage And Decision Validation
+
+Status: released as `v1.6.2`.
+
+Implemented so far:
+
+- additive inspection coverage metadata for action results.
+- deterministic decision validation for `ALLOW` results.
+- stricter known-safe auto-allow semantics for single-segment complete inspection.
+- MCP argument coverage metadata with fail-closed depth reporting.
+- approval IDs scoped to policy and inspection context.
+- audit summaries for inspection coverage and decision validation.
+
 Candidate follow-up work:
 
 - explicit policy source trust levels for signed, system, user, local, and repository policies.

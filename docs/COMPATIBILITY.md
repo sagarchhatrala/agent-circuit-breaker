@@ -148,3 +148,9 @@ Built-in rule coverage may expand in compatible releases. That means an action t
 An action that is currently `BLOCK` for a built-in catastrophic pattern should not become `ALLOW` without a major release and explicit migration guidance.
 
 Fail-closed behavior for malformed input, invalid rule files, oversized inputs, signature failures, and evaluator errors is part of the compatibility contract.
+
+v1.6.2 adds `inspection_coverage`, `decision_validation`, and `engine_version`
+as additive action-result fields. Existing fields keep their v1.x meaning.
+Automatic known-safe `ALLOW` now requires complete single-segment inspection.
+A chained action that previously inherited a safe first segment may now remain
+`UNKNOWN` unless a rule or policy mode produces a stricter decision.

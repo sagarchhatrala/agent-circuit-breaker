@@ -8,7 +8,7 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.6.1",
+    version="1.6.2",
     description="Deterministic safety gate for AI coding agents",
     long_description=README,
     long_description_content_type="text/markdown",

@@ -74,9 +74,11 @@ The current stable package includes:
 - generated built-in rule catalog output.
 - explicit resource limits for policy inputs and MCP traversal.
 - default redaction for persisted audit, approval, and ledger records.
+- inspection coverage and decision validation evidence for action results.
 
 ## Release Notes
 
+- [v1.6.2](releases/v1.6.2.md)
 - [v1.6.1](releases/v1.6.1.md)
 - [v1.6.0](releases/v1.6.0.md)
 - [v1.5.2](releases/v1.5.2.md)

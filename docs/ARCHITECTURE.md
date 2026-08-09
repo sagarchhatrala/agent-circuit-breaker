@@ -90,7 +90,7 @@ back to the existing dictionary shape.
 3. Filesystem inspector analyzes the action.
 4. Engine evaluates the action against built-in rules.
 5. If a rule matches, the engine returns that rule's response.
-6. If no rule matches and the inspector recognizes the operation as safe, the CLI reports `ALLOW`.
+6. If no rule matches and the inspectors prove a single-segment known-safe operation, the CLI reports `ALLOW`.
 7. If no rule matches and the operation is not recognized as safe, the CLI reports `UNKNOWN`.
 8. Public API evaluation converts the result into a typed internal `DecisionResult`.
 9. The API returns the stable v1.x dictionary; the CLI returns the stable text or JSON output.
@@ -101,7 +101,13 @@ This preserves the engine's simple contract while allowing the CLI to provide a 
 
 The engine returns `UNKNOWN` when no rule matches. That is the correct low-level behavior because absence of a matching rule is not the same thing as proof of safety.
 
-The CLI has additional context from the inspector. If the inspector recognizes a non-dangerous operation such as `mkdir`, `mv`, `cp`, `chmod`, or `touch`, the CLI maps that result to `ALLOW`.
+The CLI has additional context from the inspectors. If the filesystem inspector
+recognizes a non-dangerous operation such as `mkdir`, `mv`, `cp`, `chmod`, or
+`touch`, and command/SQL inspection proves the action is a single complete
+segment with no operators or risk flags, the CLI maps that result to `ALLOW`.
+
+v1.6.2 records this in `inspection_coverage` and validates the final decision in
+`decision_validation`. Incomplete mandatory inspection cannot produce `ALLOW`.
 
 This keeps policy layers explicit:
 

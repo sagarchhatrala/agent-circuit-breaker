@@ -131,7 +131,7 @@ def rule_schema_metadata() -> Dict[str, Any]:
 
 def _error_result(action: Any, error: str) -> Dict[str, Any]:
     """Build a public API error result without evaluating the action."""
-    return {
+    result = {
         "command": action,
         "verdict": "error",
         "decision": Decision.ERROR.name,
@@ -142,7 +142,11 @@ def _error_result(action: Any, error: str) -> Dict[str, Any]:
         "sql_analysis": None,
         "risk_score": 100,
         "error": error,
+        "inspection_coverage": CircuitBreakerCLI._error_inspection_coverage(error),
+        "decision_validation": None,
     }
+    CircuitBreakerCLI._validate_decision(result)
+    return result
 
 
 def _trajectory_error_result(error: str, custom_rule_summary: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

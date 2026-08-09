@@ -95,7 +95,8 @@ Tradeoff:
 
 ## CLI Allows Known Safe Operations
 
-Decision: the CLI maps recognized safe operations to `ALLOW` when no block rule matches.
+Decision: the CLI maps recognized safe operations to `ALLOW` when no block rule
+matches and mandatory inspection coverage proves the whole action is eligible.
 
 Reasoning:
 
@@ -105,7 +106,8 @@ Reasoning:
 
 Tradeoff:
 
-- The allow decision currently depends on inspector coverage.
+- The allow decision depends on complete mandatory inspector coverage.
+- A safe first command segment must not allow a later chained segment.
 - Unknown remains available for commands outside current deterministic understanding.
 
 ## Block And Error Share Exit Code 1

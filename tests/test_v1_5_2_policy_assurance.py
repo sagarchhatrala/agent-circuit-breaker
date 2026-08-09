@@ -24,7 +24,7 @@ from agent_circuit_breaker_mcp.proxy import inspect_arguments
 
 class TestVersionAndSchemas(unittest.TestCase):
     def test_version_is_current_release(self):
-        self.assertEqual(agent_circuit_breaker.__version__, "1.6.1")
+        self.assertEqual(agent_circuit_breaker.__version__, "1.6.2")
 
     def test_schema_registry_exports_public_contracts(self):
         schemas = all_schemas()
@@ -187,8 +187,11 @@ class TestMCPConformanceAndArchitecture(unittest.TestCase):
         for _ in range(40):
             payload = {"nested": payload}
 
-        with self.assertRaises(ValueError):
-            inspect_arguments(payload)
+        result = inspect_arguments(payload)
+
+        self.assertFalse(result["allowed"])
+        self.assertEqual(result["coverage"]["status"], "failed")
+        self.assertIn("recursion depth", result["error"])
 
     def test_core_architecture_boundaries(self):
         repo_root = Path(__file__).resolve().parents[1]

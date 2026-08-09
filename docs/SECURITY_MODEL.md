@@ -26,7 +26,7 @@ The caller is responsible for:
 
 Agent Circuit Breaker returns one of four decisions:
 
-- `ALLOW`: recognized safe operation with no matching block rule.
+- `ALLOW`: recognized safe operation or explicit allow rule with complete mandatory inspection.
 - `BLOCK`: a built-in or custom rule matched and denied the action.
 - `ERROR`: input, parsing, rule loading, or evaluation failed.
 - `UNKNOWN`: no rule matched and the action is not recognized as safe.
@@ -37,6 +37,22 @@ The recommended integration policy is:
 - stop on `BLOCK`.
 - stop on `ERROR`.
 - treat `UNKNOWN` as review-required unless the integration has a separate allowlist.
+
+## Inspection Coverage And Decision Validation
+
+Every action result includes additive inspection coverage metadata. The coverage
+record states whether mandatory filesystem, command, and SQL inspection
+completed before the decision was returned. It also records whether an action is
+eligible for automatic known-safe allow.
+
+`ALLOW` is not permitted when mandatory inspection is incomplete. Automatic
+known-safe allow is only permitted for a single complete command segment with no
+shell operators, no command risk flags, valid SQL inspection, and no SQL risk
+flags. A recognized safe first segment cannot make a later chained segment safe.
+
+Integrations that need strict fail-secure behavior should continue to execute
+only on `ALLOW`, stop on `BLOCK` and `ERROR`, and route `UNKNOWN` through strict
+mode, approval mode, or their own explicit allowlist.
 
 ## Trajectory Evaluation
 

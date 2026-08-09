@@ -7,6 +7,7 @@ import os
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 
+from agent_circuit_breaker import __version__
 from agent_circuit_breaker.engine import Engine, Decision
 from agent_circuit_breaker.approvals import ApprovalStore, approval_context
 from agent_circuit_breaker.audit import AuditLog, audit_event_from_result
@@ -87,6 +88,9 @@ class CircuitBreakerCLI:
             "risk_score": 0,
             "error": None,
             "policy": None,
+            "engine_version": __version__,
+            "inspection_coverage": None,
+            "decision_validation": None,
         }
 
         try:
@@ -126,7 +130,13 @@ class CircuitBreakerCLI:
                     "danger_reason": None,
                 }
                 result["error"] = "Command must be a string"
-                return apply_policy_mode(result, mode=mode, profile=profile)
+                result["inspection_coverage"] = self._build_inspection_coverage(
+                    result["operation_analysis"],
+                    result["command_analysis"],
+                    result["sql_analysis"],
+                    auto_allow_reason=None,
+                )
+                return self._apply_policy_mode_and_validate(result, mode, profile)
 
             ensure_text_within_limit(command, MAX_COMMAND_BYTES, "command")
 
@@ -166,26 +176,44 @@ class CircuitBreakerCLI:
                 "is_dangerous": sql_analysis["is_dangerous"],
                 "danger_reason": sql_analysis["danger_reason"],
             }
+            result["inspection_coverage"] = self._build_inspection_coverage(
+                result["operation_analysis"],
+                result["command_analysis"],
+                result["sql_analysis"],
+                auto_allow_reason=None,
+            )
 
             if not command_analysis["is_valid"]:
                 result["decision"] = Decision.ERROR.name
                 result["verdict"] = "error"
                 result["risk_score"] = 100
                 result["error"] = command_analysis["error"]
-                return apply_policy_mode(result, mode=mode, profile=profile)
+                return self._apply_policy_mode_and_validate(result, mode, profile)
 
             # Evaluate against engine rules
             rules = BUILTIN_RULES + (extra_rules or [])
             decision, matched_rule = self.engine.evaluate(command, rules)
+            allow_source = "rule" if matched_rule and decision == Decision.ALLOW else None
             if decision != Decision.BLOCK and not sql_analysis["is_valid"]:
                 result["decision"] = Decision.ERROR.name
                 result["verdict"] = "error"
                 result["risk_score"] = 100
                 result["error"] = sql_analysis["error"]
-                return apply_policy_mode(result, mode=mode, profile=profile)
+                return self._apply_policy_mode_and_validate(result, mode, profile)
 
-            if decision == Decision.UNKNOWN and self._is_known_safe_operation(operation_analysis):
+            if decision == Decision.UNKNOWN and self._can_auto_allow_known_safe_operation(
+                operation_analysis,
+                command_analysis,
+                sql_analysis,
+            ):
                 decision = Decision.ALLOW
+                allow_source = "auto_known_safe"
+                result["inspection_coverage"] = self._build_inspection_coverage(
+                    result["operation_analysis"],
+                    result["command_analysis"],
+                    result["sql_analysis"],
+                    auto_allow_reason="known_safe_single_segment_operation",
+                )
 
             result["decision"] = decision.name
 
@@ -217,13 +245,16 @@ class CircuitBreakerCLI:
                 command_analysis,
                 sql_analysis,
             )
-            result = apply_policy_mode(result, mode=mode, profile=profile)
+            result = self._apply_policy_mode_and_validate(result, mode, profile, allow_source=allow_source)
 
         except Exception as e:
             result["verdict"] = "error"
             result["decision"] = Decision.ERROR.name
             result["risk_score"] = 100
             result["error"] = str(e)
+            if result.get("inspection_coverage") is None:
+                result["inspection_coverage"] = self._error_inspection_coverage(str(e))
+            self._validate_decision(result)
             if self.verbose:
                 import traceback
 
@@ -275,6 +306,193 @@ class CircuitBreakerCLI:
             "create_dir",
             "create_file",
         }
+
+    @classmethod
+    def _can_auto_allow_known_safe_operation(
+        cls,
+        operation_analysis: Dict[str, Any],
+        command_analysis: Dict[str, Any],
+        sql_analysis: Dict[str, Any],
+    ) -> bool:
+        """Return true only when every mandatory inspector supports safe auto-allow."""
+        if not cls._is_known_safe_operation(operation_analysis):
+            return False
+        if not command_analysis.get("is_valid"):
+            return False
+        if command_analysis.get("is_dangerous"):
+            return False
+        if command_analysis.get("risk_flags"):
+            return False
+        if command_analysis.get("operators"):
+            return False
+        if len(command_analysis.get("segments") or []) != 1:
+            return False
+        if not sql_analysis.get("is_valid"):
+            return False
+        if sql_analysis.get("is_dangerous"):
+            return False
+        if sql_analysis.get("risk_flags"):
+            return False
+        return True
+
+    def _apply_policy_mode_and_validate(
+        self,
+        result: Dict[str, Any],
+        mode: Optional[str],
+        profile: Any,
+        *,
+        allow_source: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Apply compatibility policy mode, then validate final decision semantics."""
+        result = apply_policy_mode(result, mode=mode, profile=profile)
+        self._validate_decision(result, allow_source=allow_source)
+        return result
+
+    @staticmethod
+    def _build_inspection_coverage(
+        operation_analysis: Optional[Dict[str, Any]],
+        command_analysis: Optional[Dict[str, Any]],
+        sql_analysis: Optional[Dict[str, Any]],
+        *,
+        auto_allow_reason: Optional[str],
+    ) -> Dict[str, Any]:
+        """Build additive evidence showing which mandatory inspectors completed."""
+        records = [
+            {
+                "name": "filesystem",
+                "target": "command",
+                "mandatory": True,
+                "status": "complete" if operation_analysis is not None else "failed",
+                "error": None if operation_analysis is not None else "filesystem inspection did not run",
+                "limits_reached": False,
+                "metadata": {
+                    "operation": operation_analysis.get("operation") if operation_analysis else None,
+                    "targets": len(operation_analysis.get("targets") or []) if operation_analysis else 0,
+                    "dangerous": bool(operation_analysis.get("is_dangerous")) if operation_analysis else False,
+                },
+            },
+            {
+                "name": "command",
+                "target": "command",
+                "mandatory": True,
+                "status": "complete" if (command_analysis or {}).get("is_valid") else "failed",
+                "error": (command_analysis or {}).get("error"),
+                "limits_reached": False,
+                "metadata": {
+                    "segments": len((command_analysis or {}).get("segments") or []),
+                    "operators": list((command_analysis or {}).get("operators") or []),
+                    "risk_flags": list((command_analysis or {}).get("risk_flags") or []),
+                    "dangerous": bool((command_analysis or {}).get("is_dangerous")),
+                },
+            },
+            {
+                "name": "sql",
+                "target": "command",
+                "mandatory": True,
+                "status": "complete" if (sql_analysis or {}).get("is_valid") else "failed",
+                "error": (sql_analysis or {}).get("error"),
+                "limits_reached": False,
+                "metadata": {
+                    "statements": len((sql_analysis or {}).get("statements") or []),
+                    "risk_flags": list((sql_analysis or {}).get("risk_flags") or []),
+                    "dangerous": bool((sql_analysis or {}).get("is_dangerous")),
+                },
+            },
+        ]
+        mandatory_complete = all(record["status"] == "complete" for record in records if record["mandatory"])
+        command_metadata = records[1]["metadata"]
+        sql_metadata = records[2]["metadata"]
+        allow_eligible = (
+            mandatory_complete
+            and bool(operation_analysis)
+            and CircuitBreakerCLI._is_known_safe_operation(operation_analysis)
+            and command_metadata["segments"] == 1
+            and not command_metadata["operators"]
+            and not command_metadata["risk_flags"]
+            and not command_metadata["dangerous"]
+            and not sql_metadata["risk_flags"]
+            and not sql_metadata["dangerous"]
+        )
+        unknowns = [
+            record["name"]
+            for record in records
+            if record["mandatory"] and record["status"] != "complete"
+        ]
+        status = "complete" if mandatory_complete else "incomplete"
+        return {
+            "schema_version": 1,
+            "status": status,
+            "mandatory_complete": mandatory_complete,
+            "allow_eligible": allow_eligible,
+            "auto_allow_reason": auto_allow_reason,
+            "records": records,
+            "limits": {"max_command_bytes": MAX_COMMAND_BYTES},
+            "unknowns": unknowns,
+        }
+
+    @staticmethod
+    def _error_inspection_coverage(error: str) -> Dict[str, Any]:
+        """Build fail-closed coverage for exceptions before inspection completed."""
+        return {
+            "schema_version": 1,
+            "status": "failed",
+            "mandatory_complete": False,
+            "allow_eligible": False,
+            "auto_allow_reason": None,
+            "records": [
+                {
+                    "name": "evaluation",
+                    "target": "command",
+                    "mandatory": True,
+                    "status": "failed",
+                    "error": error,
+                    "limits_reached": False,
+                    "metadata": {},
+                }
+            ],
+            "limits": {"max_command_bytes": MAX_COMMAND_BYTES},
+            "unknowns": ["evaluation"],
+        }
+
+    @staticmethod
+    def _validate_decision(result: Dict[str, Any], *, allow_source: Optional[str] = None) -> None:
+        """Attach deterministic validation metadata and reject unsafe ALLOW states."""
+        coverage = result.get("inspection_coverage") or {}
+        validation = {
+            "schema_version": 1,
+            "status": "valid",
+            "allow_source": allow_source,
+            "allow_permitted": False,
+            "reason": "no allow decision to validate",
+        }
+        if result.get("decision") == Decision.ALLOW.name:
+            if not coverage.get("mandatory_complete"):
+                validation.update(
+                    {
+                        "status": "rejected",
+                        "allow_permitted": False,
+                        "reason": "mandatory inspection coverage is incomplete",
+                    }
+                )
+                result["decision"] = Decision.ERROR.name
+                result["verdict"] = "error"
+                result["risk_score"] = 100
+                result["error"] = "ALLOW rejected because mandatory inspection coverage was incomplete"
+            elif allow_source == "auto_known_safe" and not coverage.get("allow_eligible"):
+                validation.update(
+                    {
+                        "status": "rejected",
+                        "allow_permitted": False,
+                        "reason": "automatic allow requires single-segment complete safe inspection",
+                    }
+                )
+                result["decision"] = Decision.ERROR.name
+                result["verdict"] = "error"
+                result["risk_score"] = 100
+                result["error"] = "ALLOW rejected because action is not eligible for automatic allow"
+            else:
+                validation.update({"allow_permitted": True, "reason": "allow decision passed validation"})
+        result["decision_validation"] = validation
 
     def _load_runtime_options(
         self,

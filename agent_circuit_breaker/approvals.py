@@ -75,12 +75,30 @@ class ApprovalStore:
 
     @staticmethod
     def _approval_id(result: Dict[str, Any]) -> str:
+        coverage = result.get("inspection_coverage") or {}
+        decision_validation = result.get("decision_validation") or {}
         material = {
             "command": result.get("command"),
+            "command_hash": _stable_hash(result.get("command")),
             "run_id": result.get("run_id"),
             "risk_score": result.get("risk_score"),
             "matched_rule": result.get("matched_rule"),
             "policy": result.get("policy"),
+            "policy_source": result.get("policy_source"),
+            "policy_trust": result.get("policy_trust"),
+            "policy_signature": result.get("policy_signature"),
+            "coverage": {
+                "schema_version": coverage.get("schema_version"),
+                "status": coverage.get("status"),
+                "mandatory_complete": coverage.get("mandatory_complete"),
+                "allow_eligible": coverage.get("allow_eligible"),
+                "auto_allow_reason": coverage.get("auto_allow_reason"),
+            },
+            "decision_validation": {
+                "schema_version": decision_validation.get("schema_version"),
+                "status": decision_validation.get("status"),
+                "allow_source": decision_validation.get("allow_source"),
+            },
             "trajectory_findings": [
                 finding.get("id")
                 for finding in result.get("trajectory_findings", [])
@@ -142,3 +160,8 @@ def approval_security_context() -> Dict[str, Any]:
         "token_required": token_required,
         "warning": warning,
     }
+
+
+def _stable_hash(value: Any) -> str:
+    encoded = json.dumps(value, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()

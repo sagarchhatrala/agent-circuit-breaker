@@ -4,6 +4,36 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.2] - 2026-08-09
+
+### Added
+
+- Added `inspection_coverage` to action results so integrations can see which mandatory inspectors ran and whether coverage was complete.
+- Added `decision_validation` to action results to make unsafe `ALLOW` states fail closed.
+- Added MCP argument inspection coverage metadata, including inspected field paths and fail-closed depth errors.
+- Added approval ID scoping for policy source, policy trust, policy signature, inspection coverage, and decision validation context.
+- Added audit event summaries for inspection coverage and decision validation.
+- Added regression tests for chained-command auto-allow bypasses, MCP coverage, approval scoping, audit summaries, and schema metadata.
+
+### Changed
+
+- Known-safe filesystem auto-allow now requires a single complete command segment with no shell operators, no command risk flags, and clean SQL inspection.
+- Public decision and audit schemas now include v1.6.2 evidence fields.
+- Updated documentation and release notes for the v1.6.2 fail-secure inspection contract.
+
+### Fixed
+
+- Fixed a bypass where a safe first filesystem segment could cause a chained command to be allowed before all command segments were considered.
+- Updated the GitHub scan workflow to use `agent-circuit-breaker` instead of the old short command name.
+
+### Compatibility
+
+- Existing JSON fields keep their v1.x meaning.
+- New result fields are additive.
+- Safe single-segment filesystem operations such as `mkdir /tmp/example` still return `ALLOW`.
+- Chained or multi-segment actions that do not match a block rule remain explicit as `UNKNOWN` unless strict or approval policy mode changes them.
+- The default install remains dependency-free.
+
 ## [1.6.1] - 2026-08-09
 
 ### Added
