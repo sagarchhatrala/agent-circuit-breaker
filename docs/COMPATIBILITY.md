@@ -172,3 +172,10 @@ adapter defaults. MCP proxy forwarding and the pipeline SDK facade stop core
 `UNKNOWN` results by default. Callers that intentionally rely on a separate
 allowlist can opt in with `agent-circuit-breaker-mcp-proxy --allow-unknown` or
 `AgentCircuitBreaker(allow_core_unknown=True)`.
+
+v1.6.6 expands built-in command hardening for encoded PowerShell and common
+interpreter execution APIs. Some actions that previously returned `UNKNOWN`,
+such as `node -e "require('child_process').execSync('rm -rf /')"`, now return
+`BLOCK`. Rule plugins may now return validated declarative rule dictionaries in
+addition to `Rule` objects. Persisted-record redaction covers more common secret
+shapes without changing audit, approval, or ledger schemas.

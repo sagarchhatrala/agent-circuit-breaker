@@ -117,6 +117,9 @@ public JSON fields.
 v1.6.5 keeps the low-level `UNKNOWN` result explicit but makes executable MCP
 and pipeline SDK paths stop by default unless a caller opts into allowing
 unknown actions.
+v1.6.6 extends interpreter-wrapper inspection without changing this boundary:
+the command inspector extracts deterministic nested payload strings and the
+existing rule engine still decides from explicit built-in rules.
 
 This keeps policy layers explicit:
 

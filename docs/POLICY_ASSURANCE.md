@@ -57,6 +57,21 @@ agent-circuit-breaker catalog --format json
 
 The catalog is generated from code so docs can stay aligned with actual enforcement coverage.
 
+## Rule Plugins
+
+`--plugins` loads trusted Python entry points from the
+`agent_circuit_breaker.rules` group. A rule provider may return:
+
+- a list of `agent_circuit_breaker.Rule` objects.
+- a list of declarative rule dictionaries using the same schema as JSON rule
+  files.
+- a dictionary containing a top-level `rules` list.
+
+Declarative plugin rules are validated and built through the same rule builder
+used by `--rules`. Invalid plugin providers fail closed and include the entry
+point name in the error output. Plugins are trusted executable code; use JSON
+rule files or signed policy/rule packs for untrusted policy distribution.
+
 ## Resource Limits
 
 v1.5.2 defines explicit limits for:
@@ -92,11 +107,16 @@ Rejected by default for repository policy:
 
 ## Persisted Record Redaction
 
-Audit events, approval records, and run-ledger entries redact common secret-like values by default.
+Audit events, approval records, and run-ledger entries redact common secret-like
+values by default, including common environment-style secret keys, bearer
+tokens, query-string tokens, GitHub token prefixes, basic-auth command
+arguments, package/database password flags, and URL userinfo passwords.
 
 Set `ACB_RETAIN_RAW_RECORDS=1` only in controlled environments that explicitly require raw local retention.
 
-Redaction is not DLP. It is a deterministic safety guard against common accidental credential persistence.
+Redaction is not DLP and cannot guarantee removal of every credential format.
+It is a deterministic safety guard against common accidental credential
+persistence.
 
 ## Approval Expiry
 

@@ -121,6 +121,18 @@ Agent Circuit Breaker does not by default:
 
 It fetches a remote policy only when the caller explicitly supplies a policy URL. HTTPS is accepted by default. HTTP requires explicit insecure opt-in.
 
+## Persisted Record Redaction
+
+Audit, approval, and ledger records are redacted by default before persistence.
+The redactor covers common command-line and URL secret shapes, including bearer
+tokens, token/password/secret assignments, basic-auth arguments, database URL
+passwords, GitHub token prefixes, and package/database password flags.
+
+Redaction is best-effort deterministic hygiene, not a DLP system. Callers should
+still store local records with least privilege and avoid placing secrets in
+agent-visible command text. `ACB_RETAIN_RAW_RECORDS=1` is an explicit opt-in for
+controlled environments that require raw local records.
+
 ## Pipeline SDK Boundary
 
 The pipeline SDK can validate proposed file writes when integrations route those writes through `AgentCircuitBreaker`, for example as a `filesystem` tool call with a `path` and `operation`. It does not intercept arbitrary editor, shell, or operating-system writes by itself. Blocking writes before they reach disk requires an editor integration, MCP/filesystem proxy, or OS sandbox.

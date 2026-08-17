@@ -9,11 +9,14 @@ REDACTION_MARKER = "[REDACTED]"
 RAW_RETENTION_ENV = "ACB_RETAIN_RAW_RECORDS"
 
 SECRET_PATTERNS = (
-    re.compile(r"(?i)\b(api[_-]?key|token|secret|password|passwd|pwd)\s*=\s*([^\s;&|]+)"),
+    re.compile(r"(?i)\b([a-z0-9_.-]*(?:api[_-]?key|token|secret|password|passwd|pwd)[a-z0-9_.-]*)\s*=\s*([^\s;&|]+)"),
     re.compile(r"(?i)\b(authorization:\s*bearer)\s+([a-z0-9._~+/=-]+)"),
     re.compile(r"(?i)([?&](?:api[_-]?key|token|secret|password)=)([^&\s]+)"),
+    re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://[^/\s:@]+:)([^@\s/]+)@"),
+    re.compile(r"(?i)(\s-u\s+[^:\s]+:)([^\s]+)"),
+    re.compile(r"(?i)(\s-p)([^\s]+)"),
     re.compile(r"\b(sk-[A-Za-z0-9_-]{12,})\b"),
-    re.compile(r"\b(gh[pousr]_[A-Za-z0-9_]{20,})\b"),
+    re.compile(r"\b(gh[pousr]_[A-Za-z0-9_]{8,})\b"),
 )
 
 
@@ -52,6 +55,11 @@ def redact_record(value: Any) -> Any:
             previous_previous = str(original[index - 2]).lower() if index >= 2 else ""
             if _looks_like_secret_key(previous) or (previous == "=" and _looks_like_secret_key(previous_previous)):
                 redacted[index] = REDACTION_MARKER
+            elif previous in {"-u", "--user"} and ":" in item:
+                username, _, _password = item.partition(":")
+                redacted[index] = f"{username}:{REDACTION_MARKER}"
+            elif re.fullmatch(r"(?i)-p\S+", item):
+                redacted[index] = "-p" + REDACTION_MARKER
         return redacted
     if isinstance(value, dict):
         return {key: redact_record(child) for key, child in value.items()}
@@ -59,7 +67,10 @@ def redact_record(value: Any) -> Any:
 
 
 def _looks_like_secret_key(value: str) -> bool:
-    return any(marker in value for marker in ("token", "secret", "password", "passwd", "api_key", "apikey"))
+    return any(
+        marker in value
+        for marker in ("token", "secret", "password", "passwd", "pwd", "api_key", "apikey")
+    )
 
 
 def redaction_metadata() -> dict:

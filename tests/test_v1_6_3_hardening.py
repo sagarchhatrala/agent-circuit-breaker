@@ -102,7 +102,7 @@ class TestEvidenceHardening(unittest.TestCase):
             replay = ledger.replay(result["run_id"])
 
         action = replay["actions"][0]
-        self.assertEqual(action["engine_version"], "1.6.5")
+        self.assertEqual(action["engine_version"], "1.6.6")
         self.assertIsNotNone(action["inspection_coverage"])
         self.assertIsNotNone(action["decision_validation"])
 

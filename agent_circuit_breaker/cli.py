@@ -556,7 +556,15 @@ class CircuitBreakerCLI:
             custom_rules = custom_rule_result["rules"]
 
         if include_plugins:
-            custom_rules.extend(load_rule_plugins())
+            try:
+                custom_rules.extend(load_rule_plugins())
+            except ValueError as exc:
+                return {
+                    "is_valid": False,
+                    "errors": [str(exc)],
+                    "rule_path": "plugins",
+                    "rules": [],
+                }
 
         return {
             "is_valid": True,

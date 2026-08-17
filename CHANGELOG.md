@@ -4,6 +4,32 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.6] - 2026-08-17
+
+### Security
+
+- Expanded nested interpreter detection to cover encoded PowerShell payloads and
+  common `system(...)`, `exec(...)`, and `execSync(...)` command literals in
+  Python, Perl, Node.js, Ruby, and similar interpreter wrappers.
+- Expanded persisted-record redaction for common credential shapes including
+  AWS-style secret assignments, GitHub token prefixes, `curl -u` basic auth,
+  `mysql -p...`, and URL userinfo passwords.
+
+### Changed
+
+- Rule-provider plugins may now return validated declarative rule dictionaries
+  using the same rule schema as JSON rule files, in addition to returning
+  `Rule` objects.
+- Invalid plugin providers now fail closed with entry-point-specific diagnostic
+  errors instead of surfacing as opaque engine errors.
+
+### Compatibility
+
+- Existing v1.x CLI/API result fields and schemas keep their meaning.
+- Some interpreter-wrapped destructive commands that previously returned
+  `UNKNOWN` now return `BLOCK`.
+- Plugin providers that already return `Rule` objects continue to work.
+
 ## [1.6.5] - 2026-08-09
 
 ### Changed

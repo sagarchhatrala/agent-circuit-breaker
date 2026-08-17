@@ -1,5 +1,7 @@
 """Command Inspector - Tokenizes shell commands for later safety analysis."""
 
+import base64
+import binascii
 import re
 import shlex
 from typing import Any, Dict, List, Optional
@@ -434,9 +436,15 @@ class CommandInspector:
 
         if command in {"pwsh", "pwsh.exe", "powershell", "powershell.exe"}:
             command_flags = {"-c", "-command", "/c", "/command"}
+            encoded_flags = {"-encodedcommand", "-enc", "/encodedcommand", "/enc"}
             for index, arg in enumerate(args):
-                if arg.lower() in command_flags and index + 1 < len(args):
+                lowered = arg.lower()
+                if lowered in command_flags and index + 1 < len(args):
                     return " ".join(args[index + 1 :])
+                if lowered in encoded_flags and index + 1 < len(args):
+                    decoded = CommandInspector._decode_powershell_encoded_command(args[index + 1])
+                    if decoded is not None:
+                        return decoded
 
         interpreter_flags = {
             "python": {"-c"},
@@ -489,7 +497,54 @@ class CommandInspector:
         if sql.get("is_valid") and (sql.get("risk_flags") or sql.get("is_dangerous")):
             return True
 
+        for embedded in CommandInspector._embedded_command_literals(payload):
+            if embedded.strip() and CommandInspector._nested_payload_is_dangerous(embedded):
+                return True
+
         return False
+
+    @staticmethod
+    def _decode_powershell_encoded_command(value: str) -> Optional[str]:
+        """Decode PowerShell -EncodedCommand payloads without executing them."""
+        try:
+            raw = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError):
+            return None
+
+        for encoding in ("utf-16le", "utf-8"):
+            try:
+                decoded = raw.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+            if decoded.strip():
+                return decoded
+        return None
+
+    @staticmethod
+    def _embedded_command_literals(payload: str) -> List[str]:
+        """Extract command string literals from common interpreter execution APIs."""
+        candidates: List[str] = []
+        patterns = (
+            r"(?i)\b(?:os\.)?system\s*\(\s*(['\"])(?P<system>.*?)(?<!\\)\1",
+            r"(?i)\b(?:exec|execSync|spawnSync)\s*\(\s*(['\"])(?P<exec>.*?)(?<!\\)\1",
+            r"(?i)\bchild_process\.(?:exec|execSync|spawnSync)\s*\(\s*(['\"])(?P<child>.*?)(?<!\\)\1",
+            r"(?i)\bsystem\s*\(\s*%q\{(?P<ruby>[^}]*)\}",
+        )
+        for pattern in patterns:
+            for match in re.finditer(pattern, payload):
+                for value in match.groupdict().values():
+                    if value:
+                        candidates.append(CommandInspector._unescape_literal(value))
+        return candidates
+
+    @staticmethod
+    def _unescape_literal(value: str) -> str:
+        """Decode common escaped quote and slash forms in extracted literals."""
+        return (
+            value.replace(r"\"", '"')
+            .replace(r"\'", "'")
+            .replace(r"\\", "\\")
+        )
 
     @staticmethod
     def _is_destructive_docker(command: str, args: List[str]) -> bool:

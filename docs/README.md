@@ -54,7 +54,7 @@ The current stable package includes:
 - tamper-evident audit timeline.
 - central policy loading.
 - signed policy/rule-pack verification.
-- plugin discovery.
+- plugin discovery, including validated declarative rule providers.
 - pre-commit hook manifest.
 - stdio JSON-RPC MCP proxy that inspects all string-valued tool-call arguments.
 - HMAC-backed policy/rule-pack signatures for authenticity checks.
@@ -73,15 +73,16 @@ The current stable package includes:
 - fixture-based custom rule tests.
 - generated built-in rule catalog output.
 - explicit resource limits for policy inputs and MCP traversal.
-- default redaction for persisted audit, approval, and ledger records.
+- default redaction for common secret shapes in persisted audit, approval, and ledger records.
 - inspection coverage and decision validation evidence for action results.
-- nested shell/interpreter wrapper hardening.
+- nested shell/interpreter wrapper hardening, including encoded PowerShell payloads and common interpreter execution APIs.
 - pipeline SDK decision validation for applicable `UNKNOWN` guard results.
 - default MCP and pipeline SDK stop-on-UNKNOWN execution semantics with explicit compatibility opt-ins.
 - canonical decision summaries, MCP trajectory state evidence, approval revalidation, and replay evidence in the local run ledger.
 
 ## Release Notes
 
+- [v1.6.6](releases/v1.6.6.md)
 - [v1.6.5](releases/v1.6.5.md)
 - [v1.6.4](releases/v1.6.4.md)
 - [v1.6.3](releases/v1.6.3.md)

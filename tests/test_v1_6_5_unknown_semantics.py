@@ -59,14 +59,14 @@ class TestPipelineUnknownSemantics(unittest.TestCase):
 
         self.assertTrue(result.allowed)
 
-    def test_interpreter_wrapper_unknown_is_not_allowed_by_default_pipeline(self):
+    def test_interpreter_wrapper_danger_is_not_allowed_by_default_pipeline(self):
         result = AgentCircuitBreaker().evaluate_tool_call_sync(
             tool_name="shell",
             tool_args={"command": "python -c \"import os; os.system('rm -rf /')\""},
         )
 
         self.assertFalse(result.allowed)
-        self.assertEqual(result.verdict, "unknown")
+        self.assertEqual(result.verdict, "deny")
 
 
 if __name__ == "__main__":

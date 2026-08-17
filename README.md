@@ -70,7 +70,7 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - long-running agent trajectories: repeated blocked actions, forbidden target references, outbound output-channel drift, write-like actions outside declared scopes, direct secret egress, secret-like reads followed by egress, and data export followed by upload/post actions.
 - pipeline SDK guardrails: shell operators, filesystem path policy, private-network egress, package install policy, repeated tool-call sequences, context-window limits, and tool-call volume.
 - pipeline SDK recursive argument inspection across arbitrary tool schema field names.
-- nested shell/interpreter wrapper hardening for `sh -c`, `bash -c`, `cmd /c`, PowerShell command wrappers, and common interpreter eval flags.
+- nested shell/interpreter wrapper hardening for `sh -c`, `bash -c`, `cmd /c`, PowerShell command wrappers, encoded PowerShell payloads, and common interpreter execution APIs.
 - pipeline SDK decision validation so applicable `UNKNOWN` guard results cannot be hidden by another guard's `ALLOW`.
 - default MCP and pipeline SDK execution gates stop `UNKNOWN` unless callers explicitly opt in to forwarding or allowing unknown actions.
 - canonical decision summaries for audit, ledger, approval, and integration consistency.
@@ -345,6 +345,10 @@ agent-circuit-breaker schemas rule-file
 agent-circuit-breaker catalog --format json
 ```
 
+Trusted rule plugins loaded with `--plugins` may return either `Rule` objects or
+the same declarative rule dictionaries accepted by JSON rule files. Invalid
+plugin providers fail closed with the plugin entry point name in the error.
+
 ## Safety Profiles
 
 | Profile | Intended Use | Unknown Handling |
@@ -383,7 +387,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - replayable local run ledger for trajectory results, including canonical decision evidence.
 - central policy loading from local files or explicit caller-selected HTTPS URLs.
 - optional signed policy/rule-pack verification.
-- plugin discovery through Python entry points.
+- plugin discovery through Python entry points, including validated declarative rule providers.
 - MCP stdio proxy mode for guarding tool-call arguments.
 - HMAC-backed policy/rule-pack signatures for authenticity checks.
 - SARIF output for code scanning.
@@ -406,7 +410,7 @@ Agent Circuit Breaker includes enterprise-oriented primitives without making the
 - fixture-based custom rule tests.
 - generated built-in rule catalog output.
 - resource limits for policy inputs and MCP traversal.
-- default redaction for persisted audit, approval, and ledger records.
+- default redaction for common secret shapes in persisted audit, approval, and ledger records.
 
 ## Common Use Cases
 
@@ -433,8 +437,8 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.5`
-- Test suite: 506 tests
+- Current version: `1.6.6`
+- Test suite: 514 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
@@ -458,6 +462,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.6.md)
 - [v1.6.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.5.md)
 - [v1.6.4 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.4.md)
 - [v1.6.3 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.3.md)
