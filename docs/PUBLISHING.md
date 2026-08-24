@@ -13,10 +13,11 @@ Project links:
 
 - `build`
 - `twine`
-- TestPyPI API token
-- PyPI API token
+- GitHub trusted publishing configured for TestPyPI and PyPI.
 
-For GitHub Actions publishing, prefer trusted publishing over local token files.
+For GitHub Actions publishing, use trusted publishing over local token files.
+Only use local TestPyPI/PyPI API tokens as an emergency fallback, and keep
+those tokens outside the repository.
 
 ## Trusted Publishing
 
@@ -66,7 +67,7 @@ Expected artifacts:
 
 ## TestPyPI
 
-Upload:
+Fallback manual upload:
 
 ```bash
 python -m twine upload --repository testpypi dist/*
@@ -81,7 +82,7 @@ python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_act
 
 ## PyPI
 
-After TestPyPI verification:
+Fallback manual upload after TestPyPI verification:
 
 ```bash
 python -m twine upload dist/*
