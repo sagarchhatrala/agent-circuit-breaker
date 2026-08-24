@@ -5,6 +5,7 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 ## Start Here
 
 - [Main README](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/README.md)
+- [GETTING_STARTED.md](GETTING_STARTED.md)
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md)
 - [SECURITY_MODEL.md](SECURITY_MODEL.md)
 - [THREAT_MODEL.md](THREAT_MODEL.md)
@@ -27,6 +28,8 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 - [PUBLISHING.md](PUBLISHING.md)
 - [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
 - [BRANCH_PROTECTION.md](BRANCH_PROTECTION.md)
+- [GITHUB_SECURITY_CONFIGURATION.md](GITHUB_SECURITY_CONFIGURATION.md)
+- [OPENSSF_BASELINE_1.md](OPENSSF_BASELINE_1.md)
 - [V1_0_PRODUCTION_READINESS.md](V1_0_PRODUCTION_READINESS.md)
 - [V1_1_PLAN.md](V1_1_PLAN.md)
 - [ANNOUNCEMENT.md](ANNOUNCEMENT.md)
@@ -64,6 +67,7 @@ The current stable package includes:
 - deterministic trajectory findings for secret/data egress flows.
 - trajectory bypass hardening for egress, scope, and forbidden-target matching.
 - trusted publishing workflow that runs TestPyPI before PyPI on releases.
+- OpenSSF Baseline Level 1 evidence matrix and GitHub security configuration guidance.
 - dependency-free async pipeline SDK with protocol-based guards and local state stores.
 - typed `EvaluationRequest`, `DecisionResult`, and `Finding` primitives for stable internal decision evidence.
 - optional Redis, OpenTelemetry, and Prometheus integrations for enterprise deployments.
@@ -82,6 +86,7 @@ The current stable package includes:
 
 ## Release Notes
 
+- [v1.6.7](releases/v1.6.7.md)
 - [v1.6.6](releases/v1.6.6.md)
 - [v1.6.5](releases/v1.6.5.md)
 - [v1.6.4](releases/v1.6.4.md)
