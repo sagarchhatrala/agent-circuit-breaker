@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Agent Circuit Breaker mark">
+  <rect width="64" height="64" rx="12" fill="#171717"/>
+  <path d="M18 16h28v8H26v8h16v8H26v8h20" fill="none" stroke="#f7f5f0" stroke-width="5" stroke-linecap="square"/>
+  <path d="M45 14l-8 18h10l-12 18" fill="none" stroke="#b42318" stroke-width="4" stroke-linecap="square" stroke-linejoin="miter"/>
+</svg>
