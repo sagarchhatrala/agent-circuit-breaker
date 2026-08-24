@@ -430,6 +430,7 @@ Security references:
 - [Security model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/SECURITY_MODEL.md)
 - [Threat model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/THREAT_MODEL.md)
 - [Compatibility policy](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/COMPATIBILITY.md)
+- [OpenSSF Baseline Level 1 evidence](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/OPENSSF_BASELINE_1.md)
 
 ## What It Is Not
 
@@ -437,12 +438,13 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.6`
-- Test suite: 514 tests
+- Current version: `1.6.7`
+- Test suite: 516 tests
 - Runtime dependencies: none by default
 - License: MIT
 - Package: [agent-circuit-breaker on PyPI](https://pypi.org/project/agent-circuit-breaker/)
 - Source: [github.com/sagarchhatrala/agent-circuit-breaker](https://github.com/sagarchhatrala/agent-circuit-breaker)
+- OpenSSF readiness: Baseline Level 1 repository evidence is tracked in [docs/OPENSSF_BASELINE_1.md](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/OPENSSF_BASELINE_1.md).
 
 ## Development
 
@@ -455,13 +457,16 @@ python -m unittest discover
 
 Contributing references:
 
+- [Contributing guide](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/CONTRIBUTING.md)
 - [Engineering guide](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/ENGINEERING.md)
 - [Architecture](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/ARCHITECTURE.md)
+- [GitHub security configuration](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/GITHUB_SECURITY_CONFIGURATION.md)
 - [Release checklist](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/RELEASE_CHECKLIST.md)
 
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.7 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.7.md)
 - [v1.6.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.6.md)
 - [v1.6.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.5.md)
 - [v1.6.4 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.4.md)
