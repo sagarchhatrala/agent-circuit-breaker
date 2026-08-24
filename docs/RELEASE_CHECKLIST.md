@@ -21,7 +21,7 @@ Run:
 
 ```bash
 python -m build
-python -m twine check dist/*
+python -m twine check dist/agent_circuit_breaker-<version>.tar.gz dist/agent_circuit_breaker-<version>-py3-none-any.whl
 python -m unittest discover
 git diff --check
 ```
@@ -95,7 +95,7 @@ Expected:
 ## Package Publishing
 
 - Build artifacts with `python -m build`.
-- Validate artifacts with `python -m twine check dist/*`.
+- Validate artifacts with explicit source distribution and wheel filenames.
 - Confirm the GitHub Release `Publish` workflow publishes to TestPyPI first.
 - Confirm the same workflow publishes to PyPI after TestPyPI succeeds.
 - Verify `pip install agent-circuit-breaker==<version>` works.
