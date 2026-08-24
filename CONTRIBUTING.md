@@ -29,7 +29,9 @@ python -m unittest discover
 git diff --check
 ```
 
-Pull requests to `main` are expected to pass CI and be reviewed before merge.
+Pull requests to `main` are expected to pass CI before merge. When a second
+trusted maintainer with write access is available, pull requests should also be
+reviewed before merge.
 Do not include generated build outputs such as `dist/`, wheels, or egg-info
 directories in commits.
 
