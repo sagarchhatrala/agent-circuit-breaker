@@ -15,3 +15,10 @@ Recommended protection for `main`:
 - Restrict branch deletion.
 
 These settings should be configured in GitHub repository settings after the CI workflow has run at least once.
+
+As of the v1.6.7 OpenSSF readiness pass, the GitHub API showed these controls
+enabled for `main`: pull requests required, one approving review, strict
+`test-python-3.11` and `test-python-3.12` status checks, conversation
+resolution, administrator enforcement, force-push restriction, and deletion
+restriction. Re-check these settings before claiming OpenSSF evidence after
+repository ownership or branch ruleset changes.
