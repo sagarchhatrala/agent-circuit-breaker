@@ -15,7 +15,7 @@ Statuses use only `Met`, `Unmet`, `N/A`, or `?`.
 | -- | ------ | -------- | -------- | ------------- |
 | OSPS-AC-01.01 | ? | Repository files cannot prove account-level MFA/passkey enforcement for every privileged account. | GitHub account/org settings | Confirm MFA or passkeys are enforced for every account with admin, maintainer, or push access. |
 | OSPS-AC-02.01 | Met | Current collaborator list contains one admin account; collaborator access is manually assigned in GitHub and least-privilege expectations are documented. | GitHub collaborators API; `docs/GITHUB_SECURITY_CONFIGURATION.md` | Keep future collaborators least-privilege. |
-| OSPS-AC-03.01 | Met | `main` branch protection requires PRs, one approving review, strict status checks, conversation resolution, and administrator enforcement before merge. | GitHub branch protection API; `docs/GITHUB_SECURITY_CONFIGURATION.md` | None. |
+| OSPS-AC-03.01 | Met | `main` branch protection prevents direct commits by requiring PRs, strict status checks, conversation resolution, and administrator enforcement before merge. | GitHub branch protection API; `docs/GITHUB_SECURITY_CONFIGURATION.md` | Add a required approving review only when a second real write-access reviewer exists. |
 | OSPS-AC-03.02 | Met | `main` branch protection has force pushes and branch deletion disabled. | GitHub branch protection API; `docs/GITHUB_SECURITY_CONFIGURATION.md` | None. |
 | OSPS-BR-01.01 | Met | Workflows do not pass untrusted issue/PR titles, branch names, or user-controlled metadata into shell commands. Workflow dispatch uses a typed choice input. | GitHub workflow files | None. |
 | OSPS-BR-01.02 | N/A | This requirement is retired in the upstream baseline source. | OpenSSF `OSPS-BR.yaml` | None. |
@@ -42,7 +42,7 @@ Statuses use only `Met`, `Unmet`, `N/A`, or `?`.
 ## Copy-Paste Justifications For Met Criteria
 
 - OSPS-AC-02.01: GitHub collaborator access is manually assigned, the current collaborator set is limited to the owner/admin account, and least-privilege collaborator expectations are documented.
-- OSPS-AC-03.01: The `main` branch is protected with required pull requests, one approving review, strict CI status checks, conversation resolution, and administrator enforcement.
+- OSPS-AC-03.01: The `main` branch is protected against direct commits by requiring pull requests, strict CI status checks, conversation resolution, and administrator enforcement.
 - OSPS-AC-03.02: The `main` branch protection disallows force pushes and branch deletion.
 - OSPS-BR-01.01: GitHub Actions workflows do not inject untrusted repository metadata into shell commands; manual inputs use constrained choice values.
 - OSPS-BR-01.03: Pull request workflows do not receive package-publishing credentials; GitHub Actions default token permissions are read-only, fork PRs require first-time contributor approval, and privileged publishing is isolated to release/manual workflows using OIDC.
