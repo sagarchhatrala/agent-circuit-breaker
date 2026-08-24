@@ -179,3 +179,8 @@ such as `node -e "require('child_process').execSync('rm -rf /')"`, now return
 `BLOCK`. Rule plugins may now return validated declarative rule dictionaries in
 addition to `Rule` objects. Persisted-record redaction covers more common secret
 shapes without changing audit, approval, or ledger schemas.
+
+v1.6.7 is a repository governance, CI/CD hardening, documentation, and
+packaging metadata release. It does not intentionally change runtime CLI,
+Python API, MCP, pipeline, policy, rule, approval, audit, ledger, or schema
+semantics.
