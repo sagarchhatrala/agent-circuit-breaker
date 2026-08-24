@@ -57,7 +57,7 @@ python -m pip install --upgrade build twine
 
 ```bash
 python -m build
-python -m twine check dist/*
+python -m twine check dist/agent_circuit_breaker-<version>.tar.gz dist/agent_circuit_breaker-<version>-py3-none-any.whl
 ```
 
 Expected artifacts:
@@ -67,11 +67,10 @@ Expected artifacts:
 
 ## TestPyPI
 
-Fallback manual upload:
-
-```bash
-python -m twine upload --repository testpypi dist/*
-```
+Fallback manual upload should only be performed from a trusted maintainer
+workstation when GitHub trusted publishing is unavailable. Use explicit
+artifact filenames and the TestPyPI repository target; do not use shell
+wildcards.
 
 Install verification:
 
@@ -82,11 +81,8 @@ python -c "from agent_circuit_breaker import evaluate_action; print(evaluate_act
 
 ## PyPI
 
-Fallback manual upload after TestPyPI verification:
-
-```bash
-python -m twine upload dist/*
-```
+Fallback manual upload after TestPyPI verification should use explicit artifact
+filenames and the PyPI repository target; do not use shell wildcards.
 
 Install verification:
 
