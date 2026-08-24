@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/agent-circuit-breaker)](https://pypi.org/project/agent-circuit-breaker/)
 [![License](https://img.shields.io/github/license/sagarchhatrala/agent-circuit-breaker)](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/LICENSE)
 [![CI](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml/badge.svg)](https://github.com/sagarchhatrala/agent-circuit-breaker/actions/workflows/ci.yml)
+[![OpenSSF Baseline](https://www.bestpractices.dev/projects/14222/baseline)](https://www.bestpractices.dev/projects/14222)
 
 <p align="center">
   <img src="docs/assets/agent-circuit-breaker-readme-hero.svg" alt="Agent Circuit Breaker deterministic safety gate for AI coding agents" width="100%">
