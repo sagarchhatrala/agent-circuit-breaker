@@ -16,7 +16,7 @@ older patch release unless the issue is reproducible on the latest release.
 
 Please do not open a public issue for a vulnerability.
 
-Report suspected vulnerabilities through GitHub's private vulnerability
+Report suspected vulnerabilities through GitHub private vulnerability
 reporting for this repository:
 
 https://github.com/sagarchhatrala/agent-circuit-breaker/security/advisories/new
