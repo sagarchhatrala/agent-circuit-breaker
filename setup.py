@@ -8,7 +8,7 @@ README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="agent-circuit-breaker",
-    version="1.6.6",
+    version="1.6.7",
     description="Deterministic safety gate for AI coding agents",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -20,6 +20,9 @@ setup(
         "Documentation": "https://github.com/sagarchhatrala/agent-circuit-breaker/tree/main/docs",
         "Source": "https://github.com/sagarchhatrala/agent-circuit-breaker",
         "Issues": "https://github.com/sagarchhatrala/agent-circuit-breaker/issues",
+        "Security": "https://github.com/sagarchhatrala/agent-circuit-breaker/security/policy",
+        "Contributing": "https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/CONTRIBUTING.md",
+        "Changelog": "https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/CHANGELOG.md",
         "Releases": "https://github.com/sagarchhatrala/agent-circuit-breaker/releases",
     },
     license="MIT",

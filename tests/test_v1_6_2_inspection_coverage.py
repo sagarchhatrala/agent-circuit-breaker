@@ -16,7 +16,7 @@ class TestInspectionCoverage(unittest.TestCase):
 
         self.assertEqual(result["verdict"], "allow")
         self.assertEqual(result["decision"], "ALLOW")
-        self.assertEqual(result["engine_version"], "1.6.6")
+        self.assertEqual(result["engine_version"], "1.6.7")
         self.assertTrue(result["inspection_coverage"]["mandatory_complete"])
         self.assertTrue(result["inspection_coverage"]["allow_eligible"])
         self.assertEqual(
@@ -77,8 +77,8 @@ class TestApprovalScopeAndSchemas(unittest.TestCase):
         self.assertNotEqual(ApprovalStore._approval_id(first), ApprovalStore._approval_id(second))
 
     def test_schema_version_and_decision_schema_include_v1_6_2_fields(self):
-        self.assertEqual(__version__, "1.6.6")
-        self.assertEqual(SCHEMA_VERSION, "1.6.6")
+        self.assertEqual(__version__, "1.6.7")
+        self.assertEqual(SCHEMA_VERSION, "1.6.7")
         schema = get_schema("decision-output")
 
         self.assertIn("inspection_coverage", schema["properties"])

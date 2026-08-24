@@ -9,6 +9,8 @@ Use this checklist before tagging a release.
 - Update `README.md`.
 - Update `QUICKSTART.md`.
 - Update `docs/README.md`.
+- Update `docs/OPENSSF_BASELINE_1.md` when governance, CI/CD, security, dependency, or release controls change.
+- Update `docs/GITHUB_SECURITY_CONFIGURATION.md` when repository security settings or required manual actions change.
 - Update `docs/ROADMAP.md`.
 - Update `PLAN.md`.
 - Add release notes under `docs/releases/`.
@@ -19,10 +21,22 @@ Run:
 
 ```bash
 python -m build
-python -m twine check dist/*
+python -m twine check dist/agent_circuit_breaker-<version>.tar.gz dist/agent_circuit_breaker-<version>-py3-none-any.whl
 python -m unittest discover
 git diff --check
 ```
+
+Review OpenSSF/security hygiene before release:
+
+```bash
+git ls-files | rg -i '\.(exe|dll|so|dylib|bin|pyd|zip|tar|gz|whl|jar)$'
+rg -n "password|secret|token|api[_-]?key|AKIA|ghp_|BEGIN (RSA|OPENSSH|PRIVATE)|pypi-|sk-"
+```
+
+Expected:
+
+- no tracked generated executables or opaque release artifacts.
+- no real credentials in source, docs, examples, tests, or workflows.
 
 Run focused tests for the release area when applicable:
 
@@ -81,7 +95,7 @@ Expected:
 ## Package Publishing
 
 - Build artifacts with `python -m build`.
-- Validate artifacts with `python -m twine check dist/*`.
+- Validate artifacts with explicit source distribution and wheel filenames.
 - Confirm the GitHub Release `Publish` workflow publishes to TestPyPI first.
 - Confirm the same workflow publishes to PyPI after TestPyPI succeeds.
 - Verify `pip install agent-circuit-breaker==<version>` works.

@@ -4,6 +4,32 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.7] - 2026-08-24
+
+### Security
+
+- Added OpenSSF Baseline Level 1 evidence tracking and GitHub security
+  configuration documentation.
+- Enabled and documented repository vulnerability management controls,
+  including private vulnerability reporting and Dependabot security updates.
+
+### Added
+
+- Root `CONTRIBUTING.md` with setup, review, testing, security-sensitive
+  contribution, and generated-artifact guidance.
+- `docs/GETTING_STARTED.md` for a concise first-use guide.
+- `docs/OPENSSF_BASELINE_1.md` evidence matrix for Baseline Level 1 criteria.
+- `docs/GITHUB_SECURITY_CONFIGURATION.md` with verified repository settings
+  and manual account/organization actions.
+- Dependabot update configuration for GitHub Actions and Python packaging.
+
+### Compatibility
+
+- No runtime CLI, Python API, MCP, pipeline, policy, rule, audit, approval, or
+  ledger behavior changes are intended in this release.
+- Workflow source changes are limited to adding Dependabot update
+  configuration; existing CI and publish entry points are unchanged.
+
 ## [1.6.6] - 2026-08-17
 
 ### Security

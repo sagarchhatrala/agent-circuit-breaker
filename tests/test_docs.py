@@ -1,6 +1,7 @@
 """Documentation regression tests."""
 
 import unittest
+import re
 from pathlib import Path
 
 
@@ -119,7 +120,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("python -m unittest discover", checklist)
         self.assertIn("git diff --check", checklist)
-        self.assertIn("python -m twine check dist/*", checklist)
+        self.assertIn("python -m twine check dist/agent_circuit_breaker-<version>.tar.gz", checklist)
         self.assertIn("Push `main`.", checklist)
         self.assertIn("Create the GitHub Release", checklist)
 
@@ -131,7 +132,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         self.assertIn("trusted publishing", publishing)
         self.assertIn(".github/workflows/publish.yml", publishing)
         self.assertIn("python -m build", publishing)
-        self.assertIn("python -m twine check dist/*", publishing)
+        self.assertIn("python -m twine check dist/agent_circuit_breaker-<version>.tar.gz", publishing)
 
     def test_production_readiness_defines_stable_release_gate(self):
         """Production-readiness docs should define stable release gates."""
@@ -183,7 +184,30 @@ class TestRepositoryHygiene(unittest.TestCase):
         changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
         self.assertIn("Reporting A Vulnerability", security)
+        self.assertIn("security/advisories/new", security)
         self.assertIn("## [1.0.0] - 2026-07-15", changelog)
+
+    def test_contributing_and_openssf_docs_exist(self):
+        """The repository should document contributions and OpenSSF evidence."""
+        contributing = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        openssf = (DOCS_DIR / "OPENSSF_BASELINE_1.md").read_text(encoding="utf-8")
+        github_security = (DOCS_DIR / "GITHUB_SECURITY_CONFIGURATION.md").read_text(encoding="utf-8")
+        getting_started = (DOCS_DIR / "GETTING_STARTED.md").read_text(encoding="utf-8")
+
+        self.assertIn("python -m unittest discover", contributing)
+        self.assertIn("OSPS-AC-01.01", openssf)
+        self.assertIn("Manual GitHub Action Required", github_security)
+        self.assertIn("Only `ALLOW` is executable by default.", getting_started)
+
+    def test_openssf_matrix_has_baseline_level_one_rows(self):
+        """OpenSSF evidence should cover every Baseline Level 1 assessment row."""
+        openssf = (DOCS_DIR / "OPENSSF_BASELINE_1.md").read_text(encoding="utf-8")
+        rows = re.findall(r"^\| (OSPS-[A-Z]+-\d+\.\d+) \| (Met|Unmet|N/A|\?) \|", openssf, re.M)
+
+        self.assertEqual(len(rows), 25)
+        self.assertIn(("OSPS-AC-01.01", "?"), rows)
+        self.assertIn(("OSPS-BR-01.02", "N/A"), rows)
+        self.assertIn(("OSPS-VM-02.01", "Met"), rows)
 
     def test_publish_workflow_exists(self):
         """The repository should have a trusted-publishing workflow."""
@@ -194,6 +218,7 @@ class TestRepositoryHygiene(unittest.TestCase):
         self.assertIn("pypa/gh-action-pypi-publish", content)
         self.assertIn("testpypi", content)
         self.assertIn("pypi", content)
+
 
 
 if __name__ == "__main__":
