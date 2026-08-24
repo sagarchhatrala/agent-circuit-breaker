@@ -1,1 +1,7 @@
 include tests/fixtures/*.json
+include CHANGELOG.md
+include CONTRIBUTING.md
+include QUICKSTART.md
+include SECURITY.md
+recursive-include docs *.md *.json *.svg
+recursive-include examples *.md *.py *.json
