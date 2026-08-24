@@ -16,9 +16,8 @@ Verified through the GitHub API on 2026-08-24:
 - Private vulnerability reporting: enabled.
 - Actions default workflow token permissions: read-only.
 - Fork pull request workflow approval: first-time contributors.
-- `main` branch protection requires pull requests, one approving review,
-  strict status checks for `test-python-3.11` and `test-python-3.12`, and
-  conversation resolution.
+- `main` branch protection requires pull requests, strict status checks for
+  `test-python-3.11` and `test-python-3.12`, and conversation resolution.
 - `main` branch protection is enforced for administrators.
 - `main` branch protection disallows force pushes and branch deletion.
 
@@ -29,7 +28,7 @@ Verified through the GitHub API on 2026-08-24:
   PyPI API tokens in the repository.
 - Dependabot is configured for GitHub Actions and Python packaging metadata.
 - `SECURITY.md` provides security contacts and private reporting guidance.
-- `CONTRIBUTING.md` documents the contribution and review process.
+- `CONTRIBUTING.md` documents the contribution and change process.
 - `.gitignore` excludes local build output, virtual environments, caches, and
   local environment files.
 
@@ -44,9 +43,10 @@ that cannot be safely inferred from files alone:
   lowest role that supports their work, and grant admin access only when
   necessary.
 - Keep branch protection/rulesets enabled for `main`. Require pull requests,
-  at least one approving review, required status checks, conversation
-  resolution, enforce protection for administrators, and disable force pushes
-  and deletion.
+  required status checks, conversation resolution, enforce protection for
+  administrators, and disable force pushes and deletion.
+- If a second trusted maintainer with write access is added, require at least
+  one approving review. Do not require reviews when no real reviewer exists.
 - Keep repository Actions permissions defaulted to read-only.
 - Keep private vulnerability reporting, secret scanning, push protection, and
   Dependabot security updates enabled.
