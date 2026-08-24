@@ -120,7 +120,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
 
         self.assertIn("python -m unittest discover", checklist)
         self.assertIn("git diff --check", checklist)
-        self.assertIn("python -m twine check dist/*", checklist)
+        self.assertIn("python -m twine check dist/agent_circuit_breaker-<version>.tar.gz", checklist)
         self.assertIn("Push `main`.", checklist)
         self.assertIn("Create the GitHub Release", checklist)
 
@@ -132,7 +132,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         self.assertIn("trusted publishing", publishing)
         self.assertIn(".github/workflows/publish.yml", publishing)
         self.assertIn("python -m build", publishing)
-        self.assertIn("python -m twine check dist/*", publishing)
+        self.assertIn("python -m twine check dist/agent_circuit_breaker-<version>.tar.gz", publishing)
 
     def test_production_readiness_defines_stable_release_gate(self):
         """Production-readiness docs should define stable release gates."""
