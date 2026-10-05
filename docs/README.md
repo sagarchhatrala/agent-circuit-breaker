@@ -83,9 +83,13 @@ The current stable package includes:
 - pipeline SDK decision validation for applicable `UNKNOWN` guard results.
 - default MCP and pipeline SDK stop-on-UNKNOWN execution semantics with explicit compatibility opt-ins.
 - canonical decision summaries, MCP trajectory state evidence, approval revalidation, and replay evidence in the local run ledger.
+- MCP catalog pinning, tool-result prompt-injection scanning, and cross-tool secret taint tracking.
+- native hook scaffolds for Claude, Cursor, Codex, Gemini, and Copilot.
+- minimal HTTP JSON-RPC MCP proxy mode.
 
 ## Release Notes
 
+- [v1.6.8](releases/v1.6.8.md)
 - [v1.6.7](releases/v1.6.7.md)
 - [v1.6.6](releases/v1.6.6.md)
 - [v1.6.5](releases/v1.6.5.md)

@@ -1,17 +1,21 @@
 ﻿"""Dependency-free stdio JSON-RPC proxy for MCP tool calls."""
 
 import argparse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import subprocess
 import sys
 import threading
+from urllib.request import Request, urlopen
 from typing import Any, Dict, Iterable, List, Optional
 
 from agent_circuit_breaker import __version__
 from agent_circuit_breaker.api import evaluate_action
 from agent_circuit_breaker.cli import CircuitBreakerCLI
 from agent_circuit_breaker.limits import MAX_MCP_MESSAGE_BYTES, MAX_MCP_RECURSION_DEPTH, ensure_text_within_limit
+from agent_circuit_breaker.taint import TaintLedger
 from agent_circuit_breaker.trajectory import evaluate_trajectory
+from agent_circuit_breaker_mcp.security import MCPProxySecurity
 
 
 COMMAND_FIELDS = ("command", "cmd", "query", "sql", "script", "shell", "run")
@@ -160,10 +164,53 @@ def inspect_jsonrpc_message(
     mode: Optional[str] = None,
     rules: Optional[str] = None,
     run_guard: Optional[MCPRunGuard] = None,
+    proxy_security: Optional[MCPProxySecurity] = None,
     allow_unknown: bool = False,
 ) -> Dict[str, Any]:
     """Inspect an MCP JSON-RPC message and return forwarding metadata."""
+    if proxy_security is not None and message.get("method") == "tools/call":
+        params = message.get("params") or {}
+        tool_name = params.get("name") if isinstance(params, dict) else None
+        arguments = params.get("arguments") if isinstance(params, dict) else None
+        taint_hit = proxy_security.taint_ledger.check_value(arguments or {}, different_tool=tool_name)
+        if taint_hit is not None:
+            response = blocked_jsonrpc_response(
+                message,
+                {
+                    "checks": [
+                        {
+                            "field": "params.arguments",
+                            "result": {
+                                "verdict": "pending_approval",
+                                "decision": "PENDING_APPROVAL",
+                                "risk_score": 90,
+                                "matched_rule": "mcp_cross_tool_secret_taint",
+                            },
+                        }
+                    ],
+                    "trajectory": None,
+                },
+            )
+            if response is not None:
+                response["error"]["data"]["taint"] = taint_hit
+            return {
+                "allowed": False,
+                "checks": response["error"]["data"] if response else [],
+                "coverage": _argument_coverage([("params.arguments", json.dumps(arguments, sort_keys=True))]),
+                "response": response,
+                "taint": taint_hit,
+            }
+
     if message.get("method") != "tools/call":
+        if proxy_security is not None:
+            response = proxy_security.record_client_message(message)
+            if response is not None:
+                return {
+                    "allowed": False,
+                    "checks": [],
+                    "coverage": _argument_coverage([], status="complete", security_relevant=True),
+                    "response": response,
+                }
         return {
             "allowed": True,
             "checks": [],
@@ -187,6 +234,10 @@ def inspect_jsonrpc_message(
         response = blocked_jsonrpc_response(message, inspection)
     elif run_guard is not None:
         inspection["trajectory_state"] = run_guard.mark_forwarded(arguments or {})
+    if response is None and proxy_security is not None:
+        response = proxy_security.record_client_message(message)
+        if response is not None:
+            inspection["allowed"] = False
     return {**inspection, "response": response}
 
 
@@ -231,9 +282,11 @@ def proxy_stdio(
     mode: Optional[str] = None,
     rules: Optional[str] = None,
     run_guard: Optional[MCPRunGuard] = None,
+    proxy_security: Optional[MCPProxySecurity] = None,
     allow_unknown: bool = False,
 ) -> int:
     """Run a stdio JSON-RPC MCP proxy in front of an upstream server command."""
+    proxy_security = proxy_security or MCPProxySecurity(upstream_label=" ".join(server_command))
     process = subprocess.Popen(  # nosec: explicit user-provided MCP server command
         server_command,
         stdin=subprocess.PIPE,
@@ -244,7 +297,7 @@ def proxy_stdio(
         errors="replace",
         bufsize=1,
     )
-    relay = threading.Thread(target=_relay_server_stdout, args=(process,), daemon=True)
+    relay = threading.Thread(target=_relay_server_stdout, args=(process, proxy_security), daemon=True)
     relay.start()
 
     assert process.stdin is not None
@@ -263,6 +316,7 @@ def proxy_stdio(
                     mode=mode,
                     rules=rules,
                     run_guard=run_guard,
+                    proxy_security=proxy_security,
                     allow_unknown=allow_unknown,
                 )
                 if not inspection["allowed"]:
@@ -281,6 +335,81 @@ def proxy_stdio(
         return process.wait()
 
 
+def proxy_http(
+    listen: str,
+    upstream_url: str,
+    *,
+    profile: Optional[str] = None,
+    mode: Optional[str] = None,
+    rules: Optional[str] = None,
+    allow_unknown: bool = False,
+) -> int:
+    """Run a minimal dependency-free HTTP JSON-RPC MCP proxy."""
+    host, port_text = listen.rsplit(":", 1)
+    proxy_security = MCPProxySecurity(upstream_label=upstream_url)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802 - stdlib callback name
+            try:
+                size = int(self.headers.get("content-length", "0"))
+                raw = self.rfile.read(size).decode("utf-8")
+                ensure_text_within_limit(raw, MAX_MCP_MESSAGE_BYTES, "MCP message")
+                message = json.loads(raw)
+                if not isinstance(message, dict):
+                    raise ValueError("JSON-RPC message must be an object")
+                inspection = inspect_jsonrpc_message(
+                    message,
+                    profile=profile,
+                    mode=mode,
+                    rules=rules,
+                    proxy_security=proxy_security,
+                    allow_unknown=allow_unknown,
+                )
+                if not inspection["allowed"] and inspection.get("response") is not None:
+                    self._write_json(inspection["response"])
+                    return
+                request = Request(
+                    upstream_url,
+                    data=json.dumps(message).encode("utf-8"),
+                    headers={"content-type": "application/json", "accept": "application/json"},
+                    method="POST",
+                )
+                with urlopen(request, timeout=300) as response:  # nosec: caller-selected upstream
+                    upstream_raw = response.read().decode("utf-8")
+                upstream_message = json.loads(upstream_raw)
+                if isinstance(upstream_message, dict):
+                    upstream_inspection = inspect_upstream_jsonrpc_message(upstream_message, proxy_security)
+                    self._write_json(upstream_inspection["message"])
+                else:
+                    self._write_json(upstream_message)
+            except Exception as exc:
+                self._write_json(_proxy_error_response(None, str(exc)), status=500)
+
+        def do_GET(self) -> None:  # noqa: N802 - stdlib callback name
+            self.send_response(200)
+            self.send_header("content-type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"Agent Circuit Breaker HTTP MCP proxy. POST JSON-RPC requests here.")
+
+        def log_message(self, _format: str, *args: Any) -> None:
+            return
+
+        def _write_json(self, payload: Any, *, status: int = 200) -> None:
+            encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+            self.send_response(status)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+
+    server = ThreadingHTTPServer((host, int(port_text)), Handler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """Run inspection mode or a stdio MCP proxy."""
     parser = argparse.ArgumentParser(
@@ -294,6 +423,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--trajectory", action="store_true", help="Enable stateful trajectory checks across MCP tool calls")
     parser.add_argument("--trajectory-policy", help="JSON file containing a trajectory run contract")
     parser.add_argument("--allow-unknown", action="store_true", help="Forward UNKNOWN tool calls instead of stopping")
+    parser.add_argument("--taint-ledger", help="Path to hash-only cross-tool taint ledger")
+    parser.add_argument("--mcp-pin-dir", help="Directory for MCP tools/list catalog pins")
+    parser.add_argument("--http-listen", help="Run HTTP MCP proxy on host:port")
+    parser.add_argument("--http-upstream", help="HTTP MCP upstream URL")
     parser.add_argument("server_command", nargs="*", help="Upstream MCP server command")
     args = parser.parse_args(argv)
     contract = _load_trajectory_contract(args.trajectory_policy) if args.trajectory_policy else None
@@ -318,14 +451,32 @@ def main(argv: Optional[List[str]] = None) -> int:
             allow_unknown=args.allow_unknown,
         )
 
+    if args.http_listen or args.http_upstream:
+        if not args.http_listen or not args.http_upstream:
+            parser.error("--http-listen and --http-upstream must be used together")
+        return proxy_http(
+            args.http_listen,
+            args.http_upstream,
+            profile=args.profile,
+            mode=args.mode,
+            rules=args.rules,
+            allow_unknown=args.allow_unknown,
+        )
+
     if not args.server_command:
         parser.error("server_command is required unless --inspect-only is used")
+    proxy_security = MCPProxySecurity(
+        upstream_label=" ".join(args.server_command),
+        pin_dir=None if not args.mcp_pin_dir else __import__("pathlib").Path(args.mcp_pin_dir),
+        taint_ledger=TaintLedger(args.taint_ledger) if args.taint_ledger else TaintLedger(),
+    )
     return proxy_stdio(
         args.server_command,
         profile=args.profile,
         mode=args.mode,
         rules=args.rules,
         run_guard=run_guard,
+        proxy_security=proxy_security,
         allow_unknown=args.allow_unknown,
     )
 
@@ -416,10 +567,26 @@ def _verdict_allowed(verdict: Any, *, allow_unknown: bool = False) -> bool:
     return normalized not in STOP_VERDICTS
 
 
-def _relay_server_stdout(process: subprocess.Popen[str]) -> None:
+def inspect_upstream_jsonrpc_message(message: Dict[str, Any], proxy_security: MCPProxySecurity) -> Dict[str, Any]:
+    """Inspect an upstream JSON-RPC response before it reaches the agent."""
+    return proxy_security.inspect_upstream_message(message)
+
+
+def _relay_server_stdout(process: subprocess.Popen[str], proxy_security: Optional[MCPProxySecurity] = None) -> None:
     assert process.stdout is not None
     for line in process.stdout:
-        print(line, end="", flush=True)
+        if proxy_security is None:
+            print(line, end="", flush=True)
+            continue
+        try:
+            message = json.loads(line)
+            if isinstance(message, dict):
+                inspection = inspect_upstream_jsonrpc_message(message, proxy_security)
+                print(json.dumps(inspection["message"], sort_keys=True), flush=True)
+            else:
+                print(line, end="", flush=True)
+        except Exception:
+            print(line, end="", flush=True)
 
 
 def _proxy_error_response(message_id: Any, error: str) -> Dict[str, Any]:

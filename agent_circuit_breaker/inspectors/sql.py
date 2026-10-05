@@ -309,7 +309,55 @@ class SQLInspector:
             if predicate[index] == predicate[index + 2] and predicate[index + 1] == "=":
                 return True
 
+        if SQLInspector._has_update_functional_tautology(tokens_lower, predicate):
+            return True
+
         return False
+
+    @staticmethod
+    def _has_update_functional_tautology(tokens_lower: List[str], predicate: List[str]) -> bool:
+        """Detect UPDATE predicates that select every row the SET changes.
+
+        Examples:
+        - UPDATE users SET active = true WHERE active = false
+        - UPDATE users SET status = active WHERE status != active
+        - UPDATE users SET verified = true WHERE verified IS NULL
+        """
+        if not tokens_lower or tokens_lower[0] != "update" or "set" not in tokens_lower:
+            return False
+        try:
+            set_index = tokens_lower.index("set")
+            where_index = tokens_lower.index("where")
+        except ValueError:
+            return False
+        if where_index <= set_index + 3:
+            return False
+
+        assignments = tokens_lower[set_index + 1 : where_index]
+        if len(assignments) < 3 or assignments[1] != "=":
+            return False
+        set_col = assignments[0]
+        set_val = assignments[2]
+        if len(predicate) < 3 or predicate[0] != set_col:
+            return False
+
+        op = predicate[1]
+        pred_val = predicate[2]
+        if op in {"!=", "<>"} and pred_val == set_val:
+            return True
+        if op == "=" and SQLInspector._is_boolean_opposite(set_val, pred_val):
+            return True
+        if len(predicate) >= 3 and predicate[:3] == [set_col, "is", "null"] and set_val in {"true", "t", "1"}:
+            return True
+        if len(predicate) >= 4 and predicate[:4] == [set_col, "is", "not", set_val]:
+            return True
+        return False
+
+    @staticmethod
+    def _is_boolean_opposite(left: str, right: str) -> bool:
+        true_values = {"true", "t", "1"}
+        false_values = {"false", "f", "0"}
+        return (left in true_values and right in false_values) or (left in false_values and right in true_values)
 
     @staticmethod
     def _read_quoted(sql: str, start: int, quote: str) -> tuple[str, int]:
