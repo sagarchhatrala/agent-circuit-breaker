@@ -4,6 +4,37 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.8] - 2026-10-05
+
+### Security
+
+- Added MCP `tools/list` catalog pinning for tool name, description, and input
+  schema fingerprints, with changed tool definitions quarantined fail-closed.
+- Added MCP `tools/call` result scanning for prompt-injection-like returned text
+  before it reaches the agent context.
+- Added hash-only cross-tool secret taint tracking so credential-shaped values
+  returned by one MCP tool cannot be silently relayed into another tool.
+- Added reverse-shell, credential-to-network, sensitive credential path
+  write/delete/move/copy, and SQL functional-tautology detection.
+
+### Added
+
+- Minimal dependency-free HTTP JSON-RPC MCP proxy mode with `--http-listen` and
+  `--http-upstream`.
+- Native hook scaffolds for Claude, Cursor, Codex, Gemini, and Copilot user
+  hook config formats.
+- One-shot hook drift helpers for detecting and restoring removed ACB hook
+  entries.
+
+### Compatibility
+
+- Existing v1.x public result fields, rule schema, policy schema, approval
+  records, audit records, and trajectory output keep their meaning.
+- New failures are additive security hardening for previously unclassified MCP
+  catalog/result, taint, command, and SQL risk patterns.
+- Read-only `cat .env` behavior remains compatible unless paired with egress or
+  an MCP cross-tool taint relay.
+
 ## [1.6.7] - 2026-08-24
 
 ### Security

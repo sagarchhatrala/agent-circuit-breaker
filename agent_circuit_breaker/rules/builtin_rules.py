@@ -159,6 +159,21 @@ def _is_shell_fork_bomb(action: str) -> bool:
     return _has_command_risk(action, "cmd_shell_fork_bomb")
 
 
+def _is_reverse_shell(action: str) -> bool:
+    """Detect common reverse shell command shapes."""
+    return _has_command_risk(action, "cmd_reverse_shell")
+
+
+def _is_env_to_network(action: str) -> bool:
+    """Detect environment or credential material sent to network sinks."""
+    return _has_command_risk(action, "cmd_env_to_network")
+
+
+def _is_sensitive_path_access(action: str) -> bool:
+    """Detect direct command access to common credential paths."""
+    return _has_command_risk(action, "cmd_sensitive_path_access")
+
+
 def _is_sql_drop_table(action: str) -> bool:
     """Detect SQL DROP TABLE statements."""
     return _has_sql_risk(action, "sql_drop_table")
@@ -374,6 +389,42 @@ BUILTIN_RULES = [
         matcher=_is_shell_fork_bomb,
         metadata={
             "description": "Blocks classic shell fork bomb command text",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_reverse_shell",
+        title="Reverse shell detected",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_reverse_shell,
+        metadata={
+            "description": "Blocks common bash, netcat, Python, Perl, and PHP reverse shell command shapes",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_env_to_network",
+        title="Environment or credential material sent to network",
+        severity="CRITICAL",
+        response="block",
+        matcher=_is_env_to_network,
+        metadata={
+            "description": "Blocks commands that read environment or credential material and pipe or post it to network sinks",
+            "category": "command",
+        }
+    ),
+
+    Rule(
+        id="cmd_sensitive_path_access",
+        title="Sensitive credential path access detected",
+        severity="HIGH",
+        response="block",
+        matcher=_is_sensitive_path_access,
+        metadata={
+            "description": "Blocks direct command access to common credential paths such as .env, .ssh, .aws, .npmrc, and .pypirc",
             "category": "command",
         }
     ),

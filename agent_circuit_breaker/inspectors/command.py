@@ -24,6 +24,9 @@ class CommandInspector:
         "cmd_disk_overwrite_or_format": 100,
         "cmd_find_root_delete": 100,
         "cmd_shell_fork_bomb": 100,
+        "cmd_reverse_shell": 100,
+        "cmd_env_to_network": 95,
+        "cmd_sensitive_path_access": 80,
     }
 
     @staticmethod
@@ -283,18 +286,41 @@ class CommandInspector:
                 "Nested command payload contains dangerous action",
             )
 
+        if CommandInspector._accesses_sensitive_path(command, args):
+            CommandInspector._mark_dangerous(
+                segment,
+                "cmd_sensitive_path_access",
+                "Sensitive credential path access detected",
+            )
+
     @staticmethod
     def _detect_full_command_risks(result: Dict[str, Any]) -> None:
         """Detect risks that are easier to identify from the full command text."""
         if not CommandInspector._has_shell_fork_bomb_shape(result["normalized"]):
-            return
+            pass
+        else:
+            for segment in result["segments"]:
+                CommandInspector._mark_dangerous(
+                    segment,
+                    "cmd_shell_fork_bomb",
+                    "Shell fork bomb pattern detected",
+                )
 
-        for segment in result["segments"]:
-            CommandInspector._mark_dangerous(
-                segment,
-                "cmd_shell_fork_bomb",
-                "Shell fork bomb pattern detected",
-            )
+        if CommandInspector._has_reverse_shell_shape(result["normalized"]):
+            for segment in result["segments"]:
+                CommandInspector._mark_dangerous(
+                    segment,
+                    "cmd_reverse_shell",
+                    "Reverse shell pattern detected",
+                )
+
+        if CommandInspector._has_env_to_network_shape(result["normalized"]):
+            for segment in result["segments"]:
+                CommandInspector._mark_dangerous(
+                    segment,
+                    "cmd_env_to_network",
+                    "Environment or credential material sent to network detected",
+                )
 
     @staticmethod
     def _detect_pipeline_risks(result: Dict[str, Any], index: int) -> None:
@@ -665,6 +691,71 @@ class CommandInspector:
             r"\}\s*;\s*(?P=name)(?=$|\s|[;&|])"
         )
         return bool(pattern.search(command))
+
+    @staticmethod
+    def _has_reverse_shell_shape(command: str) -> bool:
+        """Return true for common reverse shell command patterns."""
+        patterns = (
+            r"bash\s+-i\s+.*?/dev/tcp/[^/\s]+/\d+",
+            r"(?:nc|ncat|netcat)\s+.*?(?:-e|--exec)\s+(?:/bin/)?(?:sh|bash)",
+            r"python(?:3)?\s+-c\s+.*socket\.socket.*(?:/bin/)?(?:sh|bash)",
+            r"perl\s+-e\s+.*socket.*(?:/bin/)?(?:sh|bash)",
+            r"php\s+-r\s+.*fsockopen.*(?:/bin/)?(?:sh|bash)",
+        )
+        return any(re.search(pattern, command, re.IGNORECASE) for pattern in patterns)
+
+    @staticmethod
+    def _has_env_to_network_shape(command: str) -> bool:
+        """Return true when env/credential reads are piped or posted to a network sink."""
+        lowered = command.lower()
+        reads_secret = any(
+            marker in lowered
+            for marker in (
+                "printenv",
+                " env",
+                "cat .env",
+                "cat ~/.aws/credentials",
+                "cat ~/.ssh/",
+                "cat ~/.npmrc",
+                "cat ~/.pypirc",
+                "get-content .env",
+            )
+        )
+        network_sink = any(
+            marker in lowered
+            for marker in (
+                "curl ",
+                "wget ",
+                "http://",
+                "https://",
+                "nc ",
+                "ncat ",
+                "netcat ",
+            )
+        )
+        sends_data = "|" in lowered or " --data" in lowered or " -d " in lowered or " --upload-file" in lowered
+        return reads_secret and network_sink and sends_data
+
+    @staticmethod
+    def _accesses_sensitive_path(command: str, args: List[str]) -> bool:
+        """Return true for direct reads/writes of common credential paths."""
+        if command not in {"cp", "copy", "mv", "move", "rm", "del", "remove-item"}:
+            return False
+        sensitive_markers = (
+            ".env",
+            ".npmrc",
+            ".pypirc",
+            ".netrc",
+            ".ssh/",
+            ".ssh\\",
+            ".aws/credentials",
+            ".aws\\credentials",
+            ".kube/config",
+            ".kube\\config",
+            "id_rsa",
+            "id_ed25519",
+        )
+        return any(any(marker in arg.lower() for marker in sensitive_markers) for arg in args)
 
     @staticmethod
     def _mark_dangerous(segment: Dict[str, Any], flag: str, reason: str) -> None:

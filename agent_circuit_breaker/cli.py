@@ -14,6 +14,7 @@ from agent_circuit_breaker.audit import AuditLog, audit_event_from_result
 from agent_circuit_breaker.catalog import built_in_rule_catalog, format_catalog_markdown
 from agent_circuit_breaker.explain import explain_result, format_explanation
 from agent_circuit_breaker.hooks import hook_instructions, write_hook_scaffold
+from agent_circuit_breaker.hooks_native import HOST_CONFIGS, write_native_hook_scaffold
 from agent_circuit_breaker.ledger import RunLedger
 from agent_circuit_breaker.limits import (
     MAX_COMMAND_BYTES,
@@ -1105,11 +1106,14 @@ class CircuitBreakerCLI:
     def run_install_hooks_mode(self, agent: str, directory: str, write: bool) -> int:
         """Print or write hook scaffold instructions."""
         if write:
-            result = write_hook_scaffold(directory)
+            if agent.strip().lower() in HOST_CONFIGS:
+                result = write_native_hook_scaffold(agent, directory, force=False)
+            else:
+                result = write_hook_scaffold(directory)
             if self.output_format == "json":
                 print(json.dumps(result, indent=2))
             else:
-                print(f"Hook scaffold written: {result['path']}")
+                print(f"Hook scaffold {result['status']}: {result['path']}")
             return 0
 
         output = {"agent": agent, "instructions": hook_instructions(agent)}
