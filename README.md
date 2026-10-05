@@ -76,6 +76,9 @@ Agent Circuit Breaker ships with built-in coverage for common high-risk action s
 - default MCP and pipeline SDK execution gates stop `UNKNOWN` unless callers explicitly opt in to forwarding or allowing unknown actions.
 - canonical decision summaries for audit, ledger, approval, and integration consistency.
 - richer MCP error evidence, attempted-versus-forwarded MCP trajectory state, approval expiry/revalidation support, and replay evidence in the local run ledger.
+- MCP catalog pinning, tool-result prompt-injection scanning, and cross-tool secret taint tracking.
+- native hook scaffolds for Claude, Cursor, Codex, Gemini, and Copilot.
+- minimal HTTP JSON-RPC MCP proxy mode.
 
 Unknown actions stay explicit as `UNKNOWN`. CLI `check` keeps reporting that state, while executable adapters such as the MCP proxy and pipeline SDK stop by default unless a caller explicitly opts into an allowlist-style exception.
 
@@ -439,7 +442,7 @@ Agent Circuit Breaker is not a sandbox, antivirus, endpoint monitor, permissions
 
 ## Current Status
 
-- Current version: `1.6.7`
+- Current version: `1.6.8`
 - Test suite: 516 tests
 - Runtime dependencies: none by default
 - License: MIT
@@ -467,6 +470,7 @@ Contributing references:
 ## Release Notes
 
 - [Latest GitHub release](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/latest)
+- [v1.6.8 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.8.md)
 - [v1.6.7 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.7.md)
 - [v1.6.6 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.6.md)
 - [v1.6.5 release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/main/docs/releases/v1.6.5.md)
