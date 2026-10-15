@@ -12,7 +12,7 @@ class TestMCPUnknownSemantics(unittest.TestCase):
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {"arguments": {"command": "git status"}},
+            "params": {"name": "shell", "arguments": {"command": "git status"}},
         }
 
         inspection = inspect_jsonrpc_message(message, run_guard=MCPRunGuard())
@@ -27,7 +27,7 @@ class TestMCPUnknownSemantics(unittest.TestCase):
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/call",
-            "params": {"arguments": {"command": "git status"}},
+            "params": {"name": "shell", "arguments": {"command": "git status"}},
         }
 
         inspection = inspect_jsonrpc_message(

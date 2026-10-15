@@ -15,6 +15,7 @@ from agent_circuit_breaker.normalization import normalize_for_matching
 Finding = Dict[str, Any]
 Evaluation = Dict[str, Any]
 Evaluator = Callable[[str], Evaluation]
+ActionRecord = Dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,10 @@ class TrajectoryPolicy:
     allowed_scopes: tuple[str, ...] = ()
     forbidden_targets: tuple[str, ...] = ()
     allowed_outputs: tuple[str, ...] = ()
+    allowed_actors: tuple[str, ...] = ()
+    forbidden_actors: tuple[str, ...] = ()
+    allowed_delegations: tuple[tuple[str, str], ...] = ()
+    require_actor: bool = False
     max_blocked_attempts: int = 1
     max_unknown_actions: Optional[int] = None
 
@@ -41,6 +46,10 @@ class TrajectoryPolicy:
             allowed_scopes=tuple(_string_list(contract.get("allowed_scopes"), "allowed_scopes")),
             forbidden_targets=tuple(_string_list(contract.get("forbidden_targets"), "forbidden_targets")),
             allowed_outputs=tuple(_string_list(contract.get("allowed_outputs"), "allowed_outputs")),
+            allowed_actors=tuple(_string_list(contract.get("allowed_actors"), "allowed_actors")),
+            forbidden_actors=tuple(_string_list(contract.get("forbidden_actors"), "forbidden_actors")),
+            allowed_delegations=tuple(_delegation_pairs(contract.get("allowed_delegations"))),
+            require_actor=_optional_bool(contract.get("require_actor"), "require_actor", False),
             max_blocked_attempts=_optional_int(contract.get("max_blocked_attempts"), "max_blocked_attempts", 1) or 1,
             max_unknown_actions=_optional_int(contract.get("max_unknown_actions"), "max_unknown_actions", None),
         )
@@ -57,16 +66,16 @@ def evaluate_trajectory(
     Single-action verdicts still come from the supplied evaluator. This layer
     adds deterministic checks that need run history or an explicit run contract.
     """
-    action_list = _validate_actions(actions)
+    action_records = _validate_actions(actions)
     policy = TrajectoryPolicy.from_contract(contract)
-    evaluations = [_evaluate_step(index, action, evaluator) for index, action in enumerate(action_list)]
+    evaluations = [_evaluate_step(index, record, evaluator) for index, record in enumerate(action_records)]
     findings = _find_trajectory_risks(evaluations, policy)
     verdict = _trajectory_verdict(evaluations, findings)
 
     return {
         "schema_version": 1,
-        "run_id": _run_id(action_list, contract),
-        "run_fingerprint": _run_fingerprint(action_list, contract),
+        "run_id": _run_id(action_records, contract),
+        "run_fingerprint": _run_fingerprint(action_records, contract),
         "verdict": verdict,
         "decision": verdict.upper(),
         "summary": _summary(evaluations, findings),
@@ -75,6 +84,13 @@ def evaluate_trajectory(
             "allowed_scopes": list(policy.allowed_scopes),
             "forbidden_targets": list(policy.forbidden_targets),
             "allowed_outputs": list(policy.allowed_outputs),
+            "allowed_actors": list(policy.allowed_actors),
+            "forbidden_actors": list(policy.forbidden_actors),
+            "allowed_delegations": [
+                {"from": source, "to": target}
+                for source, target in policy.allowed_delegations
+            ],
+            "require_actor": policy.require_actor,
             "max_blocked_attempts": policy.max_blocked_attempts,
             "max_unknown_actions": policy.max_unknown_actions,
         },
@@ -83,27 +99,57 @@ def evaluate_trajectory(
     }
 
 
-def _validate_actions(actions: Iterable[str]) -> List[str]:
+def _validate_actions(actions: Iterable[Any]) -> List[ActionRecord]:
     if isinstance(actions, (str, bytes)) or not isinstance(actions, Iterable):
-        raise ValueError("trajectory actions must be a list of strings")
+        raise ValueError("trajectory actions must be a list of strings or objects")
 
     action_list = list(actions)
+    records: List[ActionRecord] = []
     for index, action in enumerate(action_list):
-        if not isinstance(action, str):
-            raise ValueError(f"trajectory actions[{index}] must be a string")
-    return action_list
+        records.append(_action_record(index, action))
+    return records
 
 
-def _evaluate_step(index: int, action: str, evaluator: Evaluator) -> Evaluation:
-    result = evaluator(action)
+def _action_record(index: int, action: Any) -> ActionRecord:
+    if isinstance(action, str):
+        return {"command": action}
+    if not isinstance(action, dict):
+        raise ValueError(f"trajectory actions[{index}] must be a string or object")
+
+    command = action.get("command", action.get("action"))
+    if not isinstance(command, str):
+        raise ValueError(f"trajectory actions[{index}].command must be a string")
+
+    record: ActionRecord = {"command": command}
+    for field in ("actor", "delegated_by", "tool_name", "request_id"):
+        if field not in action or action[field] is None:
+            continue
+        if not isinstance(action[field], str):
+            raise ValueError(f"trajectory actions[{index}].{field} must be a string")
+        record[field] = action[field]
+
+    metadata = action.get("metadata")
+    if metadata is not None:
+        if not isinstance(metadata, dict):
+            raise ValueError(f"trajectory actions[{index}].metadata must be an object")
+        record["metadata"] = metadata
+    return record
+
+
+def _evaluate_step(index: int, action: ActionRecord, evaluator: Evaluator) -> Evaluation:
+    result = evaluator(action["command"])
     result = dict(result)
     result["trajectory_index"] = index
+    for field in ("actor", "delegated_by", "tool_name", "request_id", "metadata"):
+        if field in action:
+            result[field] = action[field]
     result["canonical_decision"] = from_legacy_result(result).to_summary()
     return result
 
 
 def _find_trajectory_risks(evaluations: List[Evaluation], policy: TrajectoryPolicy) -> List[Finding]:
     findings: List[Finding] = []
+    findings.extend(_actor_authority_findings(evaluations, policy))
     findings.extend(_blocked_retry_findings(evaluations, policy))
     findings.extend(_unknown_volume_findings(evaluations, policy))
     findings.extend(_forbidden_target_findings(evaluations, policy))
@@ -112,6 +158,83 @@ def _find_trajectory_risks(evaluations: List[Evaluation], policy: TrajectoryPoli
     findings.extend(_direct_secret_egress_findings(evaluations))
     findings.extend(_secret_egress_findings(evaluations))
     findings.extend(_data_export_egress_findings(evaluations))
+    findings.extend(_external_download_execution_findings(evaluations))
+    return findings
+
+
+def _actor_authority_findings(evaluations: List[Evaluation], policy: TrajectoryPolicy) -> List[Finding]:
+    findings: List[Finding] = []
+    allowed_actors = set(policy.allowed_actors)
+    forbidden_actors = set(policy.forbidden_actors)
+    allowed_delegations = set(policy.allowed_delegations)
+
+    for item in evaluations:
+        actor = item.get("actor")
+        delegated_by = item.get("delegated_by")
+        index = item["trajectory_index"]
+
+        if policy.require_actor and not actor:
+            findings.append(
+                {
+                    "id": "traj_missing_actor",
+                    "title": "Trajectory action is missing required actor identity",
+                    "severity": "HIGH",
+                    "response": "block",
+                    "indices": [index],
+                    "reason": "run contract requires every action to identify the actor",
+                }
+            )
+            continue
+
+        if not isinstance(actor, str) or not actor:
+            continue
+
+        if actor in forbidden_actors:
+            findings.append(
+                {
+                    "id": "traj_forbidden_actor",
+                    "title": "Action actor is forbidden by the run contract",
+                    "severity": "CRITICAL",
+                    "response": "block",
+                    "indices": [index],
+                    "actor": actor,
+                    "reason": f"actor {actor} is listed in forbidden_actors",
+                }
+            )
+            continue
+
+        if allowed_actors and actor not in allowed_actors:
+            findings.append(
+                {
+                    "id": "traj_unauthorized_actor",
+                    "title": "Action actor is outside the authorized run actors",
+                    "severity": "HIGH",
+                    "response": "block",
+                    "indices": [index],
+                    "actor": actor,
+                    "reason": f"actor {actor} is not listed in allowed_actors",
+                }
+            )
+
+        if delegated_by is None:
+            continue
+        if not isinstance(delegated_by, str) or not delegated_by:
+            continue
+
+        if (delegated_by, actor) not in allowed_delegations:
+            findings.append(
+                {
+                    "id": "traj_unauthorized_delegation",
+                    "title": "Delegated action is not authorized by the run contract",
+                    "severity": "HIGH",
+                    "response": "block",
+                    "indices": [index],
+                    "actor": actor,
+                    "delegated_by": delegated_by,
+                    "reason": f"delegation from {delegated_by} to {actor} is not listed in allowed_delegations",
+                }
+            )
+
     return findings
 
 
@@ -237,7 +360,11 @@ def _matches_forbidden_target(normalized_command: str, target: str) -> bool:
 
 
 def _secret_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
-    secret_reads = [item for item in evaluations if _looks_like_secret_read(item)]
+    secret_reads = [
+        item
+        for item in evaluations
+        if _looks_like_secret_read(item) or _looks_like_sensitive_derivation(item)
+    ]
     if not secret_reads:
         return []
 
@@ -254,7 +381,10 @@ def _secret_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
                     "severity": "CRITICAL",
                     "response": "block",
                     "indices": [first_secret["trajectory_index"], item["trajectory_index"]],
-                    "reason": "trajectory reads secret-like material before a network, publish, or upload action",
+                    "reason": "trajectory reads or derives secret-like material before a network, publish, or upload action",
+                    "evidence": {
+                        "source_action": _secret_source_kind(first_secret),
+                    },
                 }
             )
             break
@@ -301,6 +431,42 @@ def _data_export_egress_findings(evaluations: List[Evaluation]) -> List[Finding]
     return []
 
 
+def _external_download_execution_findings(evaluations: List[Evaluation]) -> List[Finding]:
+    """Detect external artifact download followed by later local execution."""
+    downloaded: list[tuple[Evaluation, str]] = []
+    findings: List[Finding] = []
+
+    for item in evaluations:
+        downloaded.extend((item, path) for path in _external_download_targets(item))
+        if not downloaded:
+            continue
+
+        executed_path = _executed_artifact_path(item)
+        if not executed_path:
+            continue
+
+        normalized_executed = _normalize_artifact_reference(executed_path)
+        for source, path in downloaded:
+            if source["trajectory_index"] >= item["trajectory_index"]:
+                continue
+            if normalized_executed != _normalize_artifact_reference(path):
+                continue
+            findings.append(
+                {
+                    "id": "traj_external_download_then_execute",
+                    "title": "External artifact downloaded then executed",
+                    "severity": "CRITICAL",
+                    "response": "block",
+                    "indices": [source["trajectory_index"], item["trajectory_index"]],
+                    "path": path,
+                    "reason": "trajectory executes an artifact that was downloaded from an external source earlier in the run",
+                }
+            )
+            break
+
+    return findings
+
+
 def _trajectory_verdict(evaluations: List[Evaluation], findings: List[Finding]) -> str:
     if any(item.get("verdict") == "error" for item in evaluations):
         return "error"
@@ -342,13 +508,13 @@ def _summary(evaluations: List[Evaluation], findings: List[Finding]) -> Dict[str
     return counts
 
 
-def _run_id(actions: List[str], contract: Optional[Dict[str, Any]]) -> str:
+def _run_id(actions: List[ActionRecord], contract: Optional[Dict[str, Any]]) -> str:
     material = {"actions": actions, "contract": contract or {}}
     encoded = repr(material).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
 
 
-def _run_fingerprint(actions: List[str], contract: Optional[Dict[str, Any]]) -> str:
+def _run_fingerprint(actions: List[ActionRecord], contract: Optional[Dict[str, Any]]) -> str:
     material = {"schema_version": 1, "actions": actions, "contract": contract or {}}
     encoded = json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
@@ -366,6 +532,40 @@ def _looks_like_secret_read(item: Evaluation) -> bool:
 
     read_terms = ("cat ", "type ", "get-content", " gc ", "grep ", "rg ", "printenv", " env", " set")
     return _has_sensitive_reference(item) and any(term in f" {command}" for term in read_terms)
+
+
+def _looks_like_sensitive_derivation(item: Evaluation) -> bool:
+    command = _normalized_command(item)
+    if not command or not _has_sensitive_reference(item):
+        return False
+
+    derivation_terms = (
+        "base64 ",
+        "openssl ",
+        "gpg ",
+        "tar ",
+        "zip ",
+        "7z ",
+        "gzip ",
+        "python ",
+        "python3 ",
+        "node ",
+        "jq ",
+        "sed ",
+        "awk ",
+        "cp ",
+        "copy ",
+        "xcopy ",
+        "move ",
+        "mv ",
+    )
+    return any(term in f" {command}" for term in derivation_terms) or ">" in command
+
+
+def _secret_source_kind(item: Evaluation) -> str:
+    if _looks_like_sensitive_derivation(item):
+        return "derived_or_transformed_sensitive_material"
+    return "direct_sensitive_read"
 
 
 def _looks_like_egress(item: Evaluation) -> bool:
@@ -406,6 +606,102 @@ def _looks_like_egress(item: Evaluation) -> bool:
     )
     searchable = f" {command}"
     return any(pattern in searchable for pattern in egress_patterns) or _looks_like_custom_egress(command)
+
+
+def _external_download_targets(item: Evaluation) -> List[str]:
+    command = _normalized_command(item)
+    if not command:
+        return []
+
+    tokens = _simple_tokens(command)
+    if not tokens:
+        return []
+
+    command_name = tokens[0]
+    if command_name == "curl" and _has_external_url(tokens):
+        return _clean_path_tokens(_curl_download_targets(tokens))
+    if command_name == "wget" and _has_external_url(tokens):
+        return _clean_path_tokens(_wget_download_targets(tokens))
+    return []
+
+
+def _curl_download_targets(tokens: List[str]) -> List[str]:
+    targets: List[str] = []
+    lowered = [token.lower() for token in tokens]
+    for option in ("-o", "--output"):
+        for index, token in enumerate(lowered):
+            if token == option and index + 1 < len(tokens):
+                targets.append(tokens[index + 1])
+            elif token.startswith(f"{option}="):
+                targets.append(tokens[index].split("=", 1)[1])
+
+    if "-o" in lowered or "--remote-name" in lowered:
+        for token in tokens[1:]:
+            if token.startswith(("http://", "https://")):
+                targets.append(token.rstrip("/").rsplit("/", 1)[-1])
+    return targets
+
+
+def _wget_download_targets(tokens: List[str]) -> List[str]:
+    targets: List[str] = []
+    lowered = [token.lower() for token in tokens]
+    for option in ("-o", "--output-document"):
+        for index, token in enumerate(lowered):
+            if token == option and index + 1 < len(tokens):
+                targets.append(tokens[index + 1])
+            elif token.startswith(f"{option}="):
+                targets.append(tokens[index].split("=", 1)[1])
+
+    if not targets:
+        for token in tokens[1:]:
+            if token.startswith(("http://", "https://")):
+                targets.append(token.rstrip("/").rsplit("/", 1)[-1])
+    return targets
+
+
+def _has_external_url(tokens: List[str]) -> bool:
+    return any(token.startswith(("http://", "https://")) for token in tokens)
+
+
+def _executed_artifact_path(item: Evaluation) -> Optional[str]:
+    command = _normalized_command(item)
+    if not command:
+        return None
+
+    tokens = _simple_tokens(command)
+    if not tokens:
+        return None
+
+    command_name = tokens[0]
+    interpreters = {
+        "bash",
+        "sh",
+        "zsh",
+        "dash",
+        "ksh",
+        "python",
+        "python3",
+        "py",
+        "node",
+        "ruby",
+        "perl",
+        "php",
+        "pwsh",
+        "powershell",
+    }
+    if command_name in interpreters:
+        for token in tokens[1:]:
+            if token.startswith("-"):
+                continue
+            return token
+
+    if command_name.startswith(("./", "../", "/", "~")) or re.match(r"^[a-z]:/", command_name):
+        return command_name
+    return None
+
+
+def _normalize_artifact_reference(path: str) -> str:
+    return normalize_for_matching(path).replace("\\", "/").lstrip("./")
 
 
 def _looks_like_custom_egress(command: str) -> bool:
@@ -755,3 +1051,31 @@ def _optional_int(value: Any, field: str, default: Optional[int]) -> Optional[in
     if not isinstance(value, int) or value < 0:
         raise ValueError(f"trajectory contract {field} must be a non-negative integer")
     return value
+
+
+def _optional_bool(value: Any, field: str, default: bool) -> bool:
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        raise ValueError(f"trajectory contract {field} must be a boolean")
+    return value
+
+
+def _delegation_pairs(value: Any) -> List[tuple[str, str]]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError("trajectory contract allowed_delegations must be a list")
+
+    pairs: List[tuple[str, str]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"trajectory contract allowed_delegations[{index}] must be an object")
+        source = item.get("from")
+        target = item.get("to")
+        if not isinstance(source, str) or not source:
+            raise ValueError(f"trajectory contract allowed_delegations[{index}].from must be a non-empty string")
+        if not isinstance(target, str) or not target:
+            raise ValueError(f"trajectory contract allowed_delegations[{index}].to must be a non-empty string")
+        pairs.append((source, target))
+    return pairs

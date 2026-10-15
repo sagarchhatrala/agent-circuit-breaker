@@ -218,8 +218,19 @@ def inspect_jsonrpc_message(
             "response": None,
         }
 
-    params = message.get("params") or {}
-    arguments = params.get("arguments") if isinstance(params, dict) else None
+    params = message.get("params")
+    malformed = _tool_call_malformed_reason(params)
+    if malformed:
+        inspection = {
+            "allowed": False,
+            "checks": [],
+            "coverage": _argument_coverage([], status="failed", error=malformed),
+            "error": malformed,
+        }
+        return {**inspection, "response": blocked_jsonrpc_response(message, inspection)}
+
+    assert isinstance(params, dict)
+    arguments = params.get("arguments") or {}
     inspection = inspect_arguments(arguments or {}, profile=profile, mode=mode, rules=rules, allow_unknown=allow_unknown)
     if run_guard is not None:
         trajectory_inspection = run_guard.inspect_arguments(arguments or {})
@@ -256,6 +267,7 @@ def blocked_jsonrpc_response(message: Dict[str, Any], inspection: Dict[str, Any]
     result = first_block["result"] if first_block else {}
     trajectory = inspection.get("trajectory") or {}
     first_finding = next(iter(trajectory.get("trajectory_findings") or []), None)
+    error = inspection.get("error")
     return {
         "jsonrpc": "2.0",
         "id": message.get("id"),
@@ -270,6 +282,7 @@ def blocked_jsonrpc_response(message: Dict[str, Any], inspection: Dict[str, Any]
                 "field": first_block.get("field") if first_block else None,
                 "trajectory_verdict": trajectory.get("verdict"),
                 "trajectory_finding": first_finding.get("id") if first_finding else None,
+                "error": error,
             },
         },
     }
@@ -558,6 +571,21 @@ def _argument_coverage(
         "error": error,
         "unknowns": unknowns,
     }
+
+
+def _tool_call_malformed_reason(params: Any) -> Optional[str]:
+    """Return a fail-closed reason for malformed MCP tools/call envelopes."""
+    if not isinstance(params, dict):
+        return "MCP tools/call params must be an object"
+
+    name = params.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return "MCP tools/call params.name must be a non-empty string"
+
+    if "arguments" in params and not isinstance(params["arguments"], dict):
+        return "MCP tools/call params.arguments must be an object when present"
+
+    return None
 
 
 def _verdict_allowed(verdict: Any, *, allow_unknown: bool = False) -> bool:
