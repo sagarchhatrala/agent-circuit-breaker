@@ -40,7 +40,7 @@ jobs:
         run: python -m build
 
       - name: Check package metadata
-        run: python -m twine check dist/*
+        run: python -m twine check dist/agent_circuit_breaker-*.whl dist/agent_circuit_breaker-*.tar.gz
 
       - name: Smoke installed wheel
         run: |
