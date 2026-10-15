@@ -29,6 +29,7 @@ It can detect:
 - references to forbidden targets such as `main`, `production`, `.env`, or private paths.
 - write-like actions outside declared scopes.
 - output-channel drift, such as using GitHub when only Slack was allowed.
+- unauthorized actors and unauthorized delegation edges in structured action records.
 - direct secret-like material in egress actions.
 - secret-like reads followed by later egress.
 - data export followed by upload, publish, or network send actions.
@@ -41,11 +42,13 @@ Example run contract:
   "allowed_outputs": ["slack"],
   "allowed_scopes": ["tests/", "docs/"],
   "forbidden_targets": ["main", "production", ".env"],
+  "allowed_actors": ["orchestrator", "bench-worker"],
+  "allowed_delegations": [{"from": "orchestrator", "to": "bench-worker"}],
   "max_blocked_attempts": 1,
   "max_unknown_actions": 3,
   "actions": [
-    "python bench.py",
-    "gh pr create --title PowerCool"
+    {"command": "python bench.py", "actor": "bench-worker", "delegated_by": "orchestrator"},
+    {"command": "gh pr create --title PowerCool", "actor": "subagent.release"}
   ]
 }
 ```
@@ -56,7 +59,65 @@ Run it:
 agent-circuit-breaker trajectory ./agent-run.json --format json
 ```
 
-The result is blocked because the run contract allowed Slack output, while the action attempted a GitHub PR.
+The result is blocked because the run contract allowed Slack output, while the action attempted a GitHub PR, and because `subagent.release` is not an authorized actor.
+
+Structured action objects are optional. Existing string-only action lists still work. Use structured actions when your harness, orchestrator, MCP bridge, or agent runtime can identify the actor that proposed the action and the parent actor that delegated it.
+
+Actor and delegation fields are not magic identity. They are authenticated only
+when a trusted integration supplies them from a trusted runtime context. For
+stateful local enforcement, use `RuntimeGate` and configure `actor_tokens` when
+the integration can keep actor tokens outside model-visible state.
+
+## Stateful Runtime API
+
+Retrospective trajectory evaluation is useful for tests, demos, and ledger
+review, but live enforcement needs one proposed action at a time. `RuntimeGate`
+provides that minimal workflow:
+
+```python
+from agent_circuit_breaker import RuntimeGate
+
+gate = RuntimeGate()
+run = await gate.create_run({
+    "goal": "update docs only",
+    "allowed_actors": ["orchestrator", "worker.docs"],
+    "allowed_delegations": [{"from": "orchestrator", "to": "worker.docs"}],
+    "require_actor": True,
+    "max_actions": 20,
+    "ttl_seconds": 1800,
+})
+
+decision = await gate.propose_action(
+    run.run_id,
+    {
+        "command": "mkdir /tmp/acb-demo",
+        "actor": "worker.docs",
+        "delegated_by": "orchestrator",
+    },
+)
+
+if decision.authorized:
+    # Execute through ACB's one-time authorization wrapper.
+    await gate.execute_authorized(
+        run.run_id,
+        authorization_id=decision.authorization_id,
+        executor=lambda action: {"would_execute": action["command"]},
+    )
+else:
+    # Stop this execution path. ACB returns recovery evidence, but does not
+    # automatically spawn a replacement agent.
+    print(decision.recovery)
+```
+
+The default runtime store is in-memory and process-local. It gives deterministic
+local ordering and concurrent proposal serialization for one process; it does
+not provide durable crash recovery or cross-process locking.
+
+`execute_authorized` is the supported local binding between authorization and
+side effects. It consumes the returned `authorization_id` once, records
+`started`, calls the trusted executor with the exact authorized action record,
+and records the final outcome. It still depends on the integration ensuring that
+privileged tools are reachable only through this path.
 
 ## MCP Runtime Enforcement
 
@@ -119,6 +180,9 @@ It does not:
 - call an LLM to classify actions.
 - execute commands.
 - sandbox tools.
+- authenticate caller-supplied actor names unless a trusted integration uses
+  runtime-held actor tokens.
+- automatically spawn replacement agents.
 - prove that a transfer happened.
 - replace least privilege, isolation, backups, or endpoint controls.
 

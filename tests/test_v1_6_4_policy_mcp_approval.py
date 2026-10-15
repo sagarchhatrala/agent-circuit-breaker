@@ -59,7 +59,7 @@ class TestMCPConsistency(unittest.TestCase):
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
-            "params": {"arguments": {"command": 'bash -c "rm -rf /"'}},
+            "params": {"name": "shell", "arguments": {"command": 'bash -c "rm -rf /"'}},
         }
 
         inspection = inspect_jsonrpc_message(message, run_guard=guard)
@@ -75,7 +75,7 @@ class TestMCPConsistency(unittest.TestCase):
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/call",
-            "params": {"arguments": {"command": "mkdir /tmp/acb"}},
+            "params": {"name": "shell", "arguments": {"command": "mkdir /tmp/acb"}},
         }
 
         inspection = inspect_jsonrpc_message(message, run_guard=guard)

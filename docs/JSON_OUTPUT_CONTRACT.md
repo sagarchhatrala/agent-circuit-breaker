@@ -189,7 +189,7 @@ Invalid custom rule files fail closed with `verdict` set to `error`.
 - `decision`: uppercase aggregate decision.
 - `summary`: counts for actions, allowed, blocked, unknown, pending approval, errors, and trajectory findings.
 - `contract`: normalized run contract.
-- `actions`: per-action evaluation results. Each action result preserves the normal check result fields and adds `trajectory_index` and canonical decision evidence.
+- `actions`: per-action evaluation results. Each action result preserves the normal check result fields and adds `trajectory_index` and canonical decision evidence. When callers submit structured actions, action metadata such as `actor`, `delegated_by`, `tool_name`, and `request_id` is preserved.
 - `trajectory_findings`: sequence-level findings.
 - `error`: present when trajectory parsing or validation fails.
 - `audit`: present when CLI audit logging is requested.
@@ -211,12 +211,17 @@ Current trajectory finding IDs:
 
 - `traj_repeated_blocked_actions`
 - `traj_unknown_action_volume`
+- `traj_missing_actor`
+- `traj_forbidden_actor`
+- `traj_unauthorized_actor`
+- `traj_unauthorized_delegation`
 - `traj_forbidden_target`
 - `traj_scope_violation`
 - `traj_output_channel_drift`
 - `traj_secret_in_egress_action`
 - `traj_secret_then_egress`
 - `traj_data_export_then_egress`
+- `traj_external_download_then_execute`
 
 ## MCP Trajectory Metadata
 

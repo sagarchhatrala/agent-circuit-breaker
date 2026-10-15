@@ -56,7 +56,7 @@ def evaluate_action(action: str, rule_file_path: Optional[str] = None) -> Dict[s
 
 
 def evaluate_trajectory(
-    actions: list[str],
+    actions: list[Any],
     contract: Optional[Dict[str, Any]] = None,
     rule_file_path: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -64,7 +64,9 @@ def evaluate_trajectory(
     Evaluate a sequence of actions for single-action and trajectory-level risk.
 
     Args:
-        actions: Ordered list of action or command strings.
+        actions: Ordered list of action strings or action objects. Action
+            objects must include a string `command` or `action`, and may include
+            `actor`, `delegated_by`, `tool_name`, `request_id`, and `metadata`.
         contract: Optional run contract with goal, allowed_scopes,
             forbidden_targets, allowed_outputs, max_blocked_attempts, and
             max_unknown_actions.

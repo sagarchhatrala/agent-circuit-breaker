@@ -143,6 +143,179 @@ class TestV13ExplainScanAudit(unittest.TestCase):
 
         self.assertTrue(verification["is_valid"])
         self.assertEqual(verification["entries"], 2)
+        self.assertFalse(verification["signature_checked"])
+
+    def test_audit_checkpoint_detects_tail_deletion(self):
+        cli = CircuitBreakerCLI()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_path = Path(temp_dir) / "audit.jsonl"
+            audit_log = AuditLog(str(log_path))
+            result = cli.evaluate_command("ls -la")
+            audit_log.append(audit_event_from_result(result))
+            audit_log.append(audit_event_from_result(result))
+            checkpoint = audit_log.checkpoint()
+
+            entries = log_path.read_text(encoding="utf-8").splitlines()
+            log_path.write_text(entries[0] + "\n", encoding="utf-8")
+
+            normal_verification = audit_log.verify()
+            checkpoint_verification = audit_log.verify_checkpoint(checkpoint)
+
+        self.assertTrue(normal_verification["is_valid"])
+        self.assertFalse(checkpoint_verification["is_valid"])
+        self.assertEqual(checkpoint_verification["error"], "audit log is shorter than checkpoint")
+
+    def test_audit_checkpoint_hmac_rejects_wrong_key(self):
+        cli = CircuitBreakerCLI()
+        old_key = os.environ.get("ACB_AUDIT_HMAC_KEY")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                log_path = Path(temp_dir) / "audit.jsonl"
+                audit_log = AuditLog(str(log_path))
+                result = cli.evaluate_command("ls -la")
+
+                os.environ["ACB_AUDIT_HMAC_KEY"] = "test-audit-key-32-bytes-local"
+                audit_log.append(audit_event_from_result(result))
+                checkpoint = audit_log.checkpoint()
+
+                os.environ["ACB_AUDIT_HMAC_KEY"] = "wrong-audit-key-32-bytes-local"
+                verification = audit_log.verify_checkpoint(checkpoint)
+
+            self.assertFalse(verification["is_valid"])
+            self.assertEqual(verification["error"], "checkpoint_signature mismatch")
+        finally:
+            if old_key is None:
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+            else:
+                os.environ["ACB_AUDIT_HMAC_KEY"] = old_key
+
+    def test_audit_log_hmac_signature_detects_modified_event(self):
+        cli = CircuitBreakerCLI()
+        old_key = os.environ.get("ACB_AUDIT_HMAC_KEY")
+        os.environ["ACB_AUDIT_HMAC_KEY"] = "test-audit-key-32-bytes-local"
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                log_path = Path(temp_dir) / "audit.jsonl"
+                audit_log = AuditLog(str(log_path))
+                result = cli.evaluate_command("ls -la")
+                audit_log.append(audit_event_from_result(result))
+                verification = audit_log.verify()
+                self.assertTrue(verification["is_valid"])
+                self.assertTrue(verification["signature_checked"])
+
+                entry = json.loads(log_path.read_text(encoding="utf-8").strip())
+                entry["event"]["decision"] = "BLOCK"
+                log_path.write_text(json.dumps(entry, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+                tampered = audit_log.verify()
+                self.assertFalse(tampered["is_valid"])
+                self.assertIn(tampered["error"], {"entry_hash mismatch", "entry_signature mismatch"})
+        finally:
+            if old_key is None:
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+            else:
+                os.environ["ACB_AUDIT_HMAC_KEY"] = old_key
+
+    def test_audit_log_hmac_rejects_missing_or_wrong_verification_key(self):
+        cli = CircuitBreakerCLI()
+        old_key = os.environ.get("ACB_AUDIT_HMAC_KEY")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                log_path = Path(temp_dir) / "audit.jsonl"
+                audit_log = AuditLog(str(log_path))
+                result = cli.evaluate_command("ls -la")
+
+                os.environ["ACB_AUDIT_HMAC_KEY"] = "test-audit-key-32-bytes-local"
+                audit_log.append(audit_event_from_result(result))
+
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+                missing_key = audit_log.verify()
+                self.assertFalse(missing_key["is_valid"])
+                self.assertEqual(missing_key["error"], "entry_signature present but verification key unavailable")
+
+                os.environ["ACB_AUDIT_HMAC_KEY"] = "wrong-audit-key-32-bytes-local"
+                wrong_key = audit_log.verify()
+                self.assertFalse(wrong_key["is_valid"])
+                self.assertEqual(wrong_key["error"], "entry_signature mismatch")
+        finally:
+            if old_key is None:
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+            else:
+                os.environ["ACB_AUDIT_HMAC_KEY"] = old_key
+
+    def test_audit_log_hmac_rejects_legacy_unsigned_log_when_key_required(self):
+        old_key = os.environ.get("ACB_AUDIT_HMAC_KEY")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                log_path = Path(temp_dir) / "audit.jsonl"
+                entry = {
+                    "schema_version": 1,
+                    "timestamp": "2026-10-15T00:00:00+00:00",
+                    "previous_hash": None,
+                    "event": {"decision": "ALLOW"},
+                }
+                entry["entry_hash"] = AuditLog._hash_entry(entry)
+                log_path.write_text(json.dumps(entry, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+                audit_log = AuditLog(str(log_path))
+
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+                unsigned = audit_log.verify()
+                self.assertTrue(unsigned["is_valid"])
+                self.assertFalse(unsigned["signature_checked"])
+
+                os.environ["ACB_AUDIT_HMAC_KEY"] = "test-audit-key-32-bytes-local"
+                required = audit_log.verify()
+                self.assertFalse(required["is_valid"])
+                self.assertEqual(required["error"], "unsupported signature algorithm")
+        finally:
+            if old_key is None:
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+            else:
+                os.environ["ACB_AUDIT_HMAC_KEY"] = old_key
+
+    def test_audit_log_hmac_rejects_empty_or_short_key(self):
+        old_key = os.environ.get("ACB_AUDIT_HMAC_KEY")
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                audit_log = AuditLog(str(Path(temp_dir) / "audit.jsonl"))
+                os.environ["ACB_AUDIT_HMAC_KEY"] = ""
+                with self.assertRaisesRegex(ValueError, "set but empty"):
+                    audit_log.append({"event": "test"})
+
+                os.environ["ACB_AUDIT_HMAC_KEY"] = "short"
+                with self.assertRaisesRegex(ValueError, "at least"):
+                    audit_log.verify()
+        finally:
+            if old_key is None:
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+            else:
+                os.environ["ACB_AUDIT_HMAC_KEY"] = old_key
+
+    def test_audit_log_hmac_rejects_signed_record_with_unsupported_algorithm(self):
+        cli = CircuitBreakerCLI()
+        old_key = os.environ.get("ACB_AUDIT_HMAC_KEY")
+        os.environ["ACB_AUDIT_HMAC_KEY"] = "test-audit-key-32-bytes-local"
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                log_path = Path(temp_dir) / "audit.jsonl"
+                audit_log = AuditLog(str(log_path))
+                result = cli.evaluate_command("ls -la")
+                audit_log.append(audit_event_from_result(result))
+
+                entry = json.loads(log_path.read_text(encoding="utf-8").strip())
+                entry["integrity"]["signature_algorithm"] = "none"
+                entry["entry_hash"] = AuditLog._hash_entry(entry)
+                entry["entry_signature"] = AuditLog._sign_entry(entry, os.environ["ACB_AUDIT_HMAC_KEY"])
+                log_path.write_text(json.dumps(entry, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+
+                verification = audit_log.verify()
+                self.assertFalse(verification["is_valid"])
+                self.assertEqual(verification["error"], "unsupported signature algorithm")
+        finally:
+            if old_key is None:
+                os.environ.pop("ACB_AUDIT_HMAC_KEY", None)
+            else:
+                os.environ["ACB_AUDIT_HMAC_KEY"] = old_key
 
 
 class TestV13ApprovalsAndMCP(unittest.TestCase):

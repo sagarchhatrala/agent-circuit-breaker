@@ -221,7 +221,7 @@ class TestV14MCPProxy(unittest.TestCase):
                 self.assertEqual(inspection["checks"][0]["field"], key)
                 self.assertEqual(inspection["response"]["error"]["data"]["matched_rule"], "fs_recursive_delete")
 
-    def test_mcp_proxy_inspects_raw_string_arguments(self):
+    def test_mcp_proxy_blocks_malformed_raw_string_arguments(self):
         message = {
             "jsonrpc": "2.0",
             "id": "raw",
@@ -232,8 +232,23 @@ class TestV14MCPProxy(unittest.TestCase):
         inspection = inspect_jsonrpc_message(message)
 
         self.assertFalse(inspection["allowed"])
-        self.assertEqual(inspection["checks"][0]["field"], "$")
-        self.assertEqual(inspection["response"]["error"]["data"]["matched_rule"], "sql_drop_table")
+        self.assertEqual(inspection["coverage"]["status"], "failed")
+        self.assertIn("params.arguments", inspection["error"])
+        self.assertEqual(inspection["response"]["error"]["data"]["error"], inspection["error"])
+
+    def test_mcp_proxy_blocks_missing_tool_name(self):
+        message = {
+            "jsonrpc": "2.0",
+            "id": "missing-name",
+            "method": "tools/call",
+            "params": {"arguments": {"command": "mkdir /tmp/acb"}},
+        }
+
+        inspection = inspect_jsonrpc_message(message)
+
+        self.assertFalse(inspection["allowed"])
+        self.assertEqual(inspection["coverage"]["status"], "failed")
+        self.assertIn("params.name", inspection["error"])
 
     def test_mcp_proxy_without_run_guard_stops_unknown_and_remains_stateless(self):
         first = {

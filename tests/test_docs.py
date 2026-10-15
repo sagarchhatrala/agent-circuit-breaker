@@ -167,7 +167,8 @@ class TestRepositoryHygiene(unittest.TestCase):
         workflow = REPO_ROOT / ".github" / "workflows" / "ci.yml"
         content = workflow.read_text(encoding="utf-8")
 
-        self.assertIn("python -m unittest discover", content)
+        self.assertIn("python -m pytest -q", content)
+        self.assertIn("python -m build", content)
         self.assertIn("git diff --check", content)
         self.assertIn('"3.11"', content)
         self.assertIn('"3.12"', content)

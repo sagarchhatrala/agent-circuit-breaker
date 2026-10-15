@@ -25,10 +25,11 @@ The caller is responsible for:
 
 ## Decision Model
 
-Agent Circuit Breaker returns one of four decisions:
+Agent Circuit Breaker returns one of five decisions:
 
 - `ALLOW`: recognized safe operation or explicit allow rule with complete mandatory inspection.
 - `BLOCK`: a built-in or custom rule matched and denied the action.
+- `PENDING_APPROVAL`: action must not execute until a separate human approval workflow approves the same freshly evaluated action context.
 - `ERROR`: input, parsing, rule loading, or evaluation failed.
 - `UNKNOWN`: no rule matched and the action is not recognized as safe.
 
@@ -36,6 +37,7 @@ The recommended integration policy is:
 
 - execute only on `ALLOW`.
 - stop on `BLOCK`.
+- stop on `PENDING_APPROVAL` unless a separate approval workflow revalidates the fresh action context before execution.
 - stop on `ERROR`.
 - treat `UNKNOWN` as review-required unless the integration has a separate allowlist.
 
@@ -58,13 +60,63 @@ the integration explicitly opts in with `--allow-unknown` or
 
 ## Trajectory Evaluation
 
-Trajectory mode evaluates an ordered list of proposed actions and adds deterministic checks that require run history or an explicit run contract. It can detect patterns such as repeated blocked actions, write-like actions outside allowed scopes, forbidden target references, output-channel drift, unknown-action volume, and secret-like reads followed by egress.
+Trajectory mode evaluates an ordered list of proposed actions and adds deterministic checks that require run history or an explicit run contract. It can detect patterns such as repeated blocked actions, write-like actions outside allowed scopes, forbidden target references, output-channel drift, unknown-action volume, secret-like reads or transformations followed by egress, data export followed by upload, and external artifact download followed by local execution.
 
 Trajectory egress checks are heuristic and deterministic. They look for concrete command text that combines sensitive references, data-export shapes, and external egress channels. They are not data-loss prevention, content inspection, or proof that a transfer happened.
 
 Trajectory mode is still pre-execution analysis. It does not observe live operating-system side effects, prove that a secret was actually read, or prove that network egress occurred. Callers must send proposed actions in order and honor the aggregate trajectory verdict.
 
 The MCP proxy can opt in to trajectory evaluation with `--trajectory` or `--trajectory-policy`. In that mode, the proxy keeps in-memory state for one proxy process and evaluates string-valued `tools/call` arguments as a run sequence. This state is not persisted across proxy restarts unless the caller separately records audit events.
+
+## Stateful Runtime Gate
+
+`RuntimeGate` is an in-process stateful authorization API for trusted local
+agent harnesses. A caller creates a run contract, submits each proposed action
+before execution, receives an explicit authorization decision, and records the
+execution outcome only for the exact authorized action fingerprint.
+
+The runtime gate enforces these local invariants:
+
+- `authorized` is true only for aggregate trajectory verdict `allow`.
+- `UNKNOWN`, `ERROR`, `BLOCK`, and `PENDING_APPROVAL` are not executable.
+- every proposal is recorded in sequence before the next proposal is evaluated.
+- run status, expiration, cancellation, and `max_actions` are checked before
+  evaluating the next action.
+- authorized proposals receive an unguessable, single-use `authorization_id`.
+- `execute_authorized` rejects forged, denied, expired, cancelled, or replayed
+  authorizations before calling the executor.
+- `execute_authorized` records `started` before executor side effects and
+  records `executed` or `failed` afterward.
+- new proposals are blocked while a prior execution has `started` but has no
+  final outcome, preventing dependent actions from silently advancing on
+  unknown execution status inside one process.
+- optional `actor_tokens` bind an actor ID to a token held by the trusted
+  integration; token material is not serialized in public run state.
+- outcome reporting is bound to an authorized action fingerprint in the same run.
+
+The runtime gate does not authenticate operating-system users, execute tools,
+spawn replacement agents, or sandbox the process. If no `actor_tokens` are
+configured, `actor` and `delegated_by` are trusted integration metadata. If an
+agent can call the underlying shell, MCP client, database driver, or filesystem
+tool directly, it can bypass ACB. A trusted runtime must make ACB the only path
+to privileged tool execution.
+
+`propose_action` alone is an authorization decision, not execution binding. For
+new integrations, prefer `execute_authorized` so the trusted harness consumes
+the returned one-time authorization before side effects. Fingerprint-only
+`record_outcome` is retained for compatibility and audit flows, but it is weaker
+than consuming an authorization ID.
+
+`RuntimeToolExecutor` is the first-party integration wrapper for this flow. It
+does not execute shell commands itself. The host supplies a trusted executor
+callable, while ACB owns the authorization, single-use consumption, started
+event, and final outcome lifecycle. If the supplied executor is called directly
+outside `RuntimeToolExecutor`, that is an explicit bypass outside ACB's boundary.
+
+If a timeout or cancellation occurs after `started`, ACB records
+`unknown_execution_status` and blocks dependent proposals in that run. It does
+not automatically retry the action because the side effect may already have
+occurred.
 
 ## Run Ledger
 
@@ -79,6 +131,13 @@ This means a custom `allow` rule cannot override a built-in `block` rule. Custom
 ## Network Use
 
 Core command evaluation is offline by default. The only built-in network path is explicit central policy loading with `--policy https://...`. Cleartext `http://` policy URLs are rejected by default because policy data can change enforcement behavior; callers that intentionally accept insecure transport risk must pass `--allow-insecure-remote-policy`. Local policy auto-discovery never performs network I/O.
+
+ACB is not a TLS-intercepting network proxy. That keeps setup simple and avoids
+local certificate/TLS handshake breakage, but it also means ACB does not provide
+network-level egress enforcement. It can block a tool call whose proposed action
+text visibly attempts exfiltration. It cannot stop network traffic that bypasses
+the tool-call gate; use OS, container, VPC, firewall, or runtime egress controls
+for that boundary.
 
 ## Signed Policy and Rule Packs
 

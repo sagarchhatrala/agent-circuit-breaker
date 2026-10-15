@@ -10,6 +10,9 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 - [SECURITY_MODEL.md](SECURITY_MODEL.md)
 - [THREAT_MODEL.md](THREAT_MODEL.md)
 - [LONG_HORIZON_AGENT_SAFETY.md](LONG_HORIZON_AGENT_SAFETY.md)
+- [ADAPTER_ENFORCEMENT_MATRIX.md](ADAPTER_ENFORCEMENT_MATRIX.md)
+- [RUNTIME_PRINCIPALS_AND_CAPABILITIES.md](RUNTIME_PRINCIPALS_AND_CAPABILITIES.md)
+- [RUNTIME_PRODUCTION_HARDENING.md](RUNTIME_PRODUCTION_HARDENING.md)
 - [JSON_OUTPUT_CONTRACT.md](JSON_OUTPUT_CONTRACT.md)
 - [POLICY_ASSURANCE.md](POLICY_ASSURANCE.md)
 - [API.md](API.md)
@@ -39,6 +42,8 @@ Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It e
 - [Architecture](ARCHITECTURE.md)
 - [Design decisions](DESIGN_DECISIONS.md)
 - [ADR-0001: Domain Policy Packs And Decision Model](adr/ADR-0001-domain-policy-packs-and-decision-model.md)
+- [ADR-0002: Stateful Runtime Gate](adr/ADR-0002-stateful-runtime-gate.md)
+- [ADR-0003: Durable Runtime Store](adr/ADR-0003-durable-runtime-store.md)
 - [Roadmap](ROADMAP.md)
 
 ## Current Coverage
@@ -86,9 +91,14 @@ The current stable package includes:
 - MCP catalog pinning, tool-result prompt-injection scanning, and cross-tool secret taint tracking.
 - native hook scaffolds for Claude, Cursor, Codex, Gemini, and Copilot.
 - minimal HTTP JSON-RPC MCP proxy mode.
+- stateful RuntimeGate and RuntimeToolExecutor primitives with durable SQLiteRunStore support for local executor-bound authorization state.
+- trusted-runtime principal and capability checks for executor-bound paths, documented in `RUNTIME_PRINCIPALS_AND_CAPABILITIES.md`.
+- versioned runtime persistence, approval-bound execution, and operational diagnostics, documented in `RUNTIME_PRODUCTION_HARDENING.md`.
+- adapter enforcement classifications for RuntimeGate, MCP, API, CLI, and SDK surfaces, documented in `ADAPTER_ENFORCEMENT_MATRIX.md`.
 
 ## Release Notes
 
+- [v1.6.9](releases/v1.6.9.md)
 - [v1.6.8](releases/v1.6.8.md)
 - [v1.6.7](releases/v1.6.7.md)
 - [v1.6.6](releases/v1.6.6.md)

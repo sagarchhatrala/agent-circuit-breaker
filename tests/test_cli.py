@@ -2,10 +2,12 @@
 
 import unittest
 import json
+import os
 import sys
 import tempfile
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 from agent_circuit_breaker.cli import CircuitBreakerCLI, main
 
 
@@ -839,6 +841,22 @@ class TestCLIMain(unittest.TestCase):
             sys.argv = old_argv
             sys.stdout = old_stdout
 
+    def test_main_version_flag(self):
+        """Main supports --version with the package version."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            sys.argv = ["agent-circuit-breaker", "--version"]
+            sys.stdout = StringIO()
+            with self.assertRaises(SystemExit) as raised:
+                main()
+            output = sys.stdout.getvalue()
+            self.assertEqual(raised.exception.code, 0)
+            self.assertIn("agent-circuit-breaker 1.6.9", output)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
     def test_main_check_command_sql_json_analysis(self):
         """Main JSON output includes enforced SQL analysis."""
         old_argv = sys.argv
@@ -968,6 +986,35 @@ class TestCLIMain(unittest.TestCase):
             # Verify JSON output
             parsed = json.loads(output)
             self.assertIn("verdict", parsed)
+        finally:
+            sys.argv = old_argv
+            sys.stdout = old_stdout
+
+    def test_main_timeline_checkpoint_round_trip(self):
+        """Timeline can write and verify an audit checkpoint."""
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir, patch.dict(
+                os.environ,
+                {"ACB_AUDIT_LOG": str(Path(temp_dir) / "audit.jsonl")},
+                clear=False,
+            ):
+                checkpoint = Path(temp_dir) / "audit.checkpoint.json"
+
+                sys.argv = ["agent-circuit-breaker", "check", 'mkdir "/tmp/test"', "--audit"]
+                sys.stdout = StringIO()
+                self.assertEqual(main(), 0)
+
+                sys.argv = ["agent-circuit-breaker", "timeline", "--checkpoint", str(checkpoint)]
+                sys.stdout = StringIO()
+                self.assertEqual(main(), 0)
+                self.assertTrue(checkpoint.exists())
+
+                sys.argv = ["agent-circuit-breaker", "timeline", "--verify", "--checkpoint", str(checkpoint)]
+                sys.stdout = StringIO()
+                self.assertEqual(main(), 0)
+                self.assertIn("Audit Checkpoint Valid: TRUE", sys.stdout.getvalue())
         finally:
             sys.argv = old_argv
             sys.stdout = old_stdout

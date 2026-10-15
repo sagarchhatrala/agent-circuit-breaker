@@ -27,6 +27,55 @@ agent-circuit-breaker check "git push --force origin main" --format json
 
 The JSON contract is documented in `JSON_OUTPUT_CONTRACT.md`.
 
+## Add A Live Runtime Gate
+
+For an agent harness or subagent runner, do not submit history only after the
+fact. Gate each proposed action before the tool executes:
+
+```python
+from agent_circuit_breaker import RuntimeGate
+
+gate = RuntimeGate()
+run = await gate.create_run({
+    "allowed_actors": ["orchestrator"],
+    "require_actor": True,
+    "max_actions": 20,
+})
+
+decision = await gate.propose_action(
+    run.run_id,
+    {"command": "mkdir /tmp/acb-demo", "actor": "orchestrator"},
+)
+
+if decision.authorized:
+    # Execute through a single-use authorization.
+    await gate.execute_authorized(run.run_id, authorization_id=decision.authorization_id, executor=my_executor)
+```
+
+Only a trusted integration should hold actor tokens or decide whether to execute
+after `authorized: true`.
+
+The supported first-party wrapper is `RuntimeToolExecutor`:
+
+```python
+from agent_circuit_breaker import RuntimeGate, RuntimeToolExecutor
+
+gate = RuntimeGate()
+run = await gate.create_run({"allowed_actors": ["orchestrator"], "require_actor": True})
+
+tool = RuntimeToolExecutor(
+    gate,
+    run_id=run.run_id,
+    actor="orchestrator",
+    executor=lambda action: {"would_execute": action["command"]},
+)
+
+result = await tool.execute("mkdir /tmp/acb-demo")
+```
+
+Replace the lambda with a trusted adapter. Do not expose direct access to the
+underlying privileged tool if ACB is expected to enforce the boundary.
+
 ## Add A Custom Rule
 
 ```bash

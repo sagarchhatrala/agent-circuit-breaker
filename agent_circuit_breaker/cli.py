@@ -25,12 +25,14 @@ from agent_circuit_breaker.limits import (
 )
 from agent_circuit_breaker.plugins import discover_plugins, load_rule_plugins
 from agent_circuit_breaker.policy import load_policy
+from agent_circuit_breaker.production import evaluate_production_readiness, format_production_readiness
 from agent_circuit_breaker.profiles import apply_policy_mode, get_profile, profile_metadata
 from agent_circuit_breaker.rules.builtin_rules import BUILTIN_RULES
 from agent_circuit_breaker.rules.loader import RuleDefinitionBuilder, RuleFileLoader
 from agent_circuit_breaker.sarif import scan_to_sarif
 from agent_circuit_breaker.scan import format_scan_result, scan_paths
 from agent_circuit_breaker.trajectory import evaluate_trajectory
+from agent_circuit_breaker.validation import format_safe_validation, run_safe_environment_validation
 from agent_circuit_breaker.inspectors.filesystem import FilesystemInspector
 from agent_circuit_breaker.inspectors.command import CommandInspector
 from agent_circuit_breaker.inspectors.sql import SQLInspector
@@ -1010,7 +1012,7 @@ class CircuitBreakerCLI:
         return self._exit_code_for_verdict(result["verdict"])
 
     @staticmethod
-    def _parse_trajectory_payload(payload: Any) -> tuple[List[str], Optional[Dict[str, Any]]]:
+    def _parse_trajectory_payload(payload: Any) -> tuple[List[Any], Optional[Dict[str, Any]]]:
         """Return actions and optional contract from a JSON trajectory payload."""
         if isinstance(payload, list):
             actions = payload
@@ -1021,8 +1023,8 @@ class CircuitBreakerCLI:
         else:
             raise ValueError("trajectory file must contain a list or object")
 
-        if not isinstance(actions, list) or not all(isinstance(item, str) for item in actions):
-            raise ValueError("trajectory actions must be a list of strings")
+        if not isinstance(actions, list) or not all(isinstance(item, (str, dict)) for item in actions):
+            raise ValueError("trajectory actions must be a list of strings or objects")
         if len(actions) > MAX_TRAJECTORY_ACTIONS:
             raise ValueError(f"trajectory actions exceed {MAX_TRAJECTORY_ACTIONS}")
         return actions, contract
@@ -1123,9 +1125,41 @@ class CircuitBreakerCLI:
             print(output["instructions"])
         return 0
 
-    def run_timeline_mode(self, limit: int = 20, verify: bool = False) -> int:
+    def run_timeline_mode(
+        self,
+        limit: int = 20,
+        verify: bool = False,
+        checkpoint_path: Optional[str] = None,
+    ) -> int:
         """Print recent audit log entries or verify the audit chain."""
         audit_log = AuditLog()
+        if checkpoint_path:
+            path = Path(checkpoint_path)
+            if verify:
+                try:
+                    checkpoint = json.loads(path.read_text(encoding="utf-8"))
+                    result = audit_log.verify_checkpoint(checkpoint)
+                except Exception as exc:
+                    result = {"is_valid": False, "error": str(exc)}
+                if self.output_format == "json":
+                    print(json.dumps(result, indent=2))
+                else:
+                    print(f"Audit Checkpoint Valid: {str(result['is_valid']).upper()}")
+                    if result.get("error"):
+                        print(f"Error: {result['error']}")
+                return 0 if result["is_valid"] else 1
+
+            checkpoint = audit_log.checkpoint()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(checkpoint, indent=2, sort_keys=True), encoding="utf-8")
+            if self.output_format == "json":
+                print(json.dumps({"checkpoint_path": str(path), "checkpoint": checkpoint}, indent=2))
+            else:
+                print(f"Audit checkpoint: {path}")
+                print(f"Entries: {checkpoint['entry_count']}")
+                print(f"Last hash: {checkpoint['last_entry_hash'] or '-'}")
+            return 0
+
         if verify:
             result = audit_log.verify()
             if self.output_format == "json":
@@ -1249,6 +1283,150 @@ class CircuitBreakerCLI:
         print(json.dumps(plugins, indent=2) if self.output_format == "json" else plugins)
         return 0
 
+    def run_runtime_health_mode(self, store_path: str) -> int:
+        """Inspect RuntimeGate SQLite store health without executing tools."""
+        import asyncio
+        from agent_circuit_breaker.runtime import SQLiteRunStore
+
+        async def load_health() -> Dict[str, Any]:
+            store = SQLiteRunStore(store_path)
+            return await store.health()
+
+        health = asyncio.run(load_health())
+        if self.output_format == "json":
+            print(json.dumps(health, indent=2, sort_keys=True))
+        else:
+            print(f"runtime store: {health['store']}")
+            print(f"schema version: {health['schema_version']}")
+            print(f"runs: {health['run_count']}")
+            print(f"unresolved execution runs: {health['unresolved_execution_runs']}")
+        return 0
+
+    def run_runtime_inspect_mode(self, store_path: str, run_id: str) -> int:
+        """Inspect one runtime run without changing state or executing tools."""
+        import asyncio
+        from agent_circuit_breaker.runtime import SQLiteRunStore
+
+        async def load_run() -> Dict[str, Any]:
+            store = SQLiteRunStore(store_path)
+            state = await store.read(run_id)
+            event_types = [event.event_type for event in state.events]
+            unresolved = [
+                event.authorization_id
+                for event in state.events
+                if event.event_type == "started"
+                and event.authorization_id
+                and not any(
+                    later.event_type in {"outcome", "reconciliation"}
+                    and later.authorization_id == event.authorization_id
+                    for later in state.events
+                )
+            ]
+            reconciliations = [
+                {
+                    "authorization_id": event.authorization_id,
+                    "sequence": event.sequence,
+                    "outcome": event.outcome,
+                    "reason_code": event.reason_code,
+                }
+                for event in state.events
+                if event.event_type == "reconciliation"
+            ]
+            approvals = [
+                {
+                    "approval_id": event.approval_id,
+                    "sequence": event.sequence,
+                    "reason_code": event.reason_code,
+                    "decision": event.decision,
+                }
+                for event in state.events
+                if event.event_type in {"approval", "approval_consumed", "approval_revocation"}
+            ]
+            return {
+                "run_id": state.run_id,
+                "status": state.status,
+                "version": state.version,
+                "last_reason": state.last_reason,
+                "event_count": len(state.events),
+                "event_types": event_types,
+                "unresolved_authorizations": unresolved,
+                "reconciliations": reconciliations,
+                "approvals": approvals,
+                "events": [event.to_dict() for event in state.events],
+            }
+
+        payload = asyncio.run(load_run())
+        if self.output_format == "json":
+            print(json.dumps(payload, indent=2, sort_keys=True, default=str))
+        else:
+            print(f"run: {payload['run_id']}")
+            print(f"status: {payload['status']}")
+            print(f"version: {payload['version']}")
+            print(f"events: {payload['event_count']} ({', '.join(payload['event_types'])})")
+            if payload["unresolved_authorizations"]:
+                print("unresolved authorizations: " + ", ".join(payload["unresolved_authorizations"]))
+            if payload["reconciliations"]:
+                print(f"reconciliations: {len(payload['reconciliations'])}")
+            if payload["last_reason"]:
+                print(f"last reason: {payload['last_reason']}")
+        return 0
+
+    def run_production_check_mode(
+        self,
+        *,
+        target: str,
+        runtime_store_path: Optional[str],
+        audit_log_path: Optional[str],
+        require_audit_hmac: bool,
+    ) -> int:
+        """Run local production-readiness checks without executing tools."""
+        import asyncio
+
+        result = asyncio.run(
+            evaluate_production_readiness(
+                target=target,
+                runtime_store_path=runtime_store_path,
+                audit_log_path=audit_log_path,
+                require_audit_hmac=require_audit_hmac,
+            )
+        )
+        if self.output_format == "json":
+            print(json.dumps(result, indent=2, sort_keys=True))
+        else:
+            print(format_production_readiness(result))
+        return 0 if result["is_production_ready"] else 1
+
+    def run_safe_validate_mode(self, validation_root: Optional[str]) -> int:
+        """Run safe local validation against synthetic side effects."""
+        import asyncio
+
+        try:
+            result = asyncio.run(run_safe_environment_validation(validation_root))
+        except Exception as exc:
+            result = {
+                "schema_version": 1,
+                "root": validation_root,
+                "result_count": 0,
+                "failures": [
+                    {
+                        "id": "safe_validation_error",
+                        "passed": False,
+                        "evidence": {"error": str(exc)},
+                    }
+                ],
+                "results": [],
+            }
+            if self.output_format == "json":
+                print(json.dumps(result, indent=2, sort_keys=True))
+            else:
+                print(f"Safe validation failed: {exc}", file=sys.stderr)
+            return 1
+        if self.output_format == "json":
+            print(json.dumps(result, indent=2, sort_keys=True))
+        else:
+            print(format_safe_validation(result))
+        return 0 if not result["failures"] else 1
+
     @staticmethod
     def _exit_code_for_verdict(verdict: str) -> int:
         """Return CLI exit code for a verdict string."""
@@ -1349,6 +1527,8 @@ Usage:
   agent-circuit-breaker validate-rules <PATH> [OPTIONS]
   agent-circuit-breaker rules test <PATH> [OPTIONS]
   agent-circuit-breaker schemas [NAME]
+  agent-circuit-breaker production-check --runtime-store <STORE.sqlite3>
+  agent-circuit-breaker safe-validate [--validation-root PATH]
   agent-circuit-breaker catalog [--format json]
   agent-circuit-breaker -c <ACTION> [OPTIONS]
   agent-circuit-breaker -i [OPTIONS]
@@ -1374,6 +1554,12 @@ Options:
                           Allow auto-discovered repository policy to weaken controls
   --plugins               Load optional rule-provider plugins
   --sarif                 Emit SARIF for scan mode
+  --checkpoint PATH       Write or verify an audit checkpoint with timeline
+  --runtime-store PATH    RuntimeGate SQLite store for production-check
+  --audit-log PATH        Audit log path for production-check
+  --target TARGET         Production target: local-runtime or general-containment
+  --require-audit-hmac    Require ACB_AUDIT_HMAC_KEY for production-check
+  --validation-root PATH  Local root for safe-validate evidence
 
 Examples:
   agent-circuit-breaker check 'rm -rf /'              # Evaluate an action
@@ -1386,12 +1572,15 @@ Examples:
   agent-circuit-breaker trajectory ./agent-run.json --format json
   agent-circuit-breaker install-hooks --write
   agent-circuit-breaker timeline --verify
+  agent-circuit-breaker timeline --checkpoint ./audit.checkpoint.json
   agent-circuit-breaker ledger --verify
   agent-circuit-breaker approvals list
   agent-circuit-breaker plugins --format json
   agent-circuit-breaker validate-rules ./rules.json
   agent-circuit-breaker rules test ./policy-tests
   agent-circuit-breaker schemas rule-file
+  agent-circuit-breaker production-check --runtime-store ./runtime.sqlite3
+  agent-circuit-breaker safe-validate
   agent-circuit-breaker catalog --format json
   agent-circuit-breaker -c 'mv /src /dst' -v          # Compatibility shortcut
 
@@ -1418,6 +1607,7 @@ def main() -> int:
     )
 
     parser.add_argument("-h", "--help", action="store_true", help="Show help message")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("-i", "--interactive", action="store_true", help="Interactive mode")
     parser.add_argument(
         "--format",
@@ -1455,9 +1645,24 @@ def main() -> int:
     )
     parser.add_argument("--plugins", action="store_true", help="Load installed rule plugins")
     parser.add_argument("--sarif", action="store_true", help="Emit SARIF for scan mode")
+    parser.add_argument("--checkpoint", dest="checkpoint_path", help="Audit checkpoint path")
     parser.add_argument("--write", action="store_true", help="Write generated scaffolds where supported")
     parser.add_argument("--agent", default="generic", help="Agent name for hook instructions")
     parser.add_argument("--path", default=".", help="Output path for generated scaffolds")
+    parser.add_argument("--runtime-store", dest="runtime_store_path", help="RuntimeGate SQLite store path")
+    parser.add_argument("--audit-log", dest="audit_log_path", help="Audit log path")
+    parser.add_argument(
+        "--target",
+        choices=("local-runtime", "general-containment"),
+        default="local-runtime",
+        help="Production-check target scope",
+    )
+    parser.add_argument(
+        "--require-audit-hmac",
+        action="store_true",
+        help="Require ACB_AUDIT_HMAC_KEY for production-check",
+    )
+    parser.add_argument("--validation-root", dest="validation_root", help="Safe validation root path")
     parser.add_argument("--limit", type=int, default=20, help="Timeline entry limit")
     parser.add_argument("--verify", action="store_true", help="Verify audit log hash chain")
     parser.add_argument(
@@ -1559,7 +1764,11 @@ def main() -> int:
                 return cli.run_install_hooks_mode(args.agent, args.path, args.write)
 
             if args.command_parts[0] == "timeline":
-                return cli.run_timeline_mode(limit=args.limit, verify=args.verify)
+                return cli.run_timeline_mode(
+                    limit=args.limit,
+                    verify=args.verify,
+                    checkpoint_path=args.checkpoint_path,
+                )
 
             if args.command_parts[0] == "ledger":
                 run_id = args.command_parts[1] if len(args.command_parts) >= 2 else None
@@ -1571,6 +1780,23 @@ def main() -> int:
 
             if args.command_parts[0] == "plugins":
                 return cli.run_plugins_mode()
+
+            if args.command_parts[0] == "runtime-health" and len(args.command_parts) == 2:
+                return cli.run_runtime_health_mode(args.command_parts[1])
+
+            if args.command_parts[0] == "runtime-inspect" and len(args.command_parts) == 3:
+                return cli.run_runtime_inspect_mode(args.command_parts[1], args.command_parts[2])
+
+            if args.command_parts[0] == "production-check":
+                return cli.run_production_check_mode(
+                    target=args.target,
+                    runtime_store_path=args.runtime_store_path,
+                    audit_log_path=args.audit_log_path,
+                    require_audit_hmac=args.require_audit_hmac,
+                )
+
+            if args.command_parts[0] == "safe-validate":
+                return cli.run_safe_validate_mode(args.validation_root)
 
             if args.command_parts[0] == "profiles":
                 print(json.dumps(profile_metadata(), indent=2) if output_format == "json" else profile_metadata())

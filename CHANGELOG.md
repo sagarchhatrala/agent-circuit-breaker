@@ -4,6 +4,41 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.6.9] - 2026-10-15
+
+### Security
+
+- Added the executor-bound `RuntimeGate` and `RuntimeToolExecutor` local
+  runtime path, including single-use authorizations, approval-bound execution,
+  principal/capability checks, durable SQLite state, suspension, revocation,
+  reconciliation, and fail-closed handling for unresolved execution outcomes.
+- Added HMAC-aware audit checkpoints and verification semantics for detecting
+  local audit tampering and tail truncation when checkpoints are retained
+  outside the mutable audit-log trust boundary.
+- Added `production-check` for the supported single-host local runtime scope,
+  with explicit blockers for unsupported general containment claims.
+- Added `safe-validate` for synthetic local validation of allowed execution,
+  denied execution, approval consumption, audit checkpointing, and readiness
+  checks.
+- Added runtime and readiness regressions for missing state, corrupt state,
+  unsupported schema, unresolved execution, replayed approvals, concurrent
+  consumption, process restart, and checkpoint behavior.
+
+### Changed
+
+- `production-check` now fails on a missing configured runtime SQLite store
+  instead of creating a fresh empty database and treating it as healthy.
+- `safe-validate` now refuses to overwrite pre-existing managed validation
+  artifacts under its evidence directory.
+- Public security documentation now distinguishes executor-bound RuntimeGate
+  enforcement from advisory CLI, SDK, MCP, and policy-evaluation surfaces.
+
+### Compatibility
+
+- Existing v1.x advisory CLI/API result contracts remain additive.
+- The production-ready verdict is scoped to the local RuntimeGate deployment
+  target only; it is not an OS sandbox or arbitrary-agent containment claim.
+
 ## [1.6.8] - 2026-10-05
 
 ### Security
