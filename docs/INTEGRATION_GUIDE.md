@@ -1,3 +1,7 @@
+> v1.7.0: use the [current host integration guides](integrations/README.md) and
+> [enforcement matrix](ADAPTER_ENFORCEMENT_MATRIX.md). Historical generic hook
+> examples below do not establish native-host event compatibility.
+
 ﻿# Integration Guide
 
 Agent Circuit Breaker should sit between an agent and any execution layer.

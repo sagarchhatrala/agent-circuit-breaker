@@ -42,12 +42,20 @@ jobs:
       - name: Check package metadata
         run: python -m twine check dist/agent_circuit_breaker-*.whl dist/agent_circuit_breaker-*.tar.gz
 
-      - name: Smoke installed wheel
+      - name: Smoke exact wheel outside checkout
         run: |
-          python -m pip uninstall -y agent-circuit-breaker
-          python -m pip install --no-index --find-links dist agent-circuit-breaker
-          python -c "import agent_circuit_breaker, importlib.metadata as m; assert agent_circuit_breaker.__version__ == m.version('agent-circuit-breaker')"
-          agent-circuit-breaker check "mkdir /tmp/acb-ci-smoke"
+          python -m venv /tmp/acb-ci-wheel
+          /tmp/acb-ci-wheel/bin/pip install --no-index dist/*.whl
+          cd /tmp
+          /tmp/acb-ci-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/package_smoke.py"
+          /tmp/acb-ci-wheel/bin/agent-circuit-breaker --version
+          /tmp/acb-ci-wheel/bin/agent-circuit-breaker demo --doctor
+
+      - name: Check real MCP SDK interoperability
+        run: |
+          /tmp/acb-ci-wheel/bin/pip install 'mcp==2.3.0'
+          cd /tmp
+          /tmp/acb-ci-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/mcp_sdk_smoke.py"
 
       - name: Check whitespace
         run: git diff --check

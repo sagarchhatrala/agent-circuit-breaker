@@ -23,6 +23,7 @@ Run:
 python -m build
 python -m twine check dist/agent_circuit_breaker-<version>.tar.gz dist/agent_circuit_breaker-<version>-py3-none-any.whl
 python -m unittest discover
+python -m pytest -q
 git diff --check
 ```
 
@@ -85,19 +86,21 @@ Expected:
 ## Git And GitHub
 
 - Commit release prep.
-- Push `main`.
+- Push the release branch and merge its PR after required checks on protected `main`.
 - Create the release tag.
 - Push the release tag.
-- Create the GitHub Release from `docs/releases/<version>.md`.
+- Dispatch `publish.yml` from the immutable tag; wait for all publication/smoke jobs.
+- Create the GitHub Release from `docs/releases/<version>.md` after publishing passes.
 - Verify the release appears in the GitHub Releases tab.
 - Verify `git status --short` is clean.
 
 ## Package Publishing
 
-- Build artifacts with `python -m build`.
+- Build authoritative artifacts once in CI with `python -m build`; local builds are preparation only.
 - Validate artifacts with explicit source distribution and wheel filenames.
-- Confirm the GitHub Release `Publish` workflow publishes to TestPyPI first.
-- Confirm the same workflow publishes to PyPI after TestPyPI succeeds.
+- Confirm the tag-dispatched `Publish` workflow publishes to TestPyPI first.
+- Confirm indexed TestPyPI wheel and sdist match authoritative checksums; install and smoke the wheel.
+- Confirm the same workflow publishes identical artifacts to PyPI after those gates pass.
 - Verify `pip install agent-circuit-breaker==<version>` works.
 
 ## Release Notes

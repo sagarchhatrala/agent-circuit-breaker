@@ -39,6 +39,14 @@ class RuntimeStoreError(RuntimeError):
     reason_code = "STORE_ERROR"
 
 
+class ExecutionUncertain(RuntimeError):
+    """The executor cannot establish whether an external effect completed.
+
+    Trusted remote adapters must raise this on disconnect, ambiguous responses,
+    or timeout after handing off a request. It prevents automatic retries.
+    """
+
+
 class RuntimeStoreUnavailable(RuntimeStoreError):
     reason_code = "STORE_UNAVAILABLE"
 
@@ -346,7 +354,7 @@ class RuntimeState:
 
     def to_dict(self) -> Dict[str, Any]:
         payload = asdict(self)
-        payload["events"] = [event.to_dict() for event in self.events]
+        payload["events"] = list(payload["events"])
         return payload
 
 
@@ -841,10 +849,22 @@ class RuntimeGate:
         store: InMemoryRunStore | None = None,
         evaluator: Evaluator | None = None,
         clock: Callable[[], float] = time.time,
+        compact_trajectory_events: bool = False,
     ) -> None:
+        self.compact_trajectory_events = compact_trajectory_events
         self.store = store or InMemoryRunStore()
         self.evaluator = evaluator or evaluate_action
         self.clock = clock
+
+    def _event_trajectory(self, trajectory: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.compact_trajectory_events:
+            return trajectory
+        # Each proposal already preserves its canonical action. Avoid storing
+        # every prior action evaluation again inside every later event. This is
+        # opt-in for new adapters; legacy RuntimeGate event shape is unchanged.
+        return {**{key: value for key, value in trajectory.items() if key != "actions"},
+                "event_evidence": "summary_and_current_action",
+                "current_evaluation": trajectory["actions"][-1] if trajectory.get("actions") else None}
 
     async def create_run(
         self,
@@ -912,7 +932,7 @@ class RuntimeGate:
                     timestamp=now,
                     authorization_id=authorization_id,
                     policy_fingerprint=contract.policy_fingerprint,
-                    trajectory=trajectory,
+                    trajectory=self._event_trajectory(trajectory),
                     reason_code=reason_code,
                 )
                 next_status = "active" if (authorized or approval_required) else "blocked"
@@ -1038,7 +1058,7 @@ class RuntimeGate:
             await self.record_outcome(
                 run_id,
                 authorization_id=authorization_id,
-                outcome="failed",
+                outcome="unknown_execution_status" if isinstance(exc, ExecutionUncertain) else "failed",
                 details={
                     "error_type": exc.__class__.__name__,
                     "error": str(exc),
@@ -1295,7 +1315,7 @@ class RuntimeGate:
             await self.record_outcome(
                 run_id,
                 authorization_id=authorization_id,
-                outcome="failed",
+                outcome="unknown_execution_status" if isinstance(exc, ExecutionUncertain) else "failed",
                 details={
                     "error_type": exc.__class__.__name__,
                     "error": str(exc),
@@ -1334,6 +1354,14 @@ class RuntimeGate:
             contract = self.store.contract_for(state.run_id)
             if matching.policy_fingerprint != contract.policy_fingerprint:
                 raise ValueError("authorization policy context changed")
+            if _has_uncertain_execution(state) or _has_unresolved_execution(state):
+                raise ValueError("run has unresolved execution")
+            # Authentication already happened at proposal time. Recheck the
+            # time-sensitive capability at the atomic start transition too.
+            capability_id = (matching.action or {}).get("capability_id")
+            grant = next((item for item in contract.capabilities if item.capability_id == capability_id), None)
+            if grant is not None and grant.expires_at is not None and now >= grant.expires_at:
+                raise ValueError("capability expired")
             event = RuntimeEvent(
                 sequence=len(state.events),
                 event_type="started",
@@ -1423,7 +1451,7 @@ class RuntimeGate:
                 timestamp=now,
                 authorization_id=authorization_id,
                 policy_fingerprint=contract.policy_fingerprint,
-                trajectory=trajectory,
+                trajectory=self._event_trajectory(trajectory),
                 reason_code="AUTHORIZED",
                 approval_id=approval.approval_id,
             )

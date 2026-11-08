@@ -1,101 +1,155 @@
 name: Publish
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       repository:
-        description: "Package repository target"
+        description: Package repository target (run from a version tag)
         required: true
-        default: "pypi"
+        default: pypi
         type: choice
-        options:
-          - pypi
-          - testpypi
+        options: [pypi, testpypi]
 
 permissions:
   contents: read
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    name: build-distribution
+  validate:
+    name: release-test-python-${{ matrix.python-version }}
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - uses: actions/checkout@v7
         with:
-          python-version: "3.12"
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Validate immutable tag and source
+        env:
+          RELEASE_REF: ${{ github.ref }}
+        run: |
+          python -c "import os; assert os.environ['RELEASE_REF'].startswith('refs/tags/v'), 'publish only from immutable version tag'"
+          git merge-base --is-ancestor HEAD origin/main
+          python -c "import os, agent_circuit_breaker as a; assert os.environ['RELEASE_REF'] == 'refs/tags/v' + a.__version__"
+      - run: python -m pip install -e . pytest
+      - run: python -m pytest -q
+      - run: git diff --check
 
-      - name: Install build tools
-        run: python -m pip install --upgrade build twine
-
-      - name: Build package
+  build:
+    name: build-validated-distributions
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --upgrade build twine
+      - name: Single authoritative build (wheel built from sdist)
         run: python -m build
-
-      - name: Check package metadata
-        run: python -m twine check dist/*
-
-      - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v7
+      - run: python -m twine check dist/*
+      - name: Inspect artifacts and record source checksums
+        run: |
+          python scripts/check_release_artifacts.py --version "${GITHUB_REF_NAME#v}" --revision "$GITHUB_SHA"
+      - name: Test exact wheel in clean environment outside checkout
+        run: |
+          python -m venv /tmp/acb-wheel
+          /tmp/acb-wheel/bin/pip install --no-index dist/*.whl
+          cd /tmp
+          /tmp/acb-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/package_smoke.py" "${GITHUB_REF_NAME#v}"
+          /tmp/acb-wheel/bin/agent-circuit-breaker --version
+          /tmp/acb-wheel/bin/agent-circuit-breaker demo --doctor > /tmp/acb-doctor.json
+      - uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions
           path: dist/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-provenance
+          path: |
+            release-manifest.json
+            SHA256SUMS
 
   publish-testpypi:
-    name: publish-testpypi
     needs: build
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.repository == 'testpypi' || github.event.inputs.repository == 'pypi'))
     runs-on: ubuntu-latest
     environment:
       name: testpypi
       url: https://test.pypi.org/project/agent-circuit-breaker/
-
     permissions:
       contents: read
       id-token: write
-
     steps:
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v8
         with:
           name: python-package-distributions
           path: dist/
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
+
+  testpypi-smoke:
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-provenance
+          path: provenance/
+      - name: Download TestPyPI artifact, compare bytes, install and execute
+        run: |
+          python scripts/download_release.py provenance/release-manifest.json test.pypi.org downloaded
+          python -m venv /tmp/acb-testpypi
+          /tmp/acb-testpypi/bin/pip install --no-index downloaded/*.whl
+          cd /tmp
+          /tmp/acb-testpypi/bin/python -I "$GITHUB_WORKSPACE/scripts/package_smoke.py" "${GITHUB_REF_NAME#v}"
 
   publish-pypi:
-    name: publish-pypi
-    needs:
-      - build
-      - publish-testpypi
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.repository == 'pypi')
+    needs: [build, testpypi-smoke]
+    if: github.event.inputs.repository == 'pypi'
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/project/agent-circuit-breaker/
-
     permissions:
       contents: read
       id-token: write
-
     steps:
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v8
         with:
           name: python-package-distributions
           path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+  pypi-smoke:
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          skip-existing: true
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-provenance
+          path: provenance/
+      - name: Verify public PyPI bytes and fresh installed behavior
+        run: |
+          python scripts/download_release.py provenance/release-manifest.json pypi.org downloaded
+          python -m venv /tmp/acb-pypi
+          /tmp/acb-pypi/bin/pip install --no-index downloaded/*.whl
+          cd /tmp
+          /tmp/acb-pypi/bin/python -I "$GITHUB_WORKSPACE/scripts/package_smoke.py" "${GITHUB_REF_NAME#v}"
+          /tmp/acb-pypi/bin/agent-circuit-breaker --version
+          /tmp/acb-pypi/bin/agent-circuit-breaker demo --doctor > /tmp/acb-pypi-doctor.json

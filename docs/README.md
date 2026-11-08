@@ -1,6 +1,19 @@
+# v1.7.0 practical entry points
+
+- [Packaged offline demonstration](DEMO.md)
+- [Host integrations and tested versions](integrations/README.md)
+- [Typed workflow security](WORKFLOW_SECURITY.md)
+- [Independent scenario review](validation/v1.7.0-independent-review.md)
+- [v1.7.0 release notes](releases/v1.7.0.md)
+
+The historical architecture/release documents below remain reference material.
+Use the integration pages above for current host configuration.
+
 # Agent Circuit Breaker Documentation
 
 Agent Circuit Breaker is a local-first safety runtime for AI coding agents. It evaluates proposed shell commands, filesystem operations, SQL text, and MCP tool-call arguments before execution.
+
+[v1.7.0 measured validation](validation/v1.7.0-results.md) · [Release notes](releases/v1.7.0.md)
 
 ## Start Here
 

@@ -134,3 +134,8 @@ Thumbs.db
 # Project-specific
 *.bak
 .local/
+
+# Owner-private integration backups and generated release evidence
+.acb-integrations/
+release-manifest.json
+SHA256SUMS
