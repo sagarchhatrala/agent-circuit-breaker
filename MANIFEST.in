@@ -3,5 +3,8 @@ include CHANGELOG.md
 include CONTRIBUTING.md
 include QUICKSTART.md
 include SECURITY.md
-recursive-include docs *.md *.json *.svg
+recursive-include docs *.md *.json *.svg *.png
 recursive-include examples *.md *.py *.json
+
+recursive-include agent_circuit_breaker/demo_assets *.html *.css *.js
+recursive-include scripts *.py

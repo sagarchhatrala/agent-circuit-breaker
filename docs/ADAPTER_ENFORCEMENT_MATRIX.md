@@ -1,39 +1,34 @@
-# Adapter Enforcement Matrix
+# Adapter enforcement matrix
 
-Date: 2026-10-15
+Reviewed for v1.7.0, November 8, 2026. Enforcement assumes the owner process,
+policy/state and executors cannot be modified or bypassed by the agent.
 
-This matrix classifies ACB entry points for the single-host, trusted
-executor-bound deployment model. "Enforced" means the path owns the protected
-side effect and checks RuntimeGate state before invoking the executor.
+| Entry point | Who executes? | Authorization / approvals | Durable start / outcome | Scope |
+|---|---|---|---|---|
+| `Workflow.call` | ACB typed executor | Owner policy; derived resources; exact artifact versions; single-use approval | RuntimeGate + SQLite | Pinned reads, copies, Base64, fixed report generation, bounded Git status, owner-supplied publisher |
+| `workflow-mcp` | ACB typed executor | Same dispatcher; client metadata cannot grant authority | Same lifecycle | stdio modern 2026-07-28 and legacy initialization; six fixed tools |
+| Responses `Dispatcher` | Application's ACB executor | Same typed contract; duplicate call IDs never reexecute | Same lifecycle | Application-side function calls; hosted tools excluded |
+| `RegisteredMCPBridge` | Trusted transport forwards to registered upstream | Explicit owner registrations, reviewed catalog hash, principal, resource, capability | Before forward and after report; uncertain on error/timeout/cancel | Library integration for bounded string arguments and text results; not a generic secure MCP server |
+| `RuntimeToolExecutor` / `RuntimeGate.execute_*` | Trusted caller-supplied executor | Configured capabilities, exact approvals, policy checks | Yes | Caller must correctly bind actual execution and mark ambiguous remote failures `ExecutionUncertain` |
+| Claude native hook | Claude Code | PreToolUse permit/deny from documented payload | No executor-owned lifecycle | Host owns execution; fixture-tested, native host unavailable |
+| Cursor native hooks | Cursor | Separate documented shell/MCP format | No executor-owned lifecycle | Desktop-targeted fixtures; native desktop/CLI unavailable |
+| Legacy stdio MCP proxy | Upstream server | Inspects command-like arguments; catalog/taint evidence | No RuntimeGate lifecycle | Can prevent forwarding; not executor-owned authorization |
+| Legacy HTTP proxy | Upstream server | Same limited inspection | No lifecycle | Custom JSON POST bridge; not full Streamable HTTP |
+| CLI `check`, `scan`, `trajectory`, `explain`; evaluation/pipeline SDK | Caller | Evaluation only | No | Only `ALLOW` may be executed by a trusted caller |
+| Advisory ApprovalStore | Nobody | Local review records | No | Not RuntimeGate execution authority |
+| Native tools, other MCP servers, direct subprocess calls | Host/caller | Outside this path | No | Not protected by configuring ACB-mediated tools |
 
-| Entry point | Side effects | Principal/capability | Policy/history | Approval | Suspension/revocation | Durable consumption/start/outcome | Classification |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `RuntimeToolExecutor.execute(...)` without `approval_id` | Yes, through caller executor | Enforced when contract configures tokens/capabilities | RuntimeGate trajectory and persisted run history | Returns `pending_approval` when configured; does not execute | Enforced before start | Yes | Enforced |
-| `RuntimeToolExecutor.execute(..., approval_id=...)` | Yes, through caller executor | Enforced | RuntimeGate trajectory and persisted run history | Exact approval consumed once | Enforced before start | Yes | Enforced |
-| `RuntimeGate.execute_authorized(...)` | Yes, through caller executor | Bound at proposal; policy fingerprint rechecked at start | RuntimeGate persisted history | Not for approval-required actions | Enforced before start | Yes | Enforced |
-| `RuntimeGate.execute_approved(...)` | Yes, through caller executor | Enforced before approval and start | RuntimeGate persisted history | Exact approval consumed once | Enforced before start | Yes | Enforced |
-| `RuntimeGate.propose_action(...)` | No | Evaluates authority before issuing authorization | Yes | Can return `pending_approval` | Yes | Proposal only | Advisory authorization step |
-| `RuntimeGate.record_outcome(...)` | No | Matches existing authorization | Store integrity checked | N/A | Does not start execution | Outcome only | Evidence API |
-| `RuntimeGate.reconcile_execution(...)` | No | Trusted reconciler token when configured | Matches started execution | N/A | Does not start execution | Reconciliation event only | Recovery evidence API |
-| MCP stdio proxy | Forwards to upstream MCP server if allowed | None beyond caller/tool metadata | Evaluates command-like arguments and optional trajectory | Advisory only, not RuntimeGate approvals | No RuntimeGate suspension/revocation | No RuntimeGate start/outcome | Advisory proxy |
-| `AgentCircuitBreaker` / `PipelineEngine` SDK | No direct execution | None | Guard evaluation only | Advisory result only | Pipeline state only | No RuntimeGate start/outcome | Advisory |
-| `evaluate_action`, `evaluate_trajectory`, CLI `check`, `scan`, `trajectory`, `explain` | No direct protected execution | Caller metadata only | Deterministic evaluation | Advisory/local review only | No RuntimeGate suspension/revocation | No RuntimeGate start/outcome | Advisory |
-| ApprovalStore in `approvals.py` | No execution | Local file review record | Binds to evaluation result hash | Review queue only | No RuntimeGate revocation | No execution start/outcome | Advisory review evidence |
-| Direct caller executor/tool/subprocess invocation | Yes | None from ACB | None unless caller separately evaluates | None | None | None | Untrusted/direct |
+`ALLOW`, `BLOCK`, `UNKNOWN`, `PENDING_APPROVAL`, and `ERROR` remain distinct.
+Unknown/failed checks never become execution permission. Native hook JSON uses the
+host's allow/deny schema while including the original ACB outcome in its reason.
 
-## Common Enforced Contract
+An upstream transport write means forwarding started. A JSON-RPC error or timeout
+cannot prove that no remote effect happened. A valid success is a **server-reported
+completion**, not independent evidence of a remote effect. The demo collector
+separately observes exact received bytes. Unresolved non-idempotent operations are
+not retried automatically; reconcile using trusted external evidence.
 
-Every enforced path must:
-
-1. use trusted integration-supplied principal, capability, and token context;
-2. canonicalize the action and target;
-3. evaluate current policy and persisted run history;
-4. require an exact approval for configured approval scopes;
-5. validate SQLite schema and runtime-state integrity;
-6. check current suspension, revocation, policy fingerprint, and unresolved state;
-7. atomically consume authorization or approval before side effects;
-8. durably record `started` before invoking the executor;
-9. record `outcome` or preserve unresolved execution for reconciliation.
-
-Advisory integrations can be useful for blocking or warning, but they must not
-be described as providing RuntimeGate's executor-bound guarantees.
+Catalog hashes bind definitions, not implementation code, credentials, or server
+trustworthiness. Legacy first-contact pinning is visibly labeled TOFU; changed/new
+catalog entries require explicit review. The registered bridge requires owner-pinned
+catalog definitions before first use.

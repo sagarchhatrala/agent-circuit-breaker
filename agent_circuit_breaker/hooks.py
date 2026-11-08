@@ -12,14 +12,14 @@ import sys
 def main() -> int:
     command = " ".join(sys.argv[1:]).strip()
     if not command:
-        return 0
+        return 1
     result = subprocess.run(
         ["agent-circuit-breaker", "check", command],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    if result.returncode in (0, 2):
+    if result.returncode == 0:
         return 0
     sys.stderr.write(result.stdout)
     if result.stderr:
@@ -37,7 +37,7 @@ def hook_instructions(agent: str = "generic") -> str:
     return (
         "Create a pre-command hook that calls:\n"
         "  agent-circuit-breaker check \"<command>\"\n\n"
-        "Allow exit code 0, stop on exit code 1, and treat exit code 2 as not vetted. "
+        "Allow only exit code 0; stop on all other outcomes, including UNKNOWN. "
         f"Selected agent profile: {agent}."
     )
 

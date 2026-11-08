@@ -852,7 +852,7 @@ class TestCLIMain(unittest.TestCase):
                 main()
             output = sys.stdout.getvalue()
             self.assertEqual(raised.exception.code, 0)
-            self.assertIn("agent-circuit-breaker 1.6.9", output)
+            self.assertIn("agent-circuit-breaker 1.7.0", output)
         finally:
             sys.argv = old_argv
             sys.stdout = old_stdout

@@ -121,7 +121,7 @@ class TestReleaseReadinessDocs(unittest.TestCase):
         self.assertIn("python -m unittest discover", checklist)
         self.assertIn("git diff --check", checklist)
         self.assertIn("python -m twine check dist/agent_circuit_breaker-<version>.tar.gz", checklist)
-        self.assertIn("Push `main`.", checklist)
+        self.assertIn("merge its PR after required checks", checklist)
         self.assertIn("Create the GitHub Release", checklist)
 
     def test_publishing_docs_define_testpypi_first(self):

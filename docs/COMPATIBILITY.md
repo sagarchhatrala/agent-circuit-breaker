@@ -184,3 +184,26 @@ v1.6.7 is a repository governance, CI/CD hardening, documentation, and
 packaging metadata release. It does not intentionally change runtime CLI,
 Python API, MCP, pipeline, policy, rule, approval, audit, ledger, or schema
 semantics.
+
+## v1.7.0 migration
+
+The existing evaluation APIs, CLI decision codes, RuntimeGate defaults and rule
+schema remain supported. New typed workflows and packaged demo are additive.
+They require POSIX file descriptor support; generic evaluation remains portable.
+
+Unverified native Codex, Gemini and Copilot hook generators are retired with an
+explicit error. Use documented project MCP configuration for Codex. Claude and
+Cursor scaffolds now translate actual host payloads with separate schemas and
+fail-closed settings; uninstall/restore is handled by `integrate`. Generic
+pre-command scaffolds now stop on UNKNOWN and missing commands. Old generated
+files are not silently rewritten: review/remove them and reinstall deliberately.
+
+Catalog hashing includes complete tool definitions, including output schemas and
+annotations. Existing legacy pins can therefore require explicit owner review.
+New tools no longer silently extend a previously pinned catalog. Same-tool secret
+relay is no longer exempt from legacy taint checks. These are security hardening
+changes; no supported evaluator/runtime API was removed.
+
+Typed workflows opt into compact persisted trajectory summaries. Default
+RuntimeGate event shape is unchanged. Capability expiration is rechecked at atomic
+execution start; unresolved executions prevent other preauthorized starts.

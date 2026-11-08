@@ -4,6 +4,50 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.7.0] - 2026-11-08
+
+### Added
+
+- Typed local workflow tools for pinned file reads, bounded repository status,
+  report generation, copying, Base64 encoding and exact approved publication.
+  Supported transformations preserve authenticated, versioned sensitivity labels.
+- Durable executor-owned MCP stdio integration for modern 2026-07-28 and legacy
+  protocols; one server per state directory, restart reuse, and no agent approval
+  endpoint. A narrow registered remote bridge preserves uncertain outcomes.
+- Separate Claude Code and Cursor event adapters, project configuration preview,
+  merge, verification and restoration; Codex MCP configuration guidance.
+- Responses function dispatcher with deterministic offline execution and bounded,
+  opt-in live mode. No live API or unavailable native-host verification is claimed.
+- Packaged offline local UI, five synthetic scenarios, captioned recordings,
+  reproducible evidence and an independently authored adversarial scenario matrix.
+
+### Security and behavior
+
+- Runtime start rechecks capability expiry and unresolved execution. Remote response
+  loss never implies rollback or automatically retries non-idempotent operations.
+- Malformed, new, removed or changed catalog definitions quarantine rather than
+  silently extending trust; explicit owner review approves a pinned catalog update.
+- Same-tool credential matches remain tainted. Benign security discussion no longer
+  matches the standalone exfiltration noun; injection checks remain incomplete evidence.
+- Generated host commands use an isolated interpreter (`-I`), preventing project-local
+  Python modules or PYTHONPATH from replacing the trusted adapter.
+- Native hooks deny UNKNOWN and failed checks. A host-owned executor still differs
+  from the complete RuntimeGate lifecycle.
+- Bounded Git metadata snapshots omit repository configuration, hooks and alternates,
+  preventing repository-configured clean filters during the supported status operation.
+- Optional compact trajectory evidence reduces repeated history serialization in
+  typed workflows; the existing RuntimeGate event shape remains the default.
+
+### Compatibility and release validation
+
+- Standard-library-only core retained; UI assets included in the wheel. Typed file
+  executors require POSIX; arbitrary programs/scripts continue to abstain.
+- Unsupported Codex/Gemini/Copilot native scaffold generation is retired with an
+  explicit migration error. Existing supported APIs and historical regression tests remain.
+- One authoritative CI build is tested outside the checkout; TestPyPI wheel/sdist
+  bytes are compared with the manifest and installed before the same bytes reach PyPI.
+- See [release notes](docs/releases/v1.7.0.md) for boundaries and verification scope.
+
 ## [1.6.9] - 2026-10-15
 
 ### Security

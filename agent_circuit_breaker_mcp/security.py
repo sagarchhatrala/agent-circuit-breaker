@@ -17,7 +17,7 @@ DEFAULT_PIN_DIR = ".agent-circuit-breaker/mcp-pins"
 PROMPT_INJECTION_PATTERNS = (
     re.compile(r"ignore (?:all )?(?:previous|prior|above) instructions", re.IGNORECASE),
     re.compile(r"reveal (?:the )?(?:system|developer) prompt", re.IGNORECASE),
-    re.compile(r"exfiltrat(?:e|ion)", re.IGNORECASE),
+    re.compile(r"\b(?:upload|send|transfer|exfiltrate)\b.{0,100}\b(?:credentials|secrets|tokens|private key)\b", re.IGNORECASE),
     re.compile(r"send (?:all )?(?:secrets|credentials|tokens)", re.IGNORECASE),
 )
 
@@ -41,7 +41,7 @@ class MCPProxySecurity:
             self.pending[_canonical_id(message_id)] = {"kind": "tools/list"}
         elif method == "tools/call":
             tool_name = str((message.get("params") or {}).get("name") or "")
-            if tool_name in self.quarantined_tools:
+            if "*" in self.quarantined_tools or tool_name in self.quarantined_tools:
                 return _jsonrpc_error(
                     message_id,
                     -32081,
@@ -69,7 +69,14 @@ class MCPProxySecurity:
         return {"allowed": True, "message": message, "checks": []}
 
     def _inspect_tools_list(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        catalog = extract_tool_catalog((message.get("result") or {}).get("tools"))
+        try:
+            result = message.get("result")
+            if not isinstance(result, dict):
+                raise ValueError("catalog result must be an object")
+            catalog = extract_tool_catalog(result.get("tools"))
+        except ValueError:
+            self.quarantined_tools.add("*")
+            return {"allowed": False, "message": _jsonrpc_error(message.get("id"), -32082, "malformed MCP catalog; session quarantined", {}), "checks": [{"type": "catalog_invalid"}]}
         check = CatalogPinStore(self.upstream_label, self.pin_dir).check(catalog)
         checks: List[Dict[str, Any]] = [{"type": "catalog_pin", **check}]
         poisoned = []
@@ -80,7 +87,7 @@ class MCPProxySecurity:
         if poisoned:
             self.quarantined_tools.update(poisoned)
             checks.append({"type": "tool_description", "poisoned_tools": poisoned})
-        changed = [item["name"] for item in check.get("changed", [])]
+        changed = [item["name"] for item in check.get("changed", [])] + check.get("new", []) + check.get("removed", [])
         if changed:
             self.quarantined_tools.update(changed)
         if changed or poisoned:
@@ -143,6 +150,7 @@ class CatalogPinStore:
             self._save(live)
             return {
                 "first_contact": True,
+                "trust": "legacy TOFU: first catalog pinned without independent review",
                 "changed": [],
                 "new": [],
                 "removed": [],
@@ -156,11 +164,6 @@ class CatalogPinStore:
         ]
         new = [name for name in live if name not in stored]
         removed = [name for name in stored if name not in live]
-        if new:
-            merged = dict(stored)
-            for name in new:
-                merged[name] = live[name]
-            self._save(merged)
         return {
             "first_contact": False,
             "changed": changed,
@@ -169,13 +172,23 @@ class CatalogPinStore:
             "pin_path": str(self.path),
         }
 
+    def approve(self, catalog: List[Dict[str, Any]], *, expected_sha256: str) -> None:
+        """Owner-only update after inspecting the exact complete catalog."""
+        validated = extract_tool_catalog(catalog)
+        snapshot = hashlib.sha256(json.dumps(validated, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if snapshot != expected_sha256:
+            raise ValueError("catalog changed since review")
+        self._save({tool["name"]: tool_fingerprint(tool) for tool in validated})
+
     def _load(self) -> Optional[Dict[str, str]]:
         if not self.path.exists():
             return None
         with self.path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
         tools = payload.get("tools")
-        return tools if isinstance(tools, dict) else None
+        if payload.get("upstream") != self.upstream_label or payload.get("schema_version") != 1 or not isinstance(tools, dict) or not all(isinstance(k, str) and isinstance(v, str) and len(v) == 64 for k, v in tools.items()):
+            raise ValueError("malformed or wrong-server catalog pin")
+        return tools
 
     def _save(self, tools: Dict[str, str]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -192,31 +205,26 @@ def default_pin_dir() -> Path:
 
 def extract_tool_catalog(value: Any) -> List[Dict[str, Any]]:
     if not isinstance(value, list):
-        return []
+        raise ValueError("catalog must be a list")
     catalog = []
+    names = set()
     for item in value:
         if not isinstance(item, dict):
-            continue
+            raise ValueError("tool entry must be an object")
         name = item.get("name")
-        if not isinstance(name, str) or not name:
-            continue
-        catalog.append(
-            {
-                "name": name,
-                "description": item.get("description") if isinstance(item.get("description"), str) else "",
-                "inputSchema": item.get("inputSchema") if isinstance(item.get("inputSchema"), dict) else {},
-            }
-        )
+        if not isinstance(name, str) or not name or name in names:
+            raise ValueError("missing or duplicate tool identity")
+        names.add(name)
+        if not isinstance(item.get("description", ""), str) or not isinstance(item.get("inputSchema", {}), dict):
+            raise ValueError("malformed tool description or schema")
+        catalog.append({**item, "name": name, "description": item.get("description", ""), "inputSchema": item.get("inputSchema", {})})
     return catalog
 
 
 def tool_fingerprint(tool: Dict[str, Any]) -> str:
-    material = {
-        "name": tool.get("name"),
-        "description": tool.get("description") or "",
-        "inputSchema": tool.get("inputSchema") or {},
-    }
-    return hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    # Include annotations, output schemas and extension fields as well. Pinning
+    # is definition integrity, never attestation of server implementation.
+    return hashlib.sha256(json.dumps(tool, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
 def result_texts(value: Any) -> Iterable[str]:
@@ -237,6 +245,8 @@ def result_texts(value: Any) -> Iterable[str]:
 
 
 def _has_prompt_injection(text: str) -> bool:
+    # This is bounded evidence, never an authorization source. Security prose
+    # about prevention must not match a noun such as "exfiltration" alone.
     return any(pattern.search(text) for pattern in PROMPT_INJECTION_PATTERNS)
 
 

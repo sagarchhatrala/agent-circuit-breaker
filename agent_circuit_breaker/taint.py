@@ -60,8 +60,6 @@ class TaintLedger:
             entry = hashes.get(digest)
             if entry is None:
                 continue
-            if different_tool and entry.get("tool") == different_tool:
-                continue
             return {
                 "hash": digest,
                 "source": entry.get("source"),

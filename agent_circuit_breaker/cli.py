@@ -1107,6 +1107,9 @@ class CircuitBreakerCLI:
 
     def run_install_hooks_mode(self, agent: str, directory: str, write: bool) -> int:
         """Print or write hook scaffold instructions."""
+        if agent.strip().lower() in {"codex", "gemini", "copilot"}:
+            print("Unverified native scaffold retired; use documented MCP integration.", file=sys.stderr)
+            return 1
         if write:
             if agent.strip().lower() in HOST_CONFIGS:
                 result = write_native_hook_scaffold(agent, directory, force=False)
@@ -1519,6 +1522,10 @@ Usage:
   agent-circuit-breaker explain <ACTION> [OPTIONS]
   agent-circuit-breaker scan <PATH...> [OPTIONS]
   agent-circuit-breaker trajectory <RUN.json> [OPTIONS]
+  agent-circuit-breaker demo [--doctor | --replay | --fixture-project PATH]
+  agent-circuit-breaker integrate HOST [detect|preview|install|verify|uninstall] [OPTIONS]
+  agent-circuit-breaker hook HOST EVENT
+  agent-circuit-breaker workflow-mcp --workspace PATH --state PATH --policy PATH
   agent-circuit-breaker install-hooks [OPTIONS]
   agent-circuit-breaker timeline [OPTIONS]
   agent-circuit-breaker ledger [RUN_ID] [OPTIONS]
@@ -1600,6 +1607,17 @@ def main() -> int:
     Returns:
         Exit code
     """
+    # Keep optional integration/demo modules off the evaluator import path.
+    if len(sys.argv) > 1 and sys.argv[1] in {"integrate", "hook", "demo", "workflow-mcp"}:
+        if sys.argv[1] == "integrate":
+            from .integrations import main as command_main
+        elif sys.argv[1] == "hook":
+            from .hooks_native import main as command_main
+        elif sys.argv[1] == "workflow-mcp":
+            from agent_circuit_breaker_mcp.workflow_server import main as command_main
+        else:
+            from .demo import main as command_main
+        return command_main(sys.argv[2:])
     parser = argparse.ArgumentParser(
         prog="agent-circuit-breaker",
         description="Agent Circuit Breaker - Deterministic Safety Layer for AI Agents",

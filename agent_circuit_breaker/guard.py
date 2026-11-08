@@ -17,7 +17,7 @@ def check_hook_drift(home: str) -> Dict[str, Any]:
         if not path.exists():
             continue
         raw = path.read_text(encoding="utf-8", errors="replace")
-        if "agent-circuit-breaker" not in raw:
+        if "agent_circuit_breaker.hooks_native" not in raw:
             findings.append({"agent": agent, "path": str(path), "status": "missing_acb_hook"})
     return {"schema_version": 1, "findings": findings, "drifted": bool(findings)}
 

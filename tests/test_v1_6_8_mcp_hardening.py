@@ -107,18 +107,15 @@ class TestDetectorHardening(unittest.TestCase):
 
 
 class TestNativeHooksAndGuard(unittest.TestCase):
-    def test_native_codex_hook_scaffold(self):
+    def test_retired_codex_hook_scaffold_has_explicit_migration(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            result = write_native_hook_scaffold("codex", temp_dir)
-            raw = Path(result["path"]).read_text(encoding="utf-8")
-
-        self.assertEqual(result["status"], "written")
-        self.assertIn("agent-circuit-breaker check", raw)
-        self.assertIn("preToolUse", raw)
+            with self.assertRaisesRegex(ValueError, "integrate codex"):
+                write_native_hook_scaffold("codex", temp_dir)
+            self.assertFalse((Path(temp_dir) / ".codex/hooks.json").exists())
 
     def test_guard_detects_and_restores_drift(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / ".codex" / "hooks.json"
+            path = Path(temp_dir) / ".cursor" / "hooks.json"
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps({"hooks": {"preToolUse": [{"command": "other"}]}}), encoding="utf-8")
 
@@ -128,7 +125,7 @@ class TestNativeHooksAndGuard(unittest.TestCase):
 
         self.assertTrue(drift["drifted"])
         self.assertEqual(restored["restored_count"], 1)
-        self.assertIn("agent-circuit-breaker check", raw)
+        self.assertIn("agent_circuit_breaker.hooks_native", raw)
 
 
 if __name__ == "__main__":
