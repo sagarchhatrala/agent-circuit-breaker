@@ -23,6 +23,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, Mapping, Optional
 
+from agent_circuit_breaker.effects import amounts, budget_error, settlement, usage
 from agent_circuit_breaker.api import evaluate_action
 from agent_circuit_breaker.trajectory import evaluate_trajectory
 
@@ -149,6 +150,10 @@ class RunContract:
     approver_tokens: Mapping[str, str] = field(default_factory=dict, repr=False, compare=False)
     allow_self_approval: bool = False
     reconciler_tokens: Mapping[str, str] = field(default_factory=dict, repr=False, compare=False)
+    effect_limits: Mapping[str, int] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        amounts(self.effect_limits, "effect_limits")
 
     @classmethod
     def from_mapping(cls, value: Optional[Mapping[str, Any]]) -> "RunContract":
@@ -183,6 +188,7 @@ class RunContract:
             approver_tokens=_approver_tokens(value.get("approver_tokens")),
             allow_self_approval=_optional_bool(value.get("allow_self_approval"), "allow_self_approval", False),
             reconciler_tokens=_reconciler_tokens(value.get("reconciler_tokens")),
+            effect_limits=amounts(value.get("effect_limits", {}), "effect_limits"),
         )
 
     def to_trajectory_contract(self) -> Dict[str, Any]:
@@ -221,6 +227,8 @@ class RunContract:
                 "reconciliation_authority": "token" if self.reconciler_tokens else "trusted_integration_metadata",
             }
         )
+        if self.effect_limits:
+            summary["effect_limits"] = dict(self.effect_limits)
         return summary
 
     @property
@@ -1043,6 +1051,10 @@ class RuntimeGate:
             result = executor(action)
             if inspect.isawaitable(result):
                 result = await result
+            try:
+                result, measured = settlement(result, action)
+            except ValueError as exc:
+                raise ExecutionUncertain(str(exc)) from exc
         except asyncio.CancelledError as exc:
             await self.record_outcome(
                 run_id,
@@ -1070,6 +1082,7 @@ class RuntimeGate:
             run_id,
             authorization_id=authorization_id,
             outcome="executed",
+            details={"effects": measured} if measured is not None else None,
         )
         return RuntimeExecutionResult(
             run_id=run_id,
@@ -1242,6 +1255,9 @@ class RuntimeGate:
                 raise ValueError("reconciliation action fingerprint does not match execution attempt")
             if _authorization_has_reconciliation(state, authorization_id):
                 raise ValueError("execution attempt already has a terminal outcome")
+            if evidence and "effects" in evidence:
+                from agent_circuit_breaker.effects import EffectResult
+                settlement(EffectResult(None, evidence["effects"]), started.action or {})
             details = {
                 "reconciler": reconciler,
                 "evidence": dict(evidence or {}),
@@ -1300,6 +1316,10 @@ class RuntimeGate:
             result = executor(action_record)
             if inspect.isawaitable(result):
                 result = await result
+            try:
+                result, measured = settlement(result, action_record)
+            except ValueError as exc:
+                raise ExecutionUncertain(str(exc)) from exc
         except asyncio.CancelledError as exc:
             await self.record_outcome(
                 run_id,
@@ -1327,6 +1347,7 @@ class RuntimeGate:
             run_id,
             authorization_id=authorization_id,
             outcome="executed",
+            details={"effects": measured} if measured is not None else None,
         )
         return RuntimeExecutionResult(
             run_id=run_id,
@@ -1362,6 +1383,9 @@ class RuntimeGate:
             grant = next((item for item in contract.capabilities if item.capability_id == capability_id), None)
             if grant is not None and grant.expires_at is not None and now >= grant.expires_at:
                 raise ValueError("capability expired")
+            effect_error = budget_error(state, matching.action or {}, contract.effect_limits)
+            if effect_error:
+                raise ValueError(effect_error)
             event = RuntimeEvent(
                 sequence=len(state.events),
                 event_type="started",
@@ -1828,6 +1852,12 @@ def _precheck_state(
         authority_error = _authority_error(action, contract, now)
         if authority_error is not None:
             reason_code, reason = authority_error
+            status = "blocked"
+
+    if reason is None:
+        reason = budget_error(state, action.to_trajectory_record(), contract.effect_limits)
+        if reason:
+            reason_code = "EFFECT_BUDGET_EXCEEDED"
             status = "blocked"
 
     if reason is None:
@@ -2514,6 +2544,11 @@ def _validate_state_integrity(state: RuntimeState, contract: RunContract) -> Non
 
     if consumed_approvals & revoked_approvals:
         raise RuntimeIntegrityError("approval is both consumed and revoked")
+    if contract.effect_limits:
+        try:
+            usage(state)
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise RuntimeIntegrityError("runtime effect accounting is invalid") from exc
 
 
 def _decode_state(payload: str) -> RuntimeState:
@@ -2579,6 +2614,7 @@ def _decode_contract(payload: str) -> RunContract:
             approver_tokens=dict(data.get("approver_tokens") or {}),
             allow_self_approval=bool(data.get("allow_self_approval", False)),
             reconciler_tokens=dict(data.get("reconciler_tokens") or {}),
+            effect_limits=amounts(data.get("effect_limits", {}), "effect_limits"),
         )
     except (TypeError, ValueError, KeyError, json.JSONDecodeError) as exc:
         raise RuntimeInvalidRecordError(f"invalid runtime contract record: {exc}") from exc

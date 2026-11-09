@@ -84,8 +84,14 @@ jobs:
             release-manifest.json
             SHA256SUMS
 
-  publish-testpypi:
+  owner-acceptance:
     needs: build
+    uses: ./.github/workflows/owner-acceptance.yml
+    with:
+      release-artifact: true
+
+  publish-testpypi:
+    needs: [build, owner-acceptance]
     runs-on: ubuntu-latest
     environment:
       name: testpypi

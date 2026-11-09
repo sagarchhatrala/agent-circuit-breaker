@@ -207,3 +207,20 @@ changes; no supported evaluator/runtime API was removed.
 Typed workflows opt into compact persisted trajectory summaries. Default
 RuntimeGate event shape is unchanged. Capability expiration is rechecked at atomic
 execution start; unresolved executions prevent other preauthorized starts.
+
+
+## v1.7.2 additions
+
+The requested 1.7.2 release adds opt-in owner operations without replacing existing
+evaluation, proxy, Workflow or RuntimeGate APIs. Existing unbudgeted contracts
+retain their fingerprints. The six-tool Workflow catalog is unchanged; the owner
+route has a separate expanded catalog. Use Linux/macOS for the Unix service.
+
+`owner` commands return 3 for pending approval, 2 for unknown, 1 for block/error
+and 0 for successful commands. Administrative preview success does not imply
+execution. The owner service's JSON/schema is versioned implementation surface;
+consult [its guide](OWNER_SERVICE.md) for bounded SQLite and S3 support.
+
+New budgeted contracts require trusted effect declarations. Failed/uncertain starts
+retain reservations. Export is paginated; retain every page and check the state
+version for a consistent snapshot. Same-UID development mode is not containment.

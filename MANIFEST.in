@@ -5,6 +5,7 @@ include QUICKSTART.md
 include SECURITY.md
 recursive-include docs *.md *.json *.svg *.png
 recursive-include examples *.md *.py *.json
+include examples/owner/Dockerfile
 
 recursive-include agent_circuit_breaker/demo_assets *.html *.css *.js
 recursive-include scripts *.py

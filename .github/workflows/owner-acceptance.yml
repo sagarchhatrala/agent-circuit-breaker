@@ -1,0 +1,62 @@
+name: Owner execution acceptance
+
+on:
+  workflow_call:
+    inputs:
+      release-artifact:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  owner-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - if: ${{ inputs.release-artifact }}
+        uses: actions/download-artifact@v8
+        with:
+          name: python-package-distributions
+          path: dist/
+      - if: ${{ !inputs.release-artifact }}
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Install exact wheel and S3 verification client
+        run: |
+          python -m venv /tmp/acb-owner-wheel
+          /tmp/acb-owner-wheel/bin/pip install --no-index dist/*.whl
+          /tmp/acb-owner-wheel/bin/pip install boto3
+      - name: Execute isolated owner and agent containers
+        run: python scripts/verify_owner_isolation.py --wheel dist/*.whl --output /tmp/owner-isolation.json
+      - name: Execute real S3 uploads, signature refusal, and crash recovery against MinIO
+        env:
+          ACB_REHEARSAL_S3_ACCESS: acb-rehearsal-access
+          ACB_REHEARSAL_S3_SECRET: acb-rehearsal-secret-only-not-a-real-credential
+        run: |
+          container="acb-minio-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+          docker run -d --name "$container" -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER="$ACB_REHEARSAL_S3_ACCESS" \
+            -e MINIO_ROOT_PASSWORD="$ACB_REHEARSAL_S3_SECRET" \
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          cd /tmp
+          /tmp/acb-owner-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/verify_owner_workflows.py" \
+            --s3-endpoint http://127.0.0.1:9000 --verify-signature --output /tmp/owner-minio.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: owner-execution-evidence
+          path: |
+            /tmp/owner-isolation.json
+            /tmp/owner-minio.json

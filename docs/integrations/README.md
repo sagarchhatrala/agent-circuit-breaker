@@ -1,3 +1,10 @@
+# Connect to a separate owner (v1.7.2)
+
+The recommended protected route is `integrate HOST install --mode mcp
+--owner-socket /absolute/agent.sock`. See [setup, approval and live verification](../OWNER_SERVICE.md).
+The client receives only the agent socket, never owner state or credentials.
+Configuration verification is distinct from actual execution verification.
+
 # Integration quickstart
 
 ACB has two different boundaries: native hooks return a decision to a host;

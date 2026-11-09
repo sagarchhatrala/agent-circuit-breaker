@@ -1,3 +1,24 @@
+# Current roadmap — v1.7.2
+
+Implemented: separate owner/agent Unix routes, registered SQLite maintenance,
+conditional S3 publication, cumulative measured effect budgets, owner-reviewed
+artifact declassification, paginated authenticated evidence, guided execution
+verification and real MCP/container/S3 acceptance scripts. See the
+[owner guide](OWNER_SERVICE.md) and [release evidence](validation/v1.7.2-results.md).
+
+Next priorities, not claims of this release:
+
+1. More bounded domain adapters, especially PostgreSQL, with transaction-level
+   effect verification and explicit rollback/uncertainty contracts.
+2. Operational scaling: request retention, backup/rotation tooling, cancellation
+   of queued work, delegated owner review and external checkpoint retention.
+3. Expand the public benign/adversarial corpus and establish independently
+   reproducible comparisons before claiming superior recall or false-positive rates.
+4. More native-host and deployment validation; keep containment provided by the
+   platform and authorization provided by ACB clearly distinguished.
+
+The history below records earlier milestones, not unfinished current promises.
+
 # v1.7.1 completed scope
 
 Security fixes and live execution evidence are documented in

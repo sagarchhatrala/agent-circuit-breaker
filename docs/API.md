@@ -1,3 +1,11 @@
+# Owner operations API (v1.7.2)
+
+The additive owner service and its typed tool schemas are documented in
+[OWNER_SERVICE.md](OWNER_SERVICE.md). Generic RuntimeGate integrations can use
+`RunContract.effect_limits`, trusted `RuntimeAction.metadata["effects"]` reservations
+and `agent_circuit_breaker.effects.EffectResult` measurements. Limits are optional;
+existing contracts without them preserve their fingerprints and behavior.
+
 # Public Python API
 
 Agent Circuit Breaker exposes a small package-level API for integrations that want deterministic safety checks without invoking the CLI.

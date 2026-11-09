@@ -1,3 +1,12 @@
+# Owner route added in v1.7.2
+
+For separate execution authority, use the [owner service](OWNER_SERVICE.md) with
+distinct UIDs and the [container recipe](../examples/owner/README.md). It adds
+trusted cumulative effect accounting, registered SQLite operations, S3 publication,
+reviewed declassification and signed evidence. The existing Workflow boundary and
+limitations below continue to apply. OS/mount/network restrictions must prevent
+the agent from bypassing the owner.
+
 # Typed workflow security and limits
 
 The bounded claim is: **even when an agent follows a malicious instruction, actions

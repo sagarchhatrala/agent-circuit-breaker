@@ -1,3 +1,9 @@
+# 1.7.2
+
+Owner-mediated Unix service, cumulative effect budgets, registered SQLite maintenance,
+conditional S3 publication, exact review/declassification, authenticated evidence
+pages and real MCP/container execution gates. See [release notes](docs/releases/v1.7.2.md).
+
 ﻿# Changelog
 
 All notable changes to Agent Circuit Breaker are tracked here.

@@ -10,6 +10,8 @@ permissions:
   contents: read
 
 jobs:
+  owner-acceptance:
+    uses: ./.github/workflows/owner-acceptance.yml
   test:
     name: test-python-${{ matrix.python-version }}
     runs-on: ubuntu-latest

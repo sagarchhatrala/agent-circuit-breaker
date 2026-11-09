@@ -2,6 +2,7 @@
 import asyncio
 import importlib.metadata
 import json
+import subprocess
 import sys
 import tempfile
 from importlib.resources import files
@@ -41,7 +42,8 @@ def main():
             integrate(host,project,mode='mcp',operation='install',state=project/'state',policy=project/'policy.json')
             assert integrate(host,project,mode='mcp',operation='verify')['status']=='verified'
             integrate(host,project,mode='mcp',operation='uninstall')
-    print(json.dumps({'version':expected,'installed_from':str(Path(agent_circuit_breaker.__file__).parent),'critical_scenarios':5,'status':'passed'}))
+    subprocess.run([sys.executable, '-I', str(Path(__file__).with_name('owner_smoke.py'))], check=True, timeout=45)
+    print(json.dumps({'version':expected,'installed_from':str(Path(agent_circuit_breaker.__file__).parent),'critical_scenarios':5,'owner_workflow':'passed','status':'passed'}))
 
 if __name__=='__main__':
     main()
