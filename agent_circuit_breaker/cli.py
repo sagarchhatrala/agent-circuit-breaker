@@ -1541,6 +1541,7 @@ Usage:
   agent-circuit-breaker demo [--doctor | --replay | --fixture-project PATH]
   agent-circuit-breaker integrate HOST [detect|preview|install|verify|uninstall] [OPTIONS]
   agent-circuit-breaker hook HOST EVENT
+  agent-circuit-breaker owner --help
   agent-circuit-breaker workflow-mcp --workspace PATH --state PATH --policy PATH
   agent-circuit-breaker install-hooks [OPTIONS]
   agent-circuit-breaker timeline [OPTIONS]
@@ -1624,6 +1625,9 @@ def main() -> int:
         Exit code
     """
     # Keep optional integration/demo modules off the evaluator import path.
+    if len(sys.argv) > 1 and sys.argv[1] == "owner":
+        from agent_circuit_breaker.owner import main as owner_main
+        return owner_main(sys.argv[2:])
     if len(sys.argv) > 1 and sys.argv[1] in {"integrate", "hook", "demo", "workflow-mcp"}:
         if sys.argv[1] == "integrate":
             from .integrations import main as command_main

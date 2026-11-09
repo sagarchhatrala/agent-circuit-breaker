@@ -1,0 +1,39 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "name": "agent has only read-only public socket mount and loopback network",
+      "passed": true
+    },
+    {
+      "name": "peer identity enforced and owner administrative methods refused",
+      "passed": true
+    },
+    {
+      "name": "permitted read/copy execute; traversal and socket removal refused",
+      "passed": true
+    },
+    {
+      "name": "independent owner observes exact file bytes and unchanged unapproved SQL",
+      "passed": true
+    },
+    {
+      "name": "owner approval permits exactly one actual database row change",
+      "passed": true
+    },
+    {
+      "name": "different unregistered UID cannot use public socket",
+      "passed": true
+    },
+    {
+      "name": "container restart retains consumed row budget",
+      "passed": true
+    },
+    {
+      "name": "restarted service rejects approval replay",
+      "passed": true
+    }
+  ],
+  "image": "sha256:3a1ca254c59e22adc642fb32489d845c8c6b1e882eff71d7d0ee1e649709984d",
+  "scope": "disposable Linux Docker containers, UID 10001 owner / 10002 agent, no agent network or resource mounts"
+}

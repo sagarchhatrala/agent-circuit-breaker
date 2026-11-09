@@ -1,3 +1,10 @@
+# Owner-mediated operations in v1.7.2
+
+For a real read/report, approved SQLite update and S3 artifact publication, follow
+[the owner-service quickstart](docs/OWNER_SERVICE.md). It includes actual route
+verification and a separate-UID deployment recipe. The evaluation-only commands
+below remain supported.
+
 ﻿# Quick Start
 
 ## Local Setup
@@ -99,6 +106,6 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current release is v1.7.1. See [security fixes and migration](docs/releases/v1.7.1.md)
+The current release is v1.7.2. See [security fixes and migration](docs/releases/v1.7.2.md)
 for stricter MCP argument handling, corrected SQL inspection, authenticated ledgers,
 and the repeatable local rehearsal.

@@ -83,7 +83,7 @@ class WorkflowMCPServer:
         if method == "tools/list":
             if params:
                 return self.error(request_id, -32602, "pagination is not used by this bounded catalog")
-            return result({"tools": tool_catalog(), **({"cacheScope": "public", "ttlMs": 0} if modern else {})})
+            return result({"tools": self.workflow.catalog() if hasattr(self.workflow, "catalog") else tool_catalog(), **({"cacheScope": "public", "ttlMs": 0} if modern else {})})
         if method == "tools/call":
             if set(params) - {"name", "arguments", "_meta"} or not isinstance(params.get("name"), str) or not isinstance(params.get("arguments"), dict):
                 return self.error(request_id, -32602, "invalid tool call")

@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
@@ -10,6 +11,8 @@ permissions:
   contents: read
 
 jobs:
+  owner-acceptance:
+    uses: ./.github/workflows/owner-acceptance.yml
   test:
     name: test-python-${{ matrix.python-version }}
     runs-on: ubuntu-latest

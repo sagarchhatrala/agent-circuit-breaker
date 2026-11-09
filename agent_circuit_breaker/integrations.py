@@ -16,7 +16,7 @@ from agent_circuit_breaker.hooks_native import decide
 PATHS = {("claude", "hooks"): ".claude/settings.json", ("cursor", "hooks"): ".cursor/hooks.json", ("claude", "mcp"): ".mcp.json", ("cursor", "mcp"): ".cursor/mcp.json", ("codex", "mcp"): ".codex/config.toml"}
 
 
-def additions(host: str, mode: str, workspace: Path, state: Path | None, policy: Path | None) -> dict:
+def additions(host: str, mode: str, workspace: Path, state: Path | None, policy: Path | None, owner_socket: Path | None = None) -> dict:
     executable = sys.executable
     if mode == "hooks":
         if host == "claude":
@@ -24,6 +24,9 @@ def additions(host: str, mode: str, workspace: Path, state: Path | None, policy:
             return {"hooks": {"PreToolUse": [{"matcher": "Bash|mcp__.*", "hooks": [{"type": "command", "command": command, "timeout": 10, "onFailure": "block"}]}]}}
         commands = {event: [{"command": shlex.join([executable, "-I", "-m", "agent_circuit_breaker.hooks_native", "cursor", event]), "timeout": 10, "failClosed": True}] for event in ("beforeShellExecution", "beforeMCPExecution")}
         return {"version": 1, "hooks": commands}
+    if owner_socket is not None:
+        server = {"command": executable, "args": ["-I", "-m", "agent_circuit_breaker_mcp.owner_client", "--socket", str(owner_socket.resolve())]}
+        return {"mcp_servers" if host == "codex" else "mcpServers": {"acb": server}}
     if state is None or policy is None:
         raise ValueError("MCP configuration requires --state and --policy (owner-protected paths)")
     server = {"command": executable, "args": ["-I", "-m", "agent_circuit_breaker_mcp.workflow_server", "--workspace", str(workspace), "--state", str(state.resolve()), "--policy", str(policy.resolve())]}
@@ -84,7 +87,7 @@ def atomic_write(path: Path, data: bytes) -> None:
             temporary.unlink()
 
 
-def integrate(host: str, project: Path, *, mode="hooks", operation="preview", state: Path | None = None, policy: Path | None = None) -> dict:
+def integrate(host: str, project: Path, *, mode="hooks", operation="preview", state: Path | None = None, policy: Path | None = None, owner_socket: Path | None = None) -> dict:
     project = project.resolve(strict=True)
     if (host, mode) not in PATHS:
         raise ValueError("unsupported host/mode; Codex supports mediated MCP configuration")
@@ -127,7 +130,7 @@ def integrate(host: str, project: Path, *, mode="hooks", operation="preview", st
         if merge(parsed, record["patch"]) != parsed:
             raise ValueError("installed integration has drifted")
         return {"status": "verified", "verification": "configuration and hook fixtures only" if mode == "hooks" else "configuration only; use MCP client to verify execution", "native_host": "unverified", "path": str(path)}
-    patch = additions(host, mode, project, state, policy)
+    patch = additions(host, mode, project, state, policy, owner_socket)
     before = path.read_text() if path.exists() else ""
     if path.suffix == ".toml":
         parsed = tomllib.loads(before)
@@ -169,9 +172,10 @@ def main(argv=None):
     parser.add_argument("--project", type=Path, default=Path.cwd())
     parser.add_argument("--state", type=Path)
     parser.add_argument("--policy", type=Path)
+    parser.add_argument("--owner-socket", type=Path, help="recommended: connect to a separately protected owner service")
     args = parser.parse_args(argv)
     try:
-        print(json.dumps(integrate(args.host, args.project, mode=args.mode, operation=args.operation, state=args.state, policy=args.policy), indent=2))
+        print(json.dumps(integrate(args.host, args.project, mode=args.mode, operation=args.operation, state=args.state, policy=args.policy, owner_socket=args.owner_socket), indent=2))
     except (ValueError, OSError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

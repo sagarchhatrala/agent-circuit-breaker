@@ -1,3 +1,10 @@
+# v1.7.2 scope
+
+Owner-mediated artifact/SQLite/S3 execution, cumulative effect budgets, owner-only
+review and declassification, authenticated paginated evidence, MCP owner client,
+and real execution/isolation release gates. See [the acceptance plan](docs/analysis/v1.7.2-implementation-plan.md)
+and [current validation](docs/validation/v1.7.2-results.md). Earlier plans below are historical.
+
 # v1.7.1 release
 
 Ship the reproduced AppSec fixes, SQL predicate corrections, strict uninspectable

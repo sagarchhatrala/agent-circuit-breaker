@@ -1,10 +1,11 @@
 # Adapter enforcement matrix
 
-Reviewed for v1.7.0, November 8, 2026. Enforcement assumes the owner process,
+Reviewed for v1.7.2, November 9, 2026. Enforcement assumes the owner process,
 policy/state and executors cannot be modified or bypassed by the agent.
 
 | Entry point | Who executes? | Authorization / approvals | Durable start / outcome | Scope |
 |---|---|---|---|---|
+| Owner service + owner MCP client | Separate ACB owner process | Peer UID, owner policy, exact review, protected control socket, cumulative effects | RuntimeGate + SQLite; reservation retained after uncertainty | Typed artifacts, conditional S3 PUT, registered SQLite changes; OS isolation required |
 | `Workflow.call` | ACB typed executor | Owner policy; derived resources; exact artifact versions; single-use approval | RuntimeGate + SQLite | Pinned reads, copies, Base64, fixed report generation, bounded Git status, owner-supplied publisher |
 | `workflow-mcp` | ACB typed executor | Same dispatcher; client metadata cannot grant authority | Same lifecycle | stdio modern 2026-07-28 and legacy initialization; six fixed tools |
 | Responses `Dispatcher` | Application's ACB executor | Same typed contract; duplicate call IDs never reexecute | Same lifecycle | Application-side function calls; hosted tools excluded |

@@ -1,3 +1,10 @@
+# v1.7.2 owner-mediated operations
+
+- [Start and verify a real owner workflow](OWNER_SERVICE.md)
+- [Linux container isolation recipe](../examples/owner/README.md)
+- [Release notes and compatibility](releases/v1.7.2.md)
+- [Measured execution verification](validation/v1.7.2-results.md)
+
 # v1.7.1 security patch
 
 - [Release notes and migration](releases/v1.7.1.md)

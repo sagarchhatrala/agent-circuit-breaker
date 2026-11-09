@@ -1,3 +1,10 @@
+# v1.7.2 release validation addition
+
+The reusable `owner-acceptance.yml` workflow verifies separate-UID containers and
+real MinIO effects/signatures. Publishing waits for this job on the authoritative
+wheel before TestPyPI. Main remains protected by the existing required Python
+checks; all owner acceptance checks must also pass before release.
+
 # GitHub Security Configuration
 
 This document separates repository-controlled security settings from manual

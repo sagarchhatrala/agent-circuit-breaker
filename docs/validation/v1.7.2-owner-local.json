@@ -1,0 +1,195 @@
+{
+  "version": "1.7.2",
+  "seed": 172,
+  "environment": "darwin",
+  "s3": "Moto loopback emulator",
+  "checks": 35,
+  "passed": 35,
+  "error": null,
+  "latency_ms": {
+    "samples": 57,
+    "p50": 7.892,
+    "p95": 25.929
+  },
+  "scenarios": [
+    {
+      "name": "repository status observes a real tracked-file change",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "source read matches actual bytes",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "copy_artifact wrote its actual authenticated bytes",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "encode_artifact wrote its actual authenticated bytes",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "json_artifact wrote its actual authenticated bytes",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "redact_artifact wrote its actual authenticated bytes",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "fixed report contains source data",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "traversal refused: ../escape.txt",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "traversal refused: reports/../../escape.txt",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "traversal refused: /tmp/acb-should-not-exist",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "traversal refused: reports/.hidden",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "traversal refused: reports/../escape.txt",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "agent cannot grant owner authority: approve",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "agent cannot grant owner authority: status",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "agent cannot grant owner authority: declassify",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "encoded sensitive bytes never arrive at S3",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "JSON redaction actually removes the synthetic secret",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "redaction preserves classification until owner review",
+      "category": "invariant",
+      "passed": true
+    },
+    {
+      "name": "reviewed declassification creates exact new artifact",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "publication waits with no object present",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "approved S3 object contains exact reviewed bytes",
+      "category": "benign",
+      "passed": true
+    },
+    {
+      "name": "approval replay creates no additional S3 object",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "SQLite preview leaves original database unchanged",
+      "category": "invariant",
+      "passed": true
+    },
+    {
+      "name": "concurrent approvals cause exactly one database effect",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "restart retains run and consumed effects",
+      "category": "invariant",
+      "passed": true
+    },
+    {
+      "name": "restart does not restore consumed approval",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "database mutation invalidates approved snapshot",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "expired approval never changes database",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "cumulative row budget preserves third row",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "independently retained evidence verifies",
+      "category": "invariant",
+      "passed": true
+    },
+    {
+      "name": "tampered exported evidence is rejected",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "cumulative export budget prevents second object",
+      "category": "attack",
+      "passed": true
+    },
+    {
+      "name": "fault fixture observed real S3 acceptance",
+      "category": "fault",
+      "passed": true
+    },
+    {
+      "name": "object exists despite interrupted owner",
+      "category": "fault",
+      "passed": true
+    },
+    {
+      "name": "crash leaves budget charged and retry refused",
+      "category": "fault",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "synthetic corpus, not a comparative detector benchmark",
+    "same-UID local development; Linux deployment isolation is a separate check"
+  ]
+}
