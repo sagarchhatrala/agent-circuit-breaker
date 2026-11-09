@@ -578,16 +578,18 @@ class CommandInspector:
         if command != "docker" or not args:
             return False
 
-        if args[:2] == ["system", "prune"] and ("-a" in args or "--all" in args or "--volumes" in args):
+        short_flags = {flag for arg in args if arg.startswith("-") and not arg.startswith("--")
+                       and set(arg[1:]) <= {"a", "f", "v"} for flag in arg[1:]}
+        if args[:2] == ["system", "prune"] and ("a" in short_flags or "--all" in args or "--volumes" in args):
             return True
 
         if args[:2] in (["volume", "rm"], ["volume", "prune"], ["network", "rm"]):
             return True
 
-        if args[:2] == ["image", "prune"] and ("-a" in args or "--all" in args):
+        if args[:2] == ["image", "prune"] and ("a" in short_flags or "--all" in args):
             return True
 
-        if args[:1] == ["rm"] and ("-f" in args or "--force" in args):
+        if args[:1] == ["rm"] and ("f" in short_flags or "--force" in args):
             return True
 
         if args[:3] in (["compose", "down", "--volumes"], ["compose", "down", "-v"]):
@@ -640,10 +642,13 @@ class CommandInspector:
 
         force_flags = {"--force", "--now"}
         has_force = any(
-            arg in force_flags or arg == "--grace-period=0"
+            arg in force_flags or arg in {"--force=true", "--now=true", "--grace-period=0"}
             for arg in args[1:]
         )
-        return has_force
+        return has_force or any(
+            arg == "--grace-period" and index + 1 < len(args) and args[index + 1] == "0"
+            for index, arg in enumerate(args)
+        )
 
     @staticmethod
     def _is_disk_overwrite_or_format(command: str, args: List[str]) -> bool:

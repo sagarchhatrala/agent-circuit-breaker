@@ -9,6 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from agent_circuit_breaker.decision import from_legacy_result
 from agent_circuit_breaker.redaction import redact_record, redaction_metadata
+from agent_circuit_breaker.audit import AuditLog, AUDIT_HMAC_ENV, _audit_hmac_key
+from agent_circuit_breaker.log_lock import locked_log
 
 
 DEFAULT_LEDGER_DIR = ".agent-circuit-breaker"
@@ -29,9 +31,14 @@ class RunLedger:
     def __init__(self, path: Optional[str] = None):
         self.path = Path(path) if path else default_ledger_path()
 
+    @locked_log
     def append(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Append a trajectory result and return the stored ledger entry."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        verification = self.verify()
+        if not verification["is_valid"]:
+            raise ValueError(f"cannot append to invalid run ledger: {verification['error']}")
+        key = _audit_hmac_key()
         previous_hash = self._last_hash()
         entry = {
             "schema_version": 1,
@@ -40,17 +47,28 @@ class RunLedger:
             "run_id": result.get("run_id"),
             "redaction": redaction_metadata(),
             "result": redact_record(result),
+            "integrity": {
+                "hash_algorithm": "sha256",
+                "signature_algorithm": "hmac-sha256" if key else None,
+                "signature_key_source": AUDIT_HMAC_ENV if key else None,
+            },
         }
         entry["entry_hash"] = self._hash_entry(entry)
+        if key:
+            entry["entry_signature"] = AuditLog._sign_entry(entry, key)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, sort_keys=True, separators=(",", ":")) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
         return entry
 
+    @locked_log
     def tail(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Return recent ledger entries."""
         entries = list(read_ledger_entries(self.path))
         return entries[-limit:]
 
+    @locked_log
     def get(self, run_id: str) -> Optional[Dict[str, Any]]:
         """Return the latest ledger entry for a run id."""
         match = None
@@ -59,8 +77,12 @@ class RunLedger:
                 match = entry
         return match
 
+    @locked_log
     def replay(self, run_id: str) -> Dict[str, Any]:
         """Return replayable action history for a stored trajectory run."""
+        verification = self.verify()
+        if not verification["is_valid"]:
+            raise ValueError(f"cannot replay invalid run ledger: {verification['error']}")
         entry = self.get(run_id)
         if entry is None:
             raise FileNotFoundError(f"run not found: {run_id}")
@@ -95,19 +117,19 @@ class RunLedger:
             ],
         }
 
-    def verify(self) -> Dict[str, Any]:
-        """Verify ledger hash-chain integrity."""
-        previous_hash = None
-        count = 0
-        for entry in read_ledger_entries(self.path):
-            count += 1
-            if entry.get("previous_hash") != previous_hash:
-                return {"is_valid": False, "entries": count, "error": "previous_hash mismatch"}
-            entry_hash = entry.get("entry_hash")
-            if entry_hash != self._hash_entry(entry):
-                return {"is_valid": False, "entries": count, "error": "entry_hash mismatch"}
-            previous_hash = entry_hash
-        return {"is_valid": True, "entries": count, "error": None}
+    def verify(self, *, require_signature: bool = False) -> Dict[str, Any]:
+        """Verify the chain and, when configured, every protected-key signature."""
+        result = AuditLog(str(self.path)).verify()
+        if require_signature and not result.get("signature_checked"):
+            return {**result, "is_valid": False, "error": "authenticated ledger required"}
+        return result
+
+    def checkpoint(self) -> Dict[str, Any]:
+        """Create a checkpoint in the shared audit format for independent retention."""
+        return AuditLog(str(self.path)).checkpoint()
+
+    def verify_checkpoint(self, checkpoint: Dict[str, Any]) -> Dict[str, Any]:
+        return AuditLog(str(self.path)).verify_checkpoint(checkpoint)
 
     def _last_hash(self) -> Optional[str]:
         last_hash = None
@@ -117,7 +139,7 @@ class RunLedger:
 
     @staticmethod
     def _hash_entry(entry: Dict[str, Any]) -> str:
-        material = {key: value for key, value in entry.items() if key != "entry_hash"}
+        material = {key: value for key, value in entry.items() if key not in {"entry_hash", "entry_signature"}}
         encoded = json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
 

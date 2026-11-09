@@ -99,6 +99,6 @@ Verdict: BLOCK
 
 ## Current Development Focus
 
-The current target is the v1.6 architecture line: typed decision evidence, policy
-source trust boundaries, and first-party domain policy packs while preserving the
-stable v1.x CLI and API contracts.
+The current release is v1.7.1. See [security fixes and migration](docs/releases/v1.7.1.md)
+for stricter MCP argument handling, corrected SQL inspection, authenticated ledgers,
+and the repeatable local rehearsal.

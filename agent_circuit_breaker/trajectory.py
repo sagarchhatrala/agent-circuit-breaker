@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import posixpath
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Optional
@@ -50,7 +51,7 @@ class TrajectoryPolicy:
             forbidden_actors=tuple(_string_list(contract.get("forbidden_actors"), "forbidden_actors")),
             allowed_delegations=tuple(_delegation_pairs(contract.get("allowed_delegations"))),
             require_actor=_optional_bool(contract.get("require_actor"), "require_actor", False),
-            max_blocked_attempts=_optional_int(contract.get("max_blocked_attempts"), "max_blocked_attempts", 1) or 1,
+            max_blocked_attempts=_optional_int(contract.get("max_blocked_attempts"), "max_blocked_attempts", 1),
             max_unknown_actions=_optional_int(contract.get("max_unknown_actions"), "max_unknown_actions", None),
         )
 
@@ -308,7 +309,7 @@ def _allowed_scope_findings(evaluations: List[Evaluation], policy: TrajectoryPol
 
         for path in _write_target_tokens(command):
             normalized = _normalize_scope(path)
-            if not any(normalized == scope.rstrip("/") or normalized.startswith(scope) for scope in allowed):
+            if not any(_scope_contains(scope, normalized) for scope in allowed):
                 findings.append(
                     {
                         "id": "traj_scope_violation",
@@ -356,7 +357,10 @@ def _matches_forbidden_target(normalized_command: str, target: str) -> bool:
         pattern = rf"(?<![a-z0-9_-]){re.escape(normalized_target)}(?![a-z0-9_-])"
         return re.search(pattern, normalized_command) is not None
 
-    return normalized_target in normalized_command
+    # Path/URL targets match the exact target or descendants, not sibling names
+    # such as /srv/prod-backup. Keep the leading absolute-path boundary too.
+    suffix = "" if normalized_target.endswith("/") else r"(?![\w.-])"
+    return re.search(rf"(?<![\w.-]){re.escape(normalized_target)}{suffix}", normalized_command) is not None
 
 
 def _secret_egress_findings(evaluations: List[Evaluation]) -> List[Finding]:
@@ -830,7 +834,7 @@ def _output_channel(item: Evaluation) -> Optional[str]:
         return "s3"
     if _is_cloud_storage_output(command):
         return "cloud-storage"
-    if _is_http_output(command, lowered):
+    if _is_http_output(command, tokens):
         return "http"
     return None
 
@@ -853,10 +857,23 @@ def _is_slack_output(command: str) -> bool:
 
 
 def _is_s3_output(command: str, tokens: List[str]) -> bool:
-    if "aws s3 sync" in command:
-        return len(tokens) >= 4 and tokens[-1].startswith("s3://")
-    if "aws s3 cp" in command:
-        return len(tokens) >= 4 and tokens[-1].startswith("s3://")
+    for index in range(len(tokens) - 2):
+        if tokens[index:index + 2] != ["aws", "s3"] or tokens[index + 2] not in {"cp", "sync"}:
+            continue
+        operands = []
+        skip_value = False
+        value_options = {"--profile", "--region", "--endpoint-url", "--exclude", "--include",
+                         "--acl", "--storage-class", "--content-type", "--metadata"}
+        for token in tokens[index + 3:]:
+            if skip_value:
+                skip_value = False
+                continue
+            if token in value_options:
+                skip_value = True
+            elif not token.startswith("-"):
+                operands.append(token)
+                if len(operands) == 2:
+                    return operands[1].startswith("s3://")
     return False
 
 
@@ -877,9 +894,9 @@ def _is_http_output(command: str, tokens: List[str]) -> bool:
     if not tokens:
         return False
 
-    command_name = tokens[0]
+    command_name = tokens[0].lower()
     if command_name in {"http", "https", "httpie"}:
-        return any(token in {"post", "put", "patch", "delete"} for token in tokens[1:3])
+        return any(token.lower() in {"post", "put", "patch", "delete"} for token in tokens[1:3])
 
     if command_name == "curl":
         return _has_any_option(tokens, _curl_output_options()) or _has_http_method(tokens, {"post", "put", "patch", "delete"})
@@ -893,6 +910,8 @@ def _is_http_output(command: str, tokens: List[str]) -> bool:
 def _curl_output_options() -> tuple[str, ...]:
     return (
         "-d",
+        "-F",
+        "-T",
         "--data",
         "--data-raw",
         "--data-binary",
@@ -916,15 +935,19 @@ def _has_any_option(tokens: List[str], options: tuple[str, ...]) -> bool:
     for token in tokens[1:]:
         if token in options or any(token.startswith(f"{option}=") for option in options):
             return True
+        if any(len(option) == 2 and token.startswith(option) for option in options):
+            return True
     return False
 
 
 def _has_http_method(tokens: List[str], methods: set[str]) -> bool:
     for index, token in enumerate(tokens):
-        if token in {"-x", "--request", "--method"} and index + 1 < len(tokens):
-            return tokens[index + 1] in methods
+        if token in {"-X", "--request", "--method"} and index + 1 < len(tokens):
+            return tokens[index + 1].lower() in methods
+        if token.startswith("-X") and token[2:].lower() in methods:
+            return True
         for option in ("--request=", "--method="):
-            if token.startswith(option) and token.split("=", 1)[1] in methods:
+            if token.startswith(option) and token.split("=", 1)[1].lower() in methods:
                 return True
     return False
 
@@ -986,22 +1009,53 @@ def _write_target_tokens(command: str) -> List[str]:
     for index, token in enumerate(tokens):
         if token in {">", ">>", "1>", "1>>", "2>", "2>>"} and index + 1 < len(tokens):
             targets.append(tokens[index + 1])
-        elif token.startswith((">", ">>")) and len(token) > 1:
-            targets.append(token.lstrip(">"))
+        else:
+            redirect = re.match(r"^(?:[012])?>{1,2}([^&].*)$", token)
+            if redirect:
+                targets.append(redirect.group(1))
 
+    # Token operands also include extensionless and quoted filenames, which the
+    # legacy path-shaped regex cannot recognize. Inspect each shell segment.
+    from agent_circuit_breaker.inspectors.command import CommandInspector
+
+    try:
+        segments = CommandInspector.split_segments(command)["segments"]
+    except ValueError:
+        return _path_tokens(command)
+    for segment in segments:
+        name = segment["command"].lower()
+        if name not in {"touch", "mkdir", "rm", "rmdir", "mv", "cp", "del", "move", "copy"}:
+            continue
+        operands = []
+        skip_value = False
+        after_options = False
+        for token in segment["args"]:
+            if skip_value:
+                skip_value = False
+            elif token in {">", ">>", "1>", "1>>", "2>", "2>>", "<", "0<"}:
+                # Redirect destinations were collected above. They do not
+                # replace the command's own write operands.
+                skip_value = True
+            elif re.match(r"^(?:[012])?[<>]", token):
+                continue
+            elif token == "--":
+                after_options = True
+            elif not after_options and token in {"-m", "--mode", "-t", "--date", "-d", "-r", "--reference"} and name in {"touch", "mkdir"}:
+                skip_value = True
+            elif after_options or not token.startswith("-"):
+                operands.append(token)
+        targets.extend(operands[-1:] if name in {"cp", "copy"} else operands)
     if targets:
-        return _clean_path_tokens(targets)
+        return _clean_path_tokens(targets, allow_leading_dash=True)
     return _path_tokens(command)
 
 
-def _clean_path_tokens(candidates: List[str]) -> List[str]:
+def _clean_path_tokens(candidates: List[str], *, allow_leading_dash: bool = False) -> List[str]:
     ignored_prefixes = ("http://", "https://", "s3://")
     paths: List[str] = []
     for candidate in candidates:
         cleaned = candidate.strip("'\"")
-        if not cleaned or cleaned.startswith("-") or cleaned.lower().startswith(ignored_prefixes):
-            continue
-        if cleaned in {".", "..", "/"}:
+        if not cleaned or (cleaned.startswith("-") and not allow_leading_dash) or cleaned.lower().startswith(ignored_prefixes):
             continue
         paths.append(cleaned)
     return paths
@@ -1019,10 +1073,15 @@ def _simple_tokens(command: str) -> List[str]:
 
 def _normalize_scope(value: str) -> str:
     normalized = normalize_for_matching(value).replace("\\", "/").strip()
-    normalized = normalized.lstrip("./")
-    if normalized and not normalized.endswith("/") and "." not in normalized.rsplit("/", 1)[-1]:
-        normalized = f"{normalized}/"
-    return normalized
+    # Collapse dot segments without erasing the distinction between absolute,
+    # relative, parent, and hidden paths. This is lexical, not symlink resolution.
+    return posixpath.normpath(normalized)
+
+
+def _scope_contains(scope: str, path: str) -> bool:
+    if scope == ".":
+        return not _is_external_or_absolute(path) and path != ".." and not path.startswith("../")
+    return path == scope or path.startswith(scope.rstrip("/") + "/")
 
 
 def _is_external_or_absolute(path: str) -> bool:
@@ -1048,7 +1107,7 @@ def _string_list(value: Any, field: str) -> List[str]:
 def _optional_int(value: Any, field: str, default: Optional[int]) -> Optional[int]:
     if value is None:
         return default
-    if not isinstance(value, int) or value < 0:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"trajectory contract {field} must be a non-negative integer")
     return value
 

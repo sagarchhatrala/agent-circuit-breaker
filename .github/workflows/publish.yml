@@ -38,8 +38,9 @@ jobs:
           python -c "import os; assert os.environ['RELEASE_REF'].startswith('refs/tags/v'), 'publish only from immutable version tag'"
           git merge-base --is-ancestor HEAD origin/main
           python -c "import os, agent_circuit_breaker as a; assert os.environ['RELEASE_REF'] == 'refs/tags/v' + a.__version__"
-      - run: python -m pip install -e . pytest
+      - run: python -m pip install -e . pytest pre-commit
       - run: python -m pytest -q
+      - run: python scripts/verify_appsec_demo.py --output /tmp/acb-release-rehearsal.json
       - run: git diff --check
 
   build:
@@ -66,6 +67,12 @@ jobs:
           /tmp/acb-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/package_smoke.py" "${GITHUB_REF_NAME#v}"
           /tmp/acb-wheel/bin/agent-circuit-breaker --version
           /tmp/acb-wheel/bin/agent-circuit-breaker demo --doctor > /tmp/acb-doctor.json
+      - name: Rehearse exact wheel and real MCP SDK before publication
+        run: |
+          /tmp/acb-wheel/bin/pip install pre-commit 'mcp==2.3.0'
+          cd /tmp
+          /tmp/acb-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/verify_appsec_demo.py" --output /tmp/acb-wheel-rehearsal.json
+          /tmp/acb-wheel/bin/python -I "$GITHUB_WORKSPACE/scripts/mcp_sdk_smoke.py"
       - uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions

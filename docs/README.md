@@ -1,3 +1,8 @@
+# v1.7.1 security patch
+
+- [Release notes and migration](releases/v1.7.1.md)
+- [Live shell, SQL, MCP and ledger verification](validation/v1.7.1-results.md)
+
 # v1.7.0 practical entry points
 
 - [Packaged offline demonstration](DEMO.md)
