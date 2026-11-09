@@ -1187,9 +1187,25 @@ class CircuitBreakerCLI:
                 )
         return 0
 
-    def run_ledger_mode(self, run_id: Optional[str] = None, limit: int = 20, verify: bool = False) -> int:
+    def run_ledger_mode(self, run_id: Optional[str] = None, limit: int = 20, verify: bool = False,
+                        checkpoint_path: Optional[str] = None) -> int:
         """Print recent run ledger entries, replay one run, or verify the ledger."""
         ledger = RunLedger()
+        if checkpoint_path:
+            try:
+                path = Path(checkpoint_path)
+                if verify:
+                    result = ledger.verify_checkpoint(json.loads(path.read_text(encoding="utf-8")))
+                    print(json.dumps(result, indent=2))
+                    return 0 if result["is_valid"] else 1
+                checkpoint = ledger.checkpoint()
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(checkpoint, indent=2) + "\n", encoding="utf-8")
+                print(json.dumps({"checkpoint_path": str(path), "checkpoint": checkpoint}, indent=2))
+                return 0
+            except (OSError, ValueError) as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                return 1
         if verify:
             result = ledger.verify()
             if self.output_format == "json":
@@ -1204,7 +1220,7 @@ class CircuitBreakerCLI:
         if run_id:
             try:
                 replay = ledger.replay(run_id)
-            except FileNotFoundError as exc:
+            except (OSError, ValueError) as exc:
                 print(f"Error: {exc}", file=sys.stderr)
                 return 1
             print(json.dumps(replay, indent=2) if self.output_format == "json" else self.format_ledger_replay(replay))
@@ -1790,7 +1806,8 @@ def main() -> int:
 
             if args.command_parts[0] == "ledger":
                 run_id = args.command_parts[1] if len(args.command_parts) >= 2 else None
-                return cli.run_ledger_mode(run_id=run_id, limit=args.limit, verify=args.verify)
+                return cli.run_ledger_mode(run_id=run_id, limit=args.limit, verify=args.verify,
+                                           checkpoint_path=args.checkpoint_path)
 
             if args.command_parts[0] == "approvals" and len(args.command_parts) >= 2:
                 approval_id = args.command_parts[2] if len(args.command_parts) >= 3 else None

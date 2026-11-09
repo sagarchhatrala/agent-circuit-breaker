@@ -10,7 +10,7 @@ bound to this repository, `.github/workflows/publish.yml`, and the `testpypi` an
    a version for different bytes. Complete the [release checklist](RELEASE_CHECKLIST.md).
 2. Merge the release PR through protected main after required Python 3.11/3.12
    checks. Create and push the version tag once, pointing to that merged revision.
-3. Dispatch from that tag: `gh workflow run publish.yml --ref v1.7.0 -f repository=pypi`.
+3. Dispatch from that tag: `gh workflow run publish.yml --ref v1.7.1 -f repository=pypi`.
 4. Wait for every job, including public PyPI fresh-install verification. Download
    `release-provenance` and `python-package-distributions` from that workflow run.
 5. Create the stable GitHub release with versioned notes, reviewed synthetic media,

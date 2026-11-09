@@ -167,7 +167,7 @@ class RunContract:
             forbidden_actors=tuple(_string_list(value.get("forbidden_actors"), "forbidden_actors")),
             allowed_delegations=tuple(_delegation_pairs(value.get("allowed_delegations"))),
             require_actor=_optional_bool(value.get("require_actor"), "require_actor", False),
-            max_blocked_attempts=_optional_int(value.get("max_blocked_attempts"), "max_blocked_attempts", 1) or 1,
+            max_blocked_attempts=_optional_int(value.get("max_blocked_attempts"), "max_blocked_attempts", 1),
             max_unknown_actions=_optional_int(value.get("max_unknown_actions"), "max_unknown_actions", None),
             max_actions=_optional_int(value.get("max_actions"), "max_actions", None),
             ttl_seconds=_optional_int(value.get("ttl_seconds"), "ttl_seconds", None),
@@ -2231,7 +2231,7 @@ def _string_list(value: Any, field: str) -> list[str]:
 def _optional_int(value: Any, field: str, default: Optional[int]) -> Optional[int]:
     if value is None:
         return default
-    if not isinstance(value, int) or value < 0:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{field} must be a non-negative integer")
     return value
 

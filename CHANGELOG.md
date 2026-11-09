@@ -4,6 +4,23 @@ All notable changes to Agent Circuit Breaker are tracked here.
 
 This project follows semantic versioning after `v1.0.0`.
 
+## [1.7.1] - 2026-11-09
+
+### Security and fixes
+
+- Close reproduced filesystem scope escapes, HTTP MCP notification forwarding,
+  ignored trajectory settings, and empty/numeric-only MCP argument fallthrough.
+- Correct Docker/Kubernetes/curl/S3 option handling, zero policy limits, forbidden
+  target boundaries, and the installed pre-commit executable.
+- Inspect destructive SQL CTEs and literal comparisons; respect AND/OR precedence
+  so selective conditions containing a true conjunct are not overblocked.
+- Authenticate run ledgers with the protected audit HMAC key, expose retained
+  checkpoints, refuse corrupted append/replay, and serialize cooperating log writers.
+- Add independent safe local execution rehearsal to CI and tagged publication,
+  including exact-wheel and real MCP SDK checks before package upload.
+- See [release notes and migration](docs/releases/v1.7.1.md). Empty-tool grants,
+  optional HMAC migration, and heuristic/sandbox boundaries are explicit.
+
 ## [1.7.0] - 2026-11-08
 
 ### Added

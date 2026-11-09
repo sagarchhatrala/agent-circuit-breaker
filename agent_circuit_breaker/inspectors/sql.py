@@ -1,5 +1,7 @@
 """SQL Inspector - Tokenizes SQL text for later safety analysis."""
 
+from decimal import Decimal, InvalidOperation
+import re
 from typing import Any, Dict, List, Optional
 
 from agent_circuit_breaker.normalization import normalize_for_matching
@@ -8,7 +10,7 @@ from agent_circuit_breaker.normalization import normalize_for_matching
 class SQLInspector:
     """Inspects SQL text without executing it."""
 
-    PUNCTUATION = {"*", "=", ",", "(", ")"}
+    PUNCTUATION = {"*", "=", ",", "(", ")", ">", "<", "!"}
     RISK_SCORES = {
         "sql_drop_table": 100,
         "sql_drop_database": 100,
@@ -86,13 +88,15 @@ class SQLInspector:
                 continue
 
             if char == "'":
+                start = index
                 token, index = SQLInspector._read_quoted(sql, index, "'")
-                current.append(f"'{token}'")
+                current.append(sql[start:index])
                 continue
 
             if char == '"':
+                start = index
                 token, index = SQLInspector._read_quoted(sql, index, '"')
-                current.append(f'"{token}"')
+                current.append(sql[start:index])
                 continue
 
             if char == ";":
@@ -113,7 +117,7 @@ class SQLInspector:
         ]
 
     @staticmethod
-    def tokenize(sql: str) -> List[str]:
+    def tokenize(sql: str, *, _preserve_quotes: bool = False) -> List[str]:
         """
         Tokenize SQL text while ignoring comments.
 
@@ -152,15 +156,24 @@ class SQLInspector:
             if char == "'":
                 SQLInspector._append_token(tokens, current)
                 current = []
+                start = index
                 token, index = SQLInspector._read_quoted(sql, index, "'")
-                tokens.append(token)
+                tokens.append(sql[start:index] if _preserve_quotes else token)
                 continue
 
             if char == '"':
                 SQLInspector._append_token(tokens, current)
                 current = []
+                start = index
                 token, index = SQLInspector._read_quoted(sql, index, '"')
-                tokens.append(token)
+                tokens.append(sql[start:index] if _preserve_quotes else token)
+                continue
+
+            if char + next_char in {">=", "<=", "!=", "<>", "=="}:
+                SQLInspector._append_token(tokens, current)
+                current = []
+                tokens.append(char + next_char)
+                index += 2
                 continue
 
             if char in SQLInspector.PUNCTUATION:
@@ -228,7 +241,69 @@ class SQLInspector:
     @staticmethod
     def _detect_statement_risks(statement: Dict[str, Any]) -> None:
         """Mark destructive SQL statement shapes using parsed tokens only."""
-        tokens_lower = [token.lower() for token in statement["tokens"]]
+        tokens = SQLInspector.tokenize(statement["raw"], _preserve_quotes=True)
+        tokens = [token if token.startswith(("'", '"')) else token.lower() for token in tokens]
+        risks = []
+        for candidate in SQLInspector._policy_statements(tokens):
+            for risk in SQLInspector._token_risks(candidate):
+                if risk not in risks:
+                    risks.append(risk)
+        if not risks:
+            return
+        statement["risk_flags"] = [risk_flag for risk_flag, _ in risks]
+        statement["risk_score"] = SQLInspector._score_risks(statement["risk_flags"])
+        statement["is_dangerous"] = True
+        statement["danger_reason"] = "; ".join(reason for _, reason in risks)
+
+    @staticmethod
+    def _policy_statements(tokens: List[str], depth: int = 0) -> List[List[str]]:
+        """Expose the main statement and data-changing CTE bodies, never execute SQL."""
+        if depth > 64:
+            raise ValueError("SQL nesting exceeds inspection limit")
+        if not tokens or tokens[0] != "with":
+            return [tokens]
+        statements = []
+        index = 1
+        while index < len(tokens):
+            token = tokens[index]
+            if token in {"select", "delete", "update", "insert", "replace"}:
+                statements.append(tokens[index:])
+                return statements
+            if token == "(":
+                end = SQLInspector._closing_parenthesis(tokens, index)
+                body = tokens[index + 1:end]
+                if body and body[0] in {"with", "delete", "update", "insert", "replace"}:
+                    statements.extend(SQLInspector._policy_statements(body, depth + 1))
+                index = end
+            index += 1
+        return statements
+
+    @staticmethod
+    def _closing_parenthesis(tokens: List[str], start: int) -> int:
+        depth = 0
+        for index in range(start, len(tokens)):
+            if tokens[index] == "(":
+                depth += 1
+            elif tokens[index] == ")":
+                depth -= 1
+                if depth == 0:
+                    return index
+        raise ValueError("Unclosed SQL parenthesis")
+
+    @staticmethod
+    def _top_level_index(tokens: List[str], keyword: str) -> Optional[int]:
+        depth = 0
+        for index, token in enumerate(tokens):
+            if token == "(":
+                depth += 1
+            elif token == ")":
+                depth -= 1
+            elif depth == 0 and token == keyword:
+                return index
+        return None
+
+    @staticmethod
+    def _token_risks(tokens_lower: List[str]) -> List[tuple[str, str]]:
         risks: List[tuple[str, str]] = []
 
         if len(tokens_lower) >= 2 and tokens_lower[:2] == ["drop", "table"]:
@@ -243,7 +318,7 @@ class SQLInspector:
         if (
             len(tokens_lower) >= 3
             and tokens_lower[:2] == ["delete", "from"]
-            and "where" not in tokens_lower
+            and SQLInspector._top_level_index(tokens_lower, "where") is None
         ):
             risks.append(("sql_unqualified_delete", "Unqualified DELETE detected"))
 
@@ -258,7 +333,7 @@ class SQLInspector:
             len(tokens_lower) >= 4
             and tokens_lower[0] == "update"
             and "set" in tokens_lower
-            and "where" not in tokens_lower
+            and SQLInspector._top_level_index(tokens_lower, "where") is None
         ):
             risks.append(("sql_unqualified_update", "Unqualified UPDATE detected"))
 
@@ -270,13 +345,7 @@ class SQLInspector:
         ):
             risks.append(("sql_tautological_update", "Tautological UPDATE detected"))
 
-        if not risks:
-            return
-
-        statement["risk_flags"] = [risk_flag for risk_flag, _ in risks]
-        statement["risk_score"] = SQLInspector._score_risks(statement["risk_flags"])
-        statement["is_dangerous"] = True
-        statement["danger_reason"] = "; ".join(reason for _, reason in risks)
+        return risks
 
     @staticmethod
     def _score_risks(risk_flags: List[str]) -> int:
@@ -288,31 +357,66 @@ class SQLInspector:
     @staticmethod
     def _has_tautological_where(tokens_lower: List[str]) -> bool:
         """Return true for simple always-true WHERE predicates."""
-        if "where" not in tokens_lower:
+        where_index = SQLInspector._top_level_index(tokens_lower, "where")
+        if where_index is None:
             return False
-
-        where_index = tokens_lower.index("where")
         predicate = tokens_lower[where_index + 1 :]
-        joined = "".join(predicate)
-
-        tautologies = {
-            "1=1",
-            "true",
-            "(true)",
-            "'1'='1'",
-            "\"1\"=\"1\"",
-        }
-        if joined in tautologies:
+        for suffix in ("returning", "order", "limit"):
+            index = SQLInspector._top_level_index(predicate, suffix)
+            if index is not None:
+                predicate = predicate[:index]
+        if SQLInspector._constant_predicate(predicate) is True:
             return True
-
-        for index in range(0, len(predicate) - 2):
-            if predicate[index] == predicate[index + 2] and predicate[index + 1] == "=":
-                return True
 
         if SQLInspector._has_update_functional_tautology(tokens_lower, predicate):
             return True
 
         return False
+
+    @staticmethod
+    def _constant_predicate(tokens: List[str], depth: int = 0) -> Optional[bool]:
+        """Prove only literal predicates, respecting SQL AND/OR precedence.
+
+        Unknown expressions stay unknown. No eval, database, or user code runs.
+        In particular, a true conjunct cannot erase a selective predicate.
+        """
+        if depth > 64:
+            raise ValueError("SQL predicate nesting exceeds inspection limit")
+        while tokens and tokens[0] == "(" and SQLInspector._closing_parenthesis(tokens, 0) == len(tokens) - 1:
+            tokens = tokens[1:-1]
+            depth += 1
+            if depth > 64:
+                raise ValueError("SQL predicate nesting exceeds inspection limit")
+        for operator in ("or", "and"):
+            index = SQLInspector._top_level_index(tokens, operator)
+            if index is not None:
+                left = SQLInspector._constant_predicate(tokens[:index], depth + 1)
+                right = SQLInspector._constant_predicate(tokens[index + 1:], depth + 1)
+                if operator == "or":
+                    return True if left is True or right is True else False if left is False and right is False else None
+                return False if left is False or right is False else True if left is True and right is True else None
+        if tokens[:1] == ["not"]:
+            value = SQLInspector._constant_predicate(tokens[1:], depth + 1)
+            return None if value is None else not value
+        if len(tokens) == 1 and tokens[0] in {"true", "false"}:
+            return tokens[0] == "true"
+        if len(tokens) != 3 or tokens[1] not in {"=", "==", "!=", "<>", ">", "<", ">=", "<="}:
+            return None
+        left, operator, right = tokens
+        # String ordering depends on collation. Equality of identical literals
+        # is invariant; do not guess inequality or cross-type coercions.
+        if left.startswith("'") or right.startswith("'"):
+            if left == right and operator in {"=", "=="}:
+                return True
+            return None
+        if not all(re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?", value) for value in (left, right)):
+            return None
+        try:
+            a, b = Decimal(left), Decimal(right)
+        except InvalidOperation:
+            return None
+        return {"=": a == b, "==": a == b, "!=": a != b, "<>": a != b,
+                ">": a > b, "<": a < b, ">=": a >= b, "<=": a <= b}[operator]
 
     @staticmethod
     def _has_update_functional_tautology(tokens_lower: List[str], predicate: List[str]) -> bool:
@@ -338,7 +442,7 @@ class SQLInspector:
             return False
         set_col = assignments[0]
         set_val = assignments[2]
-        if len(predicate) < 3 or predicate[0] != set_col:
+        if len(predicate) not in {3, 4} or predicate[0] != set_col:
             return False
 
         op = predicate[1]

@@ -31,10 +31,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install test tooling
-        run: python -m pip install -e . pytest build twine
+        run: python -m pip install -e . pytest build twine pre-commit
 
       - name: Run tests
         run: python -m pytest -q
+
+      - name: Rehearse local shell, SQL, MCP, audit, and pre-commit enforcement
+        run: python scripts/verify_appsec_demo.py --output /tmp/acb-appsec-results.json
 
       - name: Build package
         run: python -m build

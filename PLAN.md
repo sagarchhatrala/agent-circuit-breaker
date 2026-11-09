@@ -1,3 +1,11 @@
+# v1.7.1 release
+
+Ship the reproduced AppSec fixes, SQL predicate corrections, strict uninspectable
+MCP handling, authenticated ledger/checkpoint support, and local execution checks
+through the protected-main and TestPyPI-to-PyPI release workflow.
+
+The plans below are historical snapshots, not the current release target.
+
 ﻿# Agent Circuit Breaker Plan
 
 Current release target: `v1.6.2` inspection coverage and decision validation.

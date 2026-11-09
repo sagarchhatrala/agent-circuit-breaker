@@ -1,3 +1,10 @@
+# v1.7.1 release verification update
+
+The publish workflow now runs the independent safe local rehearsal on Python
+3.11/3.12 and repeats it against the authoritative wheel before publishing.
+[Release workflow](../.github/workflows/publish.yml). This adds evidence and does
+not change any external certification claim.
+
 # OpenSSF Baseline Level 1 Evidence
 
 This matrix maps Agent Circuit Breaker to the Open Source Project Security

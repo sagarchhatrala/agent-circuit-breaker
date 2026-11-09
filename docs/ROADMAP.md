@@ -1,3 +1,11 @@
+# v1.7.1 completed scope
+
+Security fixes and live execution evidence are documented in
+[the release notes](releases/v1.7.1.md). General SQL semantics, OS sandboxing, and
+protection from a compromised owner process remain outside the heuristic gate.
+
+The roadmap below retains earlier milestone history.
+
 ﻿# Roadmap
 
 This roadmap tracks planned milestones while keeping each release narrow and testable.

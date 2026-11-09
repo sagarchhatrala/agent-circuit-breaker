@@ -8,14 +8,14 @@ it ended. The core is local-first and uses Python's standard library.
 [![ACB local demo: an unauthorized export cannot start](https://raw.githubusercontent.com/sagarchhatrala/agent-circuit-breaker/v1.7.0/docs/assets/acb-demo.png)](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/tag/v1.7.0)
 
 [Watch the demo / download captions](https://github.com/sagarchhatrala/agent-circuit-breaker/releases/tag/v1.7.0)
-· [Run it offline](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/DEMO.md)
+· [Run it offline](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/DEMO.md)
 
 ## Install and try it
 
 Python 3.11+. The typed local workflow executor requires POSIX (Linux/macOS).
 
 ```bash
-python -m pip install agent-circuit-breaker==1.7.0
+python -m pip install agent-circuit-breaker==1.7.1
 agent-circuit-breaker demo
 ```
 
@@ -30,17 +30,23 @@ agent-circuit-breaker demo --replay --output /tmp/acb-replay.json
 python -m agent_circuit_breaker.responses_example
 ```
 
+## v1.7.1 security fixes
+
+This release closes reproduced scope escapes and MCP forwarding gaps, expands SQL
+checks, and adds authenticated run ledgers. See the [release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/releases/v1.7.1.md)
+and [live verification](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/validation/v1.7.1-results.md) for exact coverage and migration.
+
 ## Integrations
 
 | Product | Integration | Verification scope |
 |---|---|---|
-| [Claude Code](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/integrations/claude-code.md) | Native PreToolUse adapter; mediated MCP | Configuration/event fixtures; native host unverified |
-| [Cursor](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/integrations/cursor.md) | Separate shell/MCP hooks; mediated MCP | Desktop-targeted fixtures; native host unverified |
-| [OpenAI API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/integrations/openai-api.md) | Responses function dispatcher | Real offline executor; live API opt-in |
-| [Codex](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/integrations/codex.md) | Project-scoped MCP configuration | CLI overrides and MCP SDK; project discovery/native invocation unverified |
+| [Claude Code](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/integrations/claude-code.md) | Native PreToolUse adapter; mediated MCP | Configuration/event fixtures; native host unverified |
+| [Cursor](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/integrations/cursor.md) | Separate shell/MCP hooks; mediated MCP | Desktop-targeted fixtures; native host unverified |
+| [OpenAI API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/integrations/openai-api.md) | Responses function dispatcher | Real offline executor; live API opt-in |
+| [Codex](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/integrations/codex.md) | Project-scoped MCP configuration | CLI overrides and MCP SDK; project discovery/native invocation unverified |
 
 Guided commands provide detection, preview, merge, verification and uninstall.
-[Integration quickstart and tested versions](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/integrations/README.md).
+[Integration quickstart and tested versions](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/integrations/README.md).
 
 ## Decisions and the boundary
 
@@ -54,11 +60,11 @@ modify. Native hooks permit host-owned execution; mediated tools own the full
 RuntimeGate lifecycle. Provenance covers the supported typed transformations, not
 arbitrary shell/Python/model information flow.
 
-[Verified scenarios and limitations](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/validation/v1.7.0-independent-review.md)
-· [Security model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/WORKFLOW_SECURITY.md)
-· [Enforcement matrix](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/ADAPTER_ENFORCEMENT_MATRIX.md)
-· [Runtime API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/API.md)
-· [Release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/releases/v1.7.0.md)
-· [Compatibility](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/docs/COMPATIBILITY.md)
-· [Support](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/SUPPORT.md)
-· [MIT license](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.0/LICENSE)
+[Verified scenarios and limitations](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/validation/v1.7.0-independent-review.md)
+· [Security model](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/WORKFLOW_SECURITY.md)
+· [Enforcement matrix](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/ADAPTER_ENFORCEMENT_MATRIX.md)
+· [Runtime API](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/API.md)
+· [Release notes](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/releases/v1.7.1.md)
+· [Compatibility](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/docs/COMPATIBILITY.md)
+· [Support](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/SUPPORT.md)
+· [MIT license](https://github.com/sagarchhatrala/agent-circuit-breaker/blob/v1.7.1/LICENSE)

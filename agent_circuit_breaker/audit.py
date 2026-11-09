@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from agent_circuit_breaker.decision import from_legacy_result
 from agent_circuit_breaker.redaction import redact_record, redaction_metadata
+from agent_circuit_breaker.log_lock import locked_log
 
 
 DEFAULT_AUDIT_DIR = ".agent-circuit-breaker"
@@ -32,9 +33,13 @@ class AuditLog:
     def __init__(self, path: Optional[str] = None):
         self.path = Path(path) if path else default_audit_path()
 
+    @locked_log
     def append(self, event: Dict[str, Any]) -> Dict[str, Any]:
         """Append an event and return the stored entry."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        verification = self.verify()
+        if not verification["is_valid"]:
+            raise ValueError(f"cannot append to invalid audit log: {verification['error']}")
         previous_hash = self._last_hash()
         key = _audit_hmac_key()
         entry = {
@@ -53,8 +58,11 @@ class AuditLog:
             entry["entry_signature"] = self._sign_entry(entry, key)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, sort_keys=True, separators=(",", ":")) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
         return entry
 
+    @locked_log
     def tail(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Return the last audit entries."""
         if not self.path.exists():
@@ -62,7 +70,15 @@ class AuditLog:
         entries = list(read_entries(self.path))
         return entries[-limit:]
 
+    @locked_log
     def verify(self) -> Dict[str, Any]:
+        _audit_hmac_key()  # Invalid owner configuration remains an explicit error.
+        try:
+            return self._verify()
+        except (ValueError, TypeError, OSError, AttributeError) as exc:
+            return {"is_valid": False, "entries": 0, "error": str(exc), "signature_checked": False}
+
+    def _verify(self) -> Dict[str, Any]:
         """Verify hash-chain integrity."""
         previous_hash = None
         count = 0
@@ -99,6 +115,7 @@ class AuditLog:
             previous_hash = entry_hash
         return {"is_valid": True, "entries": count, "error": None, "signature_checked": bool(key)}
 
+    @locked_log
     def checkpoint(self) -> Dict[str, Any]:
         """Return a signed checkpoint for external retention."""
         verification = self.verify()
@@ -123,6 +140,7 @@ class AuditLog:
             checkpoint["checkpoint_signature"] = self._sign_checkpoint(checkpoint, key)
         return checkpoint
 
+    @locked_log
     def verify_checkpoint(self, checkpoint: Dict[str, Any]) -> Dict[str, Any]:
         """Verify that the current audit log still contains a retained checkpoint."""
         if not isinstance(checkpoint, dict):
@@ -133,14 +151,20 @@ class AuditLog:
             return {"is_valid": False, "error": "checkpoint_hash mismatch"}
 
         key = _audit_hmac_key()
-        signature_algorithm = (checkpoint.get("integrity") or {}).get("signature_algorithm")
+        integrity = checkpoint.get("integrity")
+        if not isinstance(integrity, dict):
+            return {"is_valid": False, "error": "checkpoint integrity must be an object"}
+        signature_algorithm = integrity.get("signature_algorithm")
+        if key and signature_algorithm != "hmac-sha256":
+            return {"is_valid": False, "error": "authenticated checkpoint required when a key is configured"}
         if signature_algorithm or checkpoint.get("checkpoint_signature"):
             if not key:
                 return {"is_valid": False, "error": "checkpoint_signature present but verification key unavailable"}
             if signature_algorithm != "hmac-sha256":
                 return {"is_valid": False, "error": "unsupported checkpoint signature algorithm"}
-            if not hmac.compare_digest(
-                checkpoint.get("checkpoint_signature") or "",
+            signature = checkpoint.get("checkpoint_signature")
+            if not isinstance(signature, str) or not hmac.compare_digest(
+                signature,
                 self._sign_checkpoint(checkpoint, key),
             ):
                 return {"is_valid": False, "error": "checkpoint_signature mismatch"}
@@ -151,7 +175,7 @@ class AuditLog:
 
         entries = list(read_entries(self.path))
         entry_count = checkpoint.get("entry_count")
-        if not isinstance(entry_count, int) or entry_count < 0:
+        if isinstance(entry_count, bool) or not isinstance(entry_count, int) or entry_count < 0:
             return {"is_valid": False, "error": "checkpoint entry_count invalid"}
         if len(entries) < entry_count:
             return {

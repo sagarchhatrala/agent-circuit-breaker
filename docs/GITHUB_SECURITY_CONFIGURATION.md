@@ -21,6 +21,10 @@ Verified through the GitHub API on 2026-08-24:
 - `main` branch protection is enforced for administrators.
 - `main` branch protection disallows force pushes and branch deletion.
 
+Branch-protection requirements above were rechecked on 2026-11-09 for v1.7.1.
+The Publish workflow also requires the live rehearsal and exact-wheel MCP SDK check.
+Other historical settings have not all been re-audited on that date.
+
 ## Repository Implemented
 
 - Workflows request least-privilege permissions at workflow or job scope.

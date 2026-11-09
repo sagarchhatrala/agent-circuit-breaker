@@ -1,0 +1,159 @@
+{
+  "date": "2026-11-09",
+  "starting_commit": "d6dd54531652853db5b34b24938fb6d3f1b70dc3",
+  "release_status": "local uncommitted fixes; published version 1.7.0 reproduced 20 failed checks",
+  "platform": {
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "full_suite": {
+    "python": "3.14.8",
+    "tests_passed": 686,
+    "subtests_passed": 422,
+    "summary": "686 passed, 422 subtests passed in 7.89s"
+  },
+  "rehearsals": [
+    {
+      "timestamp": "2026-11-09T07:51:19.023866+00:00",
+      "python": "3.11.18",
+      "platform": "Darwin",
+      "checks": 126,
+      "passed": 126,
+      "failed": 0
+    },
+    {
+      "timestamp": "2026-11-09T07:51:19.054069+00:00",
+      "python": "3.12.16",
+      "platform": "Darwin",
+      "checks": 126,
+      "passed": 126,
+      "failed": 0
+    },
+    {
+      "timestamp": "2026-11-09T07:51:19.964381+00:00",
+      "python": "3.14.8",
+      "platform": "Darwin",
+      "checks": 126,
+      "passed": 126,
+      "failed": 0
+    }
+  ],
+  "rehearsal_composition": {
+    "functional_checks": 121,
+    "documented_limitation_observations": 5
+  },
+  "mcp_sdk": {
+    "version": "2.3.0",
+    "protocols": [
+      "2026-07-28",
+      "2025-11-25"
+    ],
+    "real_report": true,
+    "denied_without_start": true,
+    "restart_reused_run": true
+  },
+  "sarif": {
+    "schema": "https://json.schemastore.org/sarif-2.1.0.json",
+    "full_schema_validation": "passed",
+    "schema_sha256": "c96eb2d311c37b0a38cbd18c52d79a68f778bbd2d831abed7412d9850740f785",
+    "historical_upload_run": "https://github.com/sagarchhatrala/agent-circuit-breaker/actions/runs/42477444434",
+    "new_upload_triggered": false
+  },
+  "artifacts": [
+    {
+      "path": "/tmp/acb-appsec-final-dist/agent_circuit_breaker-1.7.0-py3-none-any.whl",
+      "sha256": "f585eb43cb3c84406bd8a724729d142e2509ab6b7261265aedc23c31187565b1",
+      "metadata_check": "passed"
+    },
+    {
+      "path": "/tmp/acb-appsec-final-dist/agent_circuit_breaker-1.7.0.tar.gz",
+      "sha256": "70a4de95703a72a92a1a81cc92b8ac70129f2b2d7ac21b5707570965ed28a644",
+      "metadata_check": "passed"
+    }
+  ],
+  "wheel_python_source_matches_checkout": true,
+  "wheel_python_source_sha256": {
+    "agent_circuit_breaker/__init__.py": "a64b1a68b4daa475222d39f0001d737e506f980d9f7d3b56a5198c81ddc56e86",
+    "agent_circuit_breaker/api.py": "9b8c4e865d4830a51fa7c93ad9063a76e155176e9b2bdc8e3cda35757341b971",
+    "agent_circuit_breaker/approvals.py": "2baecc17776b606f1dff560e31adfff15ea0c58ed932a7e9cd72f3494e542146",
+    "agent_circuit_breaker/audit.py": "63107aaec68dd2edb3bf5adbcd96df4fb7c773cbf0f3f63cf0a3fc564dfad0c9",
+    "agent_circuit_breaker/catalog.py": "ed091c00a6d581cc8bee7805f2b32187284cfb2b5564c7460efc23b2c08fee78",
+    "agent_circuit_breaker/cli.py": "61cae0f0d6c7f3dd407a8becd3a4b4740cdbbd9523c3049398dacd05cef714a3",
+    "agent_circuit_breaker/decision.py": "8a0ce8a3cef440b7d69447803ca91b5529c1eb12ae7aca089574647563ab2e75",
+    "agent_circuit_breaker/demo.py": "1485ad41379adba9d6493f77ef09c635d9718846e841dbea9f0f5c2f2a11c43d",
+    "agent_circuit_breaker/engine.py": "3c16f59c6970f5ea3c3830b716f39860ae3ff64a2e7dfb969530229238eba828",
+    "agent_circuit_breaker/explain.py": "b60ca5ffbeb6990294b4fd73b646e1f86a30d3235227031a332b88c6621d1426",
+    "agent_circuit_breaker/git_status_child.py": "2cf7c1beab6c7021fa48697e57cd76c9a7eb1e2cc6beee374c9188b6c91b32b1",
+    "agent_circuit_breaker/guard.py": "2a454b679784beae91f74d114f0a60aa0475e4776154acf3c75be4d09ab4b967",
+    "agent_circuit_breaker/hooks.py": "e569311a824f70e21dacff09816a8532eab40e2268d7ea11669e17d51bfda790",
+    "agent_circuit_breaker/hooks_native.py": "ca58bea3c3d4ba8e583a2cda86cc0d88e4d5c640b1eca675aa9376035409db84",
+    "agent_circuit_breaker/integrations.py": "58d2274f03a20cd6baa5c3bcee0b75004f047461791fe1e0a356cf600582ecfb",
+    "agent_circuit_breaker/ledger.py": "88a8b3ab5069af4bf2111e32182cc7da63475c0aa2e4f8b970c82c306536fd4b",
+    "agent_circuit_breaker/limits.py": "bc2e195c82ba30d27ef9a4c7d7bf5ca996b7e4dbafbc1a6297e18aeb8d71ebc9",
+    "agent_circuit_breaker/normalization.py": "1e2f0cc81ded323fd74a30fc6d019f9eb5845303b9793dfed8c8796d41bd5aba",
+    "agent_circuit_breaker/plugins.py": "77c6d9dab4c0816954cdab776c4233052da7cbe40884edb5e623cc415ac21705",
+    "agent_circuit_breaker/policy.py": "c6179ee0c9c82cfc5e28bcbe9966c2a7bf55d3f057a224097fde73289b33e7d1",
+    "agent_circuit_breaker/production.py": "78db6f6b96cd24311bab4e8826f9cc768b56f05a590fe8008907465d01e187a0",
+    "agent_circuit_breaker/profiles.py": "4fb5032edb0b9aa13fe68fb895ab481714dd51f41904953ed254b0f301d2c643",
+    "agent_circuit_breaker/redaction.py": "71672b9e2b5a15c031e4219434a64b14b310950af0bb5c2f0bd81310b975fdb2",
+    "agent_circuit_breaker/responses_example.py": "75352f366a8b83089e7104dc0890a57129fc26dcf0c99776a5c3c0f9e3a9a5c6",
+    "agent_circuit_breaker/rule_testing.py": "58014f289c71038296ece6d68f1801050222b27d6720e54d109a5e7ff45e0a7e",
+    "agent_circuit_breaker/runtime.py": "8f34e10a431d94e6668fc16f2cfa65d54cea3e9e736d7ed25e1a06577803a229",
+    "agent_circuit_breaker/sarif.py": "e5f650a4b68ba477c2bc1870d8e3cb2120d594072f66eae71446888a79b4a85b",
+    "agent_circuit_breaker/scan.py": "7330cca143a860017ff7d58d60f4d92939ffa69d19afcc65480c2074f8816b68",
+    "agent_circuit_breaker/schemas.py": "6f2d719e813f9185593d99af5c18415dd481c1064bed920092c14e065c82486f",
+    "agent_circuit_breaker/signing.py": "9cdc4e01204c686ea9218e61c9a20bb49bd849316a575fe0b9e24601cbb4b3b9",
+    "agent_circuit_breaker/taint.py": "84f8f9cc021ceed8ab2fe50d3d892af57c3109aeddd7e3e5c3949ff04d5748f2",
+    "agent_circuit_breaker/trajectory.py": "76442b5d644ef62519a482bfa74e2842285260d07f6991a6c559227a494ca795",
+    "agent_circuit_breaker/validation.py": "750a7cae93e5e4da6a6b3e04447c1297224732310f1c368ca0ee871edea84ffb",
+    "agent_circuit_breaker/workflow.py": "a51a300636eca14749f418fc89d4c1c874f3daad654c730efddf61a4e2d3ebe4",
+    "agent_circuit_breaker/core/__init__.py": "e0e775b39a020e3ee71a3057fcb80c57cd74a1c244c48a5489ee2d5b3aa459c5",
+    "agent_circuit_breaker/core/benchmarks.py": "9aaa678cee45b637269d0dde853bd620be6f768ac0a9c2d0a8635dd0ec70b76b",
+    "agent_circuit_breaker/core/context.py": "3db8dbf5095549ac295d7595bed20bd74f22092ffa8b449d53b498f140db03ea",
+    "agent_circuit_breaker/core/pipeline.py": "49305197af304ea7d5438e5f3b8e27c1ca765df264bd3bbfa9d75248bd116e9a",
+    "agent_circuit_breaker/core/results.py": "504ac7548f71292ae8afc111049b6cb39678c45bd6956a599bda23bd52b47344",
+    "agent_circuit_breaker/core/sdk.py": "642b5571829069103df9b2576ee15af69d61980cb40b6523787813d21083bc37",
+    "agent_circuit_breaker/guards/__init__.py": "259c6bf970aaa2a1cd819bd08c617b6c7bb74e625e5c837c72e8bfa79bee1d8b",
+    "agent_circuit_breaker/guards/filesystem.py": "7fa475716367b69174a9952402f9c1703849f816f5e66e4b809b67a15a523103",
+    "agent_circuit_breaker/guards/legacy.py": "e8edec1191c0c011b67b76afd7b3aef9ffc1704379e16208f53a648674136fe1",
+    "agent_circuit_breaker/guards/loops.py": "17b1275c8daa01982700ae52c55a24557188e07df412951b7f75f1ef5557388e",
+    "agent_circuit_breaker/guards/network.py": "780a45b9a55e074b1ecc61b8eee4cab93d44a21c54b85b447b6db3d7e5e060cf",
+    "agent_circuit_breaker/guards/package_install.py": "68efa78c735877a53406e6a7365f5d341f80dd9efde8570b857a4313ce11a4c8",
+    "agent_circuit_breaker/guards/shell.py": "0929d88587a2f0ecaeaacbc0729589cce99e1203b0ec217e6df8653f6b8063f2",
+    "agent_circuit_breaker/inspectors/__init__.py": "ff44b9e82e893ec7b8f23865201de38582044f9f976521616b9764a88571e69e",
+    "agent_circuit_breaker/inspectors/command.py": "43c02f349372d34f0f5246a2433ceed1dce3c38a42d1ccce670d43b74718fc19",
+    "agent_circuit_breaker/inspectors/filesystem.py": "997dd9ce3c39949a4ebc9be00e655cffa856da5ae3b09534dce353e8b2d04ede",
+    "agent_circuit_breaker/inspectors/sql.py": "0edfb1a97fb4ee5adcf92890b483c9380ff886d306ca17d4c97b7403f9c4e251",
+    "agent_circuit_breaker/interfaces/__init__.py": "0464ee624bb6b30a2b5b5cf125aa3dd71644d07199289abbcc39490ce0ffb0d5",
+    "agent_circuit_breaker/interfaces/exporters.py": "f77ea45c32337457f7796dae043a6f6dc6008796b5752fc77d4a3d6be4572f65",
+    "agent_circuit_breaker/interfaces/guards.py": "8e8544639222d303a556c17572f7d3b561d4f2e77f8deac53969f50c26ffc638",
+    "agent_circuit_breaker/interfaces/hooks.py": "b097e8f6d15d15c03024a5b63968ca08f1a8c34c79c1ab80efe0bce5b7b0dcdd",
+    "agent_circuit_breaker/interfaces/state.py": "ccf065699fb307e2daab0d58b702c12cab66aa6421a4a31dfaf4b88fb72feb85",
+    "agent_circuit_breaker/observability/__init__.py": "0ab89572f978e00298d8b04b045ca06ac31e5fbbb318bce9e4038dac91e876e3",
+    "agent_circuit_breaker/observability/events.py": "78960e71e330d534f62a43a906eb8b48eabd63076ca2ab88358cf031dde9c739",
+    "agent_circuit_breaker/observability/otel.py": "dd2add06833ab97c5e50063a328358290f3913cb6766eb9a5c8c506028af7ddc",
+    "agent_circuit_breaker/observability/prometheus.py": "c062a382ed26ad47d0680dd02af89acae5edb009d6b3d74b7b208a5daaf3134a",
+    "agent_circuit_breaker/rules/__init__.py": "a89098379b27ab0a1e63266f21b96b7a5bb50ad03981d7edb2cfb5ad7921c9fe",
+    "agent_circuit_breaker/rules/builtin_rules.py": "ba992c9a86c3aae54362c8801679e7e190ce390ebd79cfcd5a58f6a177fb7adc",
+    "agent_circuit_breaker/rules/loader.py": "e46657b5cbc600736a2ceddb886ad367ec74fdbe2398138c4830b2341988ed64",
+    "agent_circuit_breaker/state/__init__.py": "2e4fda8659fb477ddeeb47134780093743121ef9a84250bcb4751b2a1169af15",
+    "agent_circuit_breaker/state/manager.py": "6605e33a30e072668954871e604ad17f2807afb83dd71f80c668f3a3a3384fc9",
+    "agent_circuit_breaker/state/memory.py": "20f084f8ab61e6a61596739bdf78c2bac174da0d0d17af366bfb07507a75f148",
+    "agent_circuit_breaker/state/models.py": "c49b7d6fc4eacd184e7b81977a62cdc27e26de9f226d7a0367fa045e3799bce9",
+    "agent_circuit_breaker/state/redis.py": "9339014d506b406bf5a9ee4ce2bcbb12bfc7436deebf035f291b0f2f2fffe47a",
+    "agent_circuit_breaker/state/sqlite.py": "d98c70f3ea91642959c427c8ab8780da0831d3b73e0d9981fed02574a61c4061",
+    "agent_circuit_breaker_mcp/__init__.py": "09c627d9322d38b76ac1a7b70d466c32a7b50b3765db2e319ced8f0cbce6a600",
+    "agent_circuit_breaker_mcp/execution.py": "fd237ff4ec4d7e3f31b3b418a4a84e163d6e0ea48fb1340bd863a98cf3161114",
+    "agent_circuit_breaker_mcp/proxy.py": "e30862219ffd2f3ea28ec17dc5f9e9ae080c3fdd0e779ccc1371820989196c97",
+    "agent_circuit_breaker_mcp/security.py": "9df0403d0ff60c781969eb9b701ad1ba6e34b0adfabd1c9213508fa2eeb9336c",
+    "agent_circuit_breaker_mcp/workflow_server.py": "e41b970aadf70c2843984da15b814fe248250b92f9779e90138e24150aa93cfc"
+  },
+  "runner_sha256": "7e2b40b841a4f2361ff80f769e4a25ace89b488b04a4a3225b2b9e8c90ef820d",
+  "limits": [
+    "POSIX/macOS execution only; no native Windows or new Linux run",
+    "No actual cloud/Kubernetes/package publication/system deletion was executed",
+    "Generic MCP and SQL heuristic gaps documented in the companion report",
+    "The hash-only run ledger is not authenticated or immutable",
+    "Final documentation/evidence files were written after the local package build; source code in the tested wheel matches the checkout"
+  ]
+}
