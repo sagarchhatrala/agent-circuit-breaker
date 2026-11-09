@@ -9,32 +9,34 @@ The package has no required third-party runtime dependencies.
 ## Try a real local workflow
 
 Linux/macOS, Python 3.11+. These commands create **synthetic** data in a new
-directory. Use a short absolute path for Unix sockets. On macOS, use the resolved
-paths printed by `init` (usually `/private/tmp/...`).
+directory. Use a short absolute path for Unix sockets. The variable below resolves
+macOS symlinked temporary directories (usually to `/private/tmp/...`).
 
 ```bash
 python -m pip install agent-circuit-breaker==1.7.2
-agent-circuit-breaker owner init /tmp/acb-owner-example
+ACB_EXAMPLE="$(python -c 'from pathlib import Path; print(Path("/tmp/acb-owner-example").resolve())')"
+agent-circuit-breaker owner init "$ACB_EXAMPLE"
 ```
 
 The JSON result supplies `workspace`, `state`, `config`, `agent_socket` and
-`control_socket`. Substitute those exact values below. In terminal one:
+`control_socket`. Keep `ACB_EXAMPLE` set to the resolved directory. In terminal one:
 
 ```bash
 agent-circuit-breaker owner serve \
-  --workspace /tmp/acb-owner-example/workspace \
-  --state /tmp/acb-owner-example/state \
-  --config /tmp/acb-owner-example/owner.json \
-  --socket /tmp/acb-owner-example/socket/agent.sock \
+  --workspace "$ACB_EXAMPLE/workspace" \
+  --state "$ACB_EXAMPLE/state" \
+  --config "$ACB_EXAMPLE/owner.json" \
+  --socket "$ACB_EXAMPLE/socket/agent.sock" \
   --agent-uid "$(id -u)" --development
 ```
 
-In terminal two, use the actual paths printed by `init`:
+In terminal two, set `ACB_EXAMPLE` to the resolved directory printed by `init`,
+then run:
 
 ```bash
 agent-circuit-breaker owner verify \
-  --socket /tmp/acb-owner-example/socket/agent.sock \
-  --control-socket /tmp/acb-owner-example/state/control.sock \
+  --socket "$ACB_EXAMPLE/socket/agent.sock" \
+  --control-socket "$ACB_EXAMPLE/state/control.sock" \
   --report reports/verified.json
 ```
 
@@ -55,7 +57,7 @@ The generated database contains three synthetic tickets. Its registered
 
 ```bash
 agent-circuit-breaker owner call database_change \
-  --socket /tmp/acb-owner-example/socket/agent.sock \
+  --socket "$ACB_EXAMPLE/socket/agent.sock" \
   --arguments '{"operation":"close_ticket","parameters":{"id":1,"status":"closed"}}'
 ```
 
@@ -68,11 +70,11 @@ fingerprint, registered SQL, bound parameters, row count, before/after hashes,
 up to ten changed rows, resource, budgets and policy fingerprint:
 
 ```bash
-agent-circuit-breaker owner inspect REVIEW_ID --socket /tmp/acb-owner-example/state/control.sock
+agent-circuit-breaker owner inspect REVIEW_ID --socket "$ACB_EXAMPLE/state/control.sock"
 agent-circuit-breaker owner approve REVIEW_ID \
-  --socket /tmp/acb-owner-example/state/control.sock \
+  --socket "$ACB_EXAMPLE/state/control.sock" \
   --fingerprint EXACT_INSPECTED_FINGERPRINT --ttl-seconds 300
-agent-circuit-breaker owner commit REVIEW_ID --socket /tmp/acb-owner-example/socket/agent.sock
+agent-circuit-breaker owner commit REVIEW_ID --socket "$ACB_EXAMPLE/socket/agent.sock"
 ```
 
 Use `owner reject REVIEW_ID --socket CONTROL_SOCKET` to reject/revoke an active
