@@ -42,7 +42,7 @@ jobs:
           ref: 07c3a429bfed433e49018cb0f78a52145d4bedeb
           path: .local/minio-src
           persist-credentials: false
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.24'
           cache-dependency-path: .local/minio-src/go.sum
