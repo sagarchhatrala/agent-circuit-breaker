@@ -67,6 +67,7 @@ class Rehearsal:
         # Short socket paths keep this executable on macOS's sockaddr_un limit.
         info["agent_socket"] = str(self.root / (name + ".sock"))
         config = json.loads(Path(info["config"]).read_text())
+        config['workflow']['repository_status'] = True
         config["workflow"]["destinations"] = {"archive": ["internal", "public"]}
         config["effect_limits"]["export_bytes"] = export_limit
         config["effect_limits"]["files_written"] = 20
@@ -126,6 +127,19 @@ class Rehearsal:
 
     def run(self):
         f = self.fixture("work")
+        workspace = Path(f['workspace'])
+        git_env = {'PATH': '/usr/bin:/bin', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': os.devnull,
+                   'GIT_AUTHOR_NAME': 'ACB fixture', 'GIT_AUTHOR_EMAIL': 'fixture@example.invalid',
+                   'GIT_COMMITTER_NAME': 'ACB fixture', 'GIT_COMMITTER_EMAIL': 'fixture@example.invalid'}
+        def git(*args):
+            subprocess.run(['/usr/bin/git', '-c', 'core.hooksPath=/dev/null', *args], cwd=workspace,
+                           env=git_env, capture_output=True, check=True, timeout=10)
+        git('init', '--template=')
+        (workspace / 'tracked.txt').write_text('original fixture\n')
+        git('add', 'tracked.txt'); git('commit', '-m', 'synthetic baseline')
+        (workspace / 'tracked.txt').write_text('changed fixture\n')
+        status = self.call(f, 'repository_status')
+        self.check('repository status observes a real tracked-file change', status.get('outcome') == 'executed' and ' M tracked.txt' in status['result']['text'], 'benign')
         original = self.call(f, "read_file", path="incident.json")
         source = original["result"]["artifact"]
         self.check("source read matches actual bytes", original["result"]["text"].encode() == (Path(f["workspace"]) / "incident.json").read_bytes(), "benign")
@@ -146,6 +160,8 @@ class Rehearsal:
         denied = self.call(f, "publish_artifact", artifact_id=encoded["id"], destination="archive")
         self.check("encoded sensitive bytes never arrive at S3", denied["decision"] == "BLOCK" and not self.objects("work/"), "attack")
         redacted = self.call(f, "redact_artifact", artifact_id=sensitive["id"], path="reports/review-me.json")["result"]["artifact"]
+        redacted_bytes = (Path(f["workspace"]) / redacted['path']).read_bytes()
+        self.check('JSON redaction actually removes the synthetic secret', json.loads(redacted_bytes)['api_key'] == '[REDACTED]' and b'synthetic-private-fixture-value' not in redacted_bytes, 'benign')
         self.check("redaction preserves classification until owner review", redacted["labels"] == ["sensitive"], "invariant")
         public = self.invoke(f, "declassify", owner=True, artifact_id=redacted["id"], path="reports/public.json", labels=["public"], sha256=redacted["sha256"], reason="reviewed synthetic redacted example")
         self.check("reviewed declassification creates exact new artifact", public["result"]["artifact"]["labels"] == ["public"] and (Path(f["workspace"]) / "reports/public.json").read_bytes() == (Path(f["workspace"]) / "reports/review-me.json").read_bytes(), "benign")

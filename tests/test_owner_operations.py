@@ -11,6 +11,8 @@ from agent_circuit_breaker.database import SQLiteMaintenance
 from agent_circuit_breaker.effects import EffectResult, usage
 from agent_circuit_breaker.owner import OwnerService, serve, verify_bundle
 from agent_circuit_breaker.owner_setup import initialize
+from agent_circuit_breaker.operations import Operations
+from unittest.mock import patch
 from agent_circuit_breaker.runtime import ExecutionUncertain, RunContract, RuntimeAction, RuntimeGate, SQLiteRunStore
 
 
@@ -185,6 +187,12 @@ class OwnerOperationsTests(unittest.IsolatedAsyncioTestCase):
         result = await self.service.dispatch(args, administrative=True)
         self.assertEqual(result["result"]["artifact"]["labels"], ["public"])
         self.assertEqual((Path(self.info["workspace"]) / "reports/public.json").read_bytes(), (Path(self.info["workspace"]) / "incident.json").read_bytes())
+
+    async def test_redaction_handles_json_keys_and_ignores_raw_audit_setting(self):
+        source = b'{"nested":[{"api_key":"synthetic-secret","count":3}],"note":"token=synthetic-other"}'
+        with patch.dict(os.environ, {'ACB_RETAIN_RAW_RECORDS': '1'}):
+            result = json.loads(Operations._transform('redact_artifact', source))
+        self.assertEqual(result, {'nested': [{'api_key': '[REDACTED]', 'count': 3}], 'note': 'token=[REDACTED]'})
 
     async def test_export_verifiable_and_tamper_detected(self):
         await self.call("read_file", {"path": "incident.json"})

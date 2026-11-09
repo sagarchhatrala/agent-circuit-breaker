@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from dataclasses import replace
 
 from agent_circuit_breaker.database import SQLiteMaintenance
 from agent_circuit_breaker.effects import EffectResult, amounts, usage
-from agent_circuit_breaker.redaction import redact_record
+from agent_circuit_breaker.redaction import REDACTION_MARKER, redact_text
 from agent_circuit_breaker.runtime import RuntimeAction
 from agent_circuit_breaker.s3 import S3Publisher
 from agent_circuit_breaker.workflow import Workflow, WorkflowDenied, WorkflowUnknown, TOOL_FIELDS, canonical, digest, relative_path, tool_catalog
@@ -113,7 +114,20 @@ class Operations(Workflow):
     def _transform(name, data):
         if name == "json_artifact":
             return (canonical(json.loads(data)) + "\n").encode()
-        return str(redact_record(data.decode("utf-8"))).encode()
+        text = data.decode("utf-8")
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return redact_text(text).encode()
+        def redact(value):
+            if isinstance(value, dict):
+                return {key: REDACTION_MARKER if re.search(r"api[_-]?key|token|secret|password|passwd|pwd|authorization|credential", key, re.I) else redact(child)
+                        for key, child in value.items()}
+            if isinstance(value, list):
+                return [redact(child) for child in value]
+            return redact_text(value) if isinstance(value, str) else value
+        # Raw audit-retention preferences must not disable an explicit redaction tool.
+        return (canonical(redact(parsed)) + "\n").encode()
 
     def _publish(self, destination, data, artifact):
         return self.destinations[destination].publish(artifact["path"], data)

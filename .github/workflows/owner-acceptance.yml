@@ -13,7 +13,7 @@ permissions:
 jobs:
   owner-boundary:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -35,17 +35,31 @@ jobs:
           /tmp/acb-owner-wheel/bin/pip install boto3
       - name: Execute isolated owner and agent containers
         run: python scripts/verify_owner_isolation.py --wheel dist/*.whl --output /tmp/owner-isolation.json
+      - name: Check out pinned MinIO test server source
+        uses: actions/checkout@v7
+        with:
+          repository: minio/minio
+          ref: 07c3a429bfed433e49018cb0f78a52145d4bedeb
+          path: .local/minio-src
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+          cache-dependency-path: .local/minio-src/go.sum
+      - name: Build pinned MinIO source for disposable acceptance only
+        working-directory: .local/minio-src
+        run: go build -o /tmp/acb-minio .
       - name: Execute real S3 uploads, signature refusal, and crash recovery against MinIO
         env:
           ACB_REHEARSAL_S3_ACCESS: acb-rehearsal-access
           ACB_REHEARSAL_S3_SECRET: acb-rehearsal-secret-only-not-a-real-credential
         run: |
-          container="acb-minio-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
-          docker run -d --name "$container" -p 127.0.0.1:9000:9000 \
-            -e MINIO_ROOT_USER="$ACB_REHEARSAL_S3_ACCESS" \
-            -e MINIO_ROOT_PASSWORD="$ACB_REHEARSAL_S3_SECRET" \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          MINIO_ROOT_USER="$ACB_REHEARSAL_S3_ACCESS" \
+            MINIO_ROOT_PASSWORD="$ACB_REHEARSAL_S3_SECRET" \
+            /tmp/acb-minio server /tmp/acb-minio-data --address 127.0.0.1:9000 \
+            --console-address 127.0.0.1:9001 > /tmp/acb-minio.log 2>&1 &
+          minio_pid=$!
+          trap 'kill "$minio_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
             sleep 1
